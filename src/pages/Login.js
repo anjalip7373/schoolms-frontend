@@ -154,9 +154,9 @@ export default function Login() {
                 🔑 Forgot Password?
               </button>
             </div>
-            <p style={{textAlign:'center',marginTop:'10px',fontSize:'12px',color:'#94a3b8'}}>
+            {/* <p style={{textAlign:'center',marginTop:'10px',fontSize:'12px',color:'#94a3b8'}}>
               Default: admin / admin123
-            </p>
+            </p> */}
           </>
         )}
 
