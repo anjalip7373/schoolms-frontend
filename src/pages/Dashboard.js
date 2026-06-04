@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({ fees: { total: 0, paid: 0, not_paid: 0 }, salary: { total: 0, generated: 0, not_generated: 0 }, classes: [] });
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
   const [loading, setLoading] = useState(true);
@@ -97,18 +97,18 @@ const Dashboard = () => {
             <div className="stat-card blue">
               <span className="stat-icon">👥</span>
               <span className="stat-label">Total Students</span>
-              <span className="stat-value">{data.fees.total}</span>
+              <span className="stat-value">{data?.fees?.total ?? 0}</span>
             </div>
             <div className="stat-card green" onClick={() => showFeeDetails('paid')} title="Click to view">
               <span className="stat-icon">✅</span>
               <span className="stat-label">Fee Paid</span>
-              <span className="stat-value">{data.fees.paid}</span>
+              <span className="stat-value">{data?.fees?.paid ?? 0}</span>
               <span className="stat-sub">Click to view details →</span>
             </div>
             <div className="stat-card red" onClick={() => showFeeDetails('unpaid')} title="Click to view">
               <span className="stat-icon">❌</span>
               <span className="stat-label">Fee Not Paid</span>
-              <span className="stat-value">{data.fees.not_paid}</span>
+              <span className="stat-value">{data?.fees?.not_paid ?? 0}</span>
               <span className="stat-sub">Click to view details →</span>
             </div>
           </div>
@@ -120,18 +120,18 @@ const Dashboard = () => {
                 <div className="stat-card blue">
                   <span className="stat-icon">👨‍💼</span>
                   <span className="stat-label">Total Employees</span>
-                  <span className="stat-value">{data.salary.total}</span>
+                  <span className="stat-value">{data?.salary?.total ?? 0}</span>
                 </div>
                 <div className="stat-card green" onClick={() => showSalaryDetails('generated')}>
                   <span className="stat-icon">📄</span>
                   <span className="stat-label">Salary Generated</span>
-                  <span className="stat-value">{data.salary.generated}</span>
+                  <span className="stat-value">{data?.salary?.generated ?? 0}</span>
                   <span className="stat-sub">Click to view details →</span>
                 </div>
                 <div className="stat-card red" onClick={() => showSalaryDetails('not_generated')}>
                   <span className="stat-icon">⏳</span>
                   <span className="stat-label">Not Generated</span>
-                  <span className="stat-value">{data.salary.not_generated}</span>
+                  <span className="stat-value">{data?.salary?.not_generated ?? 0}</span>
                   <span className="stat-sub">Click to view details →</span>
                 </div>
               </div>
