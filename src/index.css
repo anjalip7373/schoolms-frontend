@@ -292,3 +292,125 @@ tbody tr:last-child td { border-bottom: none; }
   cursor: pointer; transition: background 0.1s; border: none; background: none; width: 100%; text-align: left;
 }
 .dropdown-item:hover { background: var(--bg); }
+
+
+/* ─── MOBILE RESPONSIVE ─────────────────────────────────────── */
+
+/* Hamburger button — hidden on desktop */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  margin-right: 8px;
+}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+@media (max-width: 768px) {
+
+  /* Show hamburger on mobile */
+  .hamburger-btn { display: block; }
+
+  /* Sidebar hidden by default on mobile */
+  .sidebar {
+    width: 260px;
+    transform: translateX(-260px);
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+
+  /* Sidebar open state */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Show overlay when sidebar is open */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Main content takes full width */
+  .main-content { margin-left: 0; }
+
+  /* Topbar adjustments */
+  .topbar {
+    padding: 0 12px;
+    height: 56px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+  }
+  .topbar-left h2 { font-size: 15px; }
+  .topbar-left p { display: none; }
+
+  /* Hide user name on mobile, show only avatar */
+  .user-info { display: none; }
+  .user-badge { padding: 4px; background: none; }
+  .logout-text { display: none; }
+  .btn-logout { padding: 6px 8px; }
+
+  /* Page content padding */
+  .page-content { padding: 16px 12px; }
+
+  /* Stats grid — 2 columns on mobile */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card { padding: 14px; }
+  .stat-card .stat-value { font-size: 22px; }
+
+  /* Page header stack on mobile */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-header h1 { font-size: 18px; }
+
+  /* Filter bar stack on mobile */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-bar .form-control { width: 100%; min-width: unset; }
+  .search-input { min-width: unset !important; width: 100% !important; }
+
+  /* Form grid single column on mobile */
+  .form-grid { grid-template-columns: 1fr; }
+
+  /* Modal full screen on mobile */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+  }
+
+  /* Table scroll */
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Buttons in tables */
+  .btn-sm { padding: 4px 8px; font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card .stat-icon { font-size: 22px; }
+  .stat-card .stat-value { font-size: 20px; }
+  .topbar-left h2 { font-size: 14px; }
+}

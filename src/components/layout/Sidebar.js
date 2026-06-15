@@ -13,30 +13,34 @@ const NAV_ITEMS = [
   { key: 'reports', label: 'Reports', icon: '📑', path: '/reports' },
   { key: 'marks', label: 'Marks', icon: '📝', path: '/marks' },
   { key: 'marks', label: 'Marksheet Report', icon: '📊', path: '/marksheet-report' },
-  { key: 'configuration', label: 'Configuration', icon: '⚙️', path: '/configuration' },  
+  { key: 'configuration', label: 'Configuration', icon: '⚙️', path: '/configuration' },
   { key: 'dashboard', label: 'My Profile', icon: '👤', path: '/profile' },
-  { key: 'broadcast', label: 'Broadcast', icon: '📢', path: '/broadcast' }, 
+  { key: 'broadcast', label: 'Broadcast', icon: '📢', path: '/broadcast' },
 ];
 
-
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { user, hasAccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const handleNav = (path) => {
+    navigate(path);
+    onClose(); // close sidebar on mobile after navigation
+  };
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-logo">
         <h1>🏫 <span>School</span>MS</h1>
         <p>Management System</p>
       </div>
       <nav className="sidebar-nav">
         <div className="nav-section-title">Main Menu</div>
-        {NAV_ITEMS.filter(item => hasAccess(item.key)).map(item => (
+        {NAV_ITEMS.filter(item => hasAccess(item.key)).map((item, index) => (
           <button
-            key={item.key}
+            key={index}
             className={"nav-item " + (location.pathname === item.path ? 'active' : '')}
-            onClick={() => navigate(item.path)}
+            onClick={() => handleNav(item.path)}
           >
             <span className="nav-icon">{item.icon}</span>
             {item.label}
