@@ -61,10 +61,11 @@ export const exportToExcel = async (data, columns, filename) => {
         cleanName,
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
-    } catch (err) {
-      console.error('Excel export failed:', err);
-      toast.error(`Excel export failed: ${err?.message || err}`);
-    }
+      } catch (err) {
+  console.error('Excel export failed:', err);
+  alert(`Excel export failed: ${err?.message || JSON.stringify(err)}`);
+}
+    
   } else {
     // Regular browser/web — use the normal download
     XLSX.writeFile(wb, cleanName);
@@ -126,9 +127,9 @@ export const exportToPDF = async (data, columns, filename, title) => {
       const base64 = doc.output('datauristring').split(',')[1];
       await saveAndShareNative(base64, cleanName, 'application/pdf');
     } catch (err) {
-      console.error('PDF export failed:', err);
-      toast.error(`PDF export failed: ${err?.message || err}`);
-    }
+  console.error('PDF export failed:', err);
+  alert(`PDF export failed: ${err?.message || JSON.stringify(err)}`);
+}
   } else {
     doc.save(cleanName);
   }
