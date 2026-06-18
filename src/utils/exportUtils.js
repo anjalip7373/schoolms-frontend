@@ -16,58 +16,58 @@ const cleanText = (str) => {
 };
 
 // Saves a file on native Android/iOS via Capacitor Filesystem, then opens the Share sheet
-// so the user can save it to Downloads, Drive, WhatsApp, etc.
-// Uses Directory.Cache because it requires NO storage permissions and is reliably writable
-// on all Android versions — the Share sheet is what actually lets the user put it in Downloads.
 const saveAndShareNative = async (base64Data, fileName, mimeType) => {
-  toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
+  try {
+    toast.info(`Preparing ${fileName}...`, { autoClose: 2000 });
 
-  const result = await Filesystem.writeFile({
-    path: fileName,
-    data: base64Data,
-    directory: Directory.Cache,
-    recursive: true,
-  });
+    // Write file to Cache directory (no storage permissions needed on any Android version)
+    await Filesystem.writeFile({
+      path: fileName,
+      data: base64Data,
+      directory: Directory.Cache,
+      recursive: true,
+    });
 
-  toast.success(`File ready: ${fileName}`, { autoClose: 3000 });
+    // Get the content:// URI so other apps (Files, Drive, WhatsApp) can open it
+    const uriResult = await Filesystem.getUri({
+      path: fileName,
+      directory: Directory.Cache,
+    });
 
-  // getUri gives a content:// uri that other apps (Files, WhatsApp, Drive) can actually open
-  const uriResult = await Filesystem.getUri({
-    path: fileName,
-    directory: Directory.Cache,
-  });
+    toast.success(`File ready! Opening share sheet...`, { autoClose: 2000 });
 
-  await Share.share({
-    title: fileName,
-    url: uriResult.uri,
-    dialogTitle: 'Save or share file',
-  });
+    // Share sheet lets the user choose: Save to Downloads, Drive, WhatsApp, etc.
+    await Share.share({
+      title: fileName,
+      text: `SchoolMS export: ${fileName}`,
+      url: uriResult.uri,
+      dialogTitle: 'Save or share file',
+    });
+
+  } catch (err) {
+    console.error('saveAndShareNative failed:', err);
+    // Show full error so it is impossible to miss
+    alert(`Export failed.\n\nFile: ${fileName}\nError: ${err?.message || JSON.stringify(err)}\n\nCheck Android Logcat for details.`);
+  }
 };
 
 export const exportToExcel = async (data, columns, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
-  const colWidths = columns.map(() => ({ wch: 20 }));
-  ws['!cols'] = colWidths;
+  ws['!cols'] = columns.map(() => ({ wch: 20 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
   const cleanName = `${cleanText(filename)}.xlsx`;
 
   if (Capacitor.isNativePlatform()) {
-    try {
-      // Get the workbook as a base64 string directly (XLSX supports this output type)
-      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-      await saveAndShareNative(
-        base64,
-        cleanName,
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      );
-      } catch (err) {
-  console.error('Excel export failed:', err);
-  alert(`Excel export failed: ${err?.message || JSON.stringify(err)}`);
-}
-    
+    // Write as base64 and share natively
+    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    await saveAndShareNative(
+      base64,
+      cleanName,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
   } else {
-    // Regular browser/web — use the normal download
+    // Web/browser — normal download
     XLSX.writeFile(wb, cleanName);
   }
 };
@@ -76,7 +76,6 @@ export const exportToPDF = async (data, columns, filename, title) => {
   const isLandscape = columns.length > 6;
   const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait' });
 
-  // Clean ALL text
   const cleanTitle = cleanText(title || filename);
   const cleanCols = columns.map(c => ({ ...c, label: cleanText(c.label) }));
 
@@ -99,22 +98,10 @@ export const exportToPDF = async (data, columns, filename, title) => {
 
   autoTable(doc, {
     head: [cleanCols.map(c => c.label)],
-    body: data.map(row =>
-      cleanCols.map(c => cleanText(row[c.label] ?? ''))
-    ),
+    body: data.map(row => cleanCols.map(c => cleanText(row[c.label] ?? ''))),
     startY: 34,
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-      font: 'helvetica',
-      overflow: 'linebreak',
-    },
-    headStyles: {
-      fillColor: [30, 64, 175],
-      textColor: 255,
-      fontStyle: 'bold',
-      font: 'helvetica',
-    },
+    styles: { fontSize: 8, cellPadding: 3, font: 'helvetica', overflow: 'linebreak' },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', font: 'helvetica' },
     alternateRowStyles: { fillColor: [241, 245, 249] },
     margin: { left: 14, right: 14 },
   });
@@ -122,14 +109,8 @@ export const exportToPDF = async (data, columns, filename, title) => {
   const cleanName = `${cleanText(filename)}.pdf`;
 
   if (Capacitor.isNativePlatform()) {
-    try {
-      // jsPDF can output a base64 data URI string directly
-      const base64 = doc.output('datauristring').split(',')[1];
-      await saveAndShareNative(base64, cleanName, 'application/pdf');
-    } catch (err) {
-  console.error('PDF export failed:', err);
-  alert(`PDF export failed: ${err?.message || JSON.stringify(err)}`);
-}
+    const base64 = doc.output('datauristring').split(',')[1];
+    await saveAndShareNative(base64, cleanName, 'application/pdf');
   } else {
     doc.save(cleanName);
   }
