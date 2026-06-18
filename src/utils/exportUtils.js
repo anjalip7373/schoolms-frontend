@@ -1,6 +1,9 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 // Remove ALL non-ASCII characters from any string
 const cleanText = (str) => {
@@ -11,16 +14,63 @@ const cleanText = (str) => {
     .trim();
 };
 
-export const exportToExcel = (data, columns, filename) => {
+// Convert an ArrayBuffer/Uint8Array to a base64 string (chunked to avoid call-stack issues on large files)
+const arrayBufferToBase64 = (buffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk);
+  }
+  return btoa(binary);
+};
+
+// Saves a file on native Android/iOS via Capacitor Filesystem, then opens the Share sheet
+// so the user can save it to Downloads, Drive, WhatsApp, etc.
+const saveAndShareNative = async (base64Data, fileName, mimeType) => {
+  try {
+    const result = await Filesystem.writeFile({
+      path: fileName,
+      data: base64Data,
+      directory: Directory.Documents,
+      recursive: true,
+    });
+
+    await Share.share({
+      title: fileName,
+      url: result.uri,
+      dialogTitle: 'Save or share file',
+    });
+  } catch (err) {
+    console.error('Native file save failed:', err);
+    throw err;
+  }
+};
+
+export const exportToExcel = async (data, columns, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
   const colWidths = columns.map(() => ({ wch: 20 }));
   ws['!cols'] = colWidths;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
-  XLSX.writeFile(wb, `${cleanText(filename)}.xlsx`);
+  const cleanName = `${cleanText(filename)}.xlsx`;
+
+  if (Capacitor.isNativePlatform()) {
+    // Get the workbook as a base64 string directly (XLSX supports this output type)
+    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    await saveAndShareNative(
+      base64,
+      cleanName,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+  } else {
+    // Regular browser/web — use the normal download
+    XLSX.writeFile(wb, cleanName);
+  }
 };
 
-export const exportToPDF = (data, columns, filename, title) => {
+export const exportToPDF = async (data, columns, filename, title) => {
   const isLandscape = columns.length > 6;
   const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait' });
 
@@ -67,7 +117,15 @@ export const exportToPDF = (data, columns, filename, title) => {
     margin: { left: 14, right: 14 },
   });
 
-  doc.save(`${cleanText(filename)}.pdf`);
+  const cleanName = `${cleanText(filename)}.pdf`;
+
+  if (Capacitor.isNativePlatform()) {
+    // jsPDF can output a base64 data URI string directly
+    const base64 = doc.output('datauristring').split(',')[1];
+    await saveAndShareNative(base64, cleanName, 'application/pdf');
+  } else {
+    doc.save(cleanName);
+  }
 };
 
 export const shareOnWhatsApp = (phone, message) => {
