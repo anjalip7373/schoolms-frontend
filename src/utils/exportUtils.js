@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { toast } from 'react-toastify';
 
 // Remove ALL non-ASCII characters from any string
 const cleanText = (str) => {
@@ -14,38 +15,33 @@ const cleanText = (str) => {
     .trim();
 };
 
-// Convert an ArrayBuffer/Uint8Array to a base64 string (chunked to avoid call-stack issues on large files)
-const arrayBufferToBase64 = (buffer) => {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode.apply(null, chunk);
-  }
-  return btoa(binary);
-};
-
 // Saves a file on native Android/iOS via Capacitor Filesystem, then opens the Share sheet
 // so the user can save it to Downloads, Drive, WhatsApp, etc.
+// Uses Directory.Cache because it requires NO storage permissions and is reliably writable
+// on all Android versions — the Share sheet is what actually lets the user put it in Downloads.
 const saveAndShareNative = async (base64Data, fileName, mimeType) => {
-  try {
-    const result = await Filesystem.writeFile({
-      path: fileName,
-      data: base64Data,
-      directory: Directory.Documents,
-      recursive: true,
-    });
+  toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
 
-    await Share.share({
-      title: fileName,
-      url: result.uri,
-      dialogTitle: 'Save or share file',
-    });
-  } catch (err) {
-    console.error('Native file save failed:', err);
-    throw err;
-  }
+  const result = await Filesystem.writeFile({
+    path: fileName,
+    data: base64Data,
+    directory: Directory.Cache,
+    recursive: true,
+  });
+
+  toast.success(`File ready: ${fileName}`, { autoClose: 3000 });
+
+  // getUri gives a content:// uri that other apps (Files, WhatsApp, Drive) can actually open
+  const uriResult = await Filesystem.getUri({
+    path: fileName,
+    directory: Directory.Cache,
+  });
+
+  await Share.share({
+    title: fileName,
+    url: uriResult.uri,
+    dialogTitle: 'Save or share file',
+  });
 };
 
 export const exportToExcel = async (data, columns, filename) => {
@@ -57,13 +53,18 @@ export const exportToExcel = async (data, columns, filename) => {
   const cleanName = `${cleanText(filename)}.xlsx`;
 
   if (Capacitor.isNativePlatform()) {
-    // Get the workbook as a base64 string directly (XLSX supports this output type)
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    await saveAndShareNative(
-      base64,
-      cleanName,
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
+    try {
+      // Get the workbook as a base64 string directly (XLSX supports this output type)
+      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      await saveAndShareNative(
+        base64,
+        cleanName,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      toast.error(`Excel export failed: ${err?.message || err}`);
+    }
   } else {
     // Regular browser/web — use the normal download
     XLSX.writeFile(wb, cleanName);
@@ -120,9 +121,14 @@ export const exportToPDF = async (data, columns, filename, title) => {
   const cleanName = `${cleanText(filename)}.pdf`;
 
   if (Capacitor.isNativePlatform()) {
-    // jsPDF can output a base64 data URI string directly
-    const base64 = doc.output('datauristring').split(',')[1];
-    await saveAndShareNative(base64, cleanName, 'application/pdf');
+    try {
+      // jsPDF can output a base64 data URI string directly
+      const base64 = doc.output('datauristring').split(',')[1];
+      await saveAndShareNative(base64, cleanName, 'application/pdf');
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      toast.error(`PDF export failed: ${err?.message || err}`);
+    }
   } else {
     doc.save(cleanName);
   }
