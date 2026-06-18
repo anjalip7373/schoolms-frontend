@@ -3,7 +3,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { toast } from 'react-toastify';
 
 // Remove ALL non-ASCII characters from any string
@@ -15,59 +14,39 @@ const cleanText = (str) => {
     .trim();
 };
 
-// Saves a file on native Android/iOS via Capacitor Filesystem, then opens the Share sheet
-const saveAndShareNative = async (base64Data, fileName, mimeType) => {
-  try {
-    toast.info(`Preparing ${fileName}...`, { autoClose: 2000 });
+// Saves a file directly to the device's public Downloads folder.
+// Directory.ExternalStorage = root of public external storage on Android,
+// so path: 'Download/filename' puts it right in the visible Downloads folder.
+const saveToDownloads = async (base64Data, fileName) => {
+  toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
 
-    // Write file to Cache directory (no storage permissions needed on any Android version)
-    await Filesystem.writeFile({
-      path: fileName,
-      data: base64Data,
-      directory: Directory.Cache,
-      recursive: true,
-    });
+  await Filesystem.writeFile({
+    path: `Download/${fileName}`,
+    data: base64Data,
+    directory: Directory.ExternalStorage,
+    recursive: true,
+  });
 
-    // Get the content:// URI so other apps (Files, Drive, WhatsApp) can open it
-    const uriResult = await Filesystem.getUri({
-      path: fileName,
-      directory: Directory.Cache,
-    });
-
-    toast.success(`File ready! Opening share sheet...`, { autoClose: 2000 });
-
-    // Share sheet lets the user choose: Save to Downloads, Drive, WhatsApp, etc.
-    await Share.share({
-      title: fileName,
-      text: `SchoolMS export: ${fileName}`,
-      url: uriResult.uri,
-      dialogTitle: 'Save or share file',
-    });
-
-  } catch (err) {
-    console.error('saveAndShareNative failed:', err);
-    // Show full error so it is impossible to miss
-    alert(`Export failed.\n\nFile: ${fileName}\nError: ${err?.message || JSON.stringify(err)}\n\nCheck Android Logcat for details.`);
-  }
+  toast.success(`Saved to Downloads: ${fileName}`, { autoClose: 4000 });
 };
 
 export const exportToExcel = async (data, columns, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = columns.map(() => ({ wch: 20 }));
+  const colWidths = columns.map(() => ({ wch: 20 }));
+  ws['!cols'] = colWidths;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
   const cleanName = `${cleanText(filename)}.xlsx`;
 
   if (Capacitor.isNativePlatform()) {
-    // Write as base64 and share natively
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    await saveAndShareNative(
-      base64,
-      cleanName,
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
+    try {
+      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      await saveToDownloads(base64, cleanName);
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      toast.error(`Excel export failed: ${err?.message || err}`);
+    }
   } else {
-    // Web/browser — normal download
     XLSX.writeFile(wb, cleanName);
   }
 };
@@ -98,7 +77,9 @@ export const exportToPDF = async (data, columns, filename, title) => {
 
   autoTable(doc, {
     head: [cleanCols.map(c => c.label)],
-    body: data.map(row => cleanCols.map(c => cleanText(row[c.label] ?? ''))),
+    body: data.map(row =>
+      cleanCols.map(c => cleanText(row[c.label] ?? ''))
+    ),
     startY: 34,
     styles: { fontSize: 8, cellPadding: 3, font: 'helvetica', overflow: 'linebreak' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', font: 'helvetica' },
@@ -109,8 +90,13 @@ export const exportToPDF = async (data, columns, filename, title) => {
   const cleanName = `${cleanText(filename)}.pdf`;
 
   if (Capacitor.isNativePlatform()) {
-    const base64 = doc.output('datauristring').split(',')[1];
-    await saveAndShareNative(base64, cleanName, 'application/pdf');
+    try {
+      const base64 = doc.output('datauristring').split(',')[1];
+      await saveToDownloads(base64, cleanName);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      toast.error(`PDF export failed: ${err?.message || err}`);
+    }
   } else {
     doc.save(cleanName);
   }
