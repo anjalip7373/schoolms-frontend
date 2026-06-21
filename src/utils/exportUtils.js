@@ -107,3 +107,59 @@ export const shareOnWhatsApp = (phone, message) => {
   const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 };
+
+// ─── SHARED NATIVE SAVE HELPERS ─────────────────────────────────────────────
+// Use these in AttendanceReport.js and MarksheetReport.js to replace
+// XLSX.writeFile(wb, filename) and doc.save(filename) calls.
+
+/**
+ * Drop-in replacement for XLSX.writeFile(wb, filename)
+ * Works on both web (browser download) and Android (saves to Downloads folder)
+ */
+export const saveWorkbook = async (wb, filename) => {
+  const cleanName = cleanText(filename);
+  if (Capacitor.isNativePlatform()) {
+    try {
+      toast.info(`Saving ${cleanName}...`, { autoClose: 2000 });
+      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      await Filesystem.writeFile({
+        path: `Download/${cleanName}`,
+        data: base64,
+        directory: Directory.ExternalStorage,
+        recursive: true,
+      });
+      toast.success(`Saved to Downloads: ${cleanName}`, { autoClose: 4000 });
+    } catch (err) {
+      console.error('Excel save failed:', err);
+      toast.error(`Save failed: ${err?.message || err}`);
+    }
+  } else {
+    XLSX.writeFile(wb, cleanName);
+  }
+};
+
+/**
+ * Drop-in replacement for doc.save(filename)
+ * Works on both web (browser download) and Android (saves to Downloads folder)
+ */
+export const saveDocument = async (doc, filename) => {
+  const cleanName = cleanText(filename);
+  if (Capacitor.isNativePlatform()) {
+    try {
+      toast.info(`Saving ${cleanName}...`, { autoClose: 2000 });
+      const base64 = doc.output('datauristring').split(',')[1];
+      await Filesystem.writeFile({
+        path: `Download/${cleanName}`,
+        data: base64,
+        directory: Directory.ExternalStorage,
+        recursive: true,
+      });
+      toast.success(`Saved to Downloads: ${cleanName}`, { autoClose: 4000 });
+    } catch (err) {
+      console.error('PDF save failed:', err);
+      toast.error(`Save failed: ${err?.message || err}`);
+    }
+  } else {
+    doc.save(cleanName);
+  }
+};

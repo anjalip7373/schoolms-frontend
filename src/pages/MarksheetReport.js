@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { saveWorkbook, saveDocument } from '../utils/exportUtils';
 
 const MarksheetReport = () => {
   const { user } = useAuth();
@@ -148,7 +149,7 @@ const MarksheetReport = () => {
   const examType = examTypes.find(e => e.id == filters.exam_type_id)?.name || '';
 
   // ── SINGLE STUDENT MARKSHEET PDF (like real exam marksheet) ──
-  const exportSingleStudentPDF = (student) => {
+  const exportSingleStudentPDF = async (student) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.width;
     const pageH = doc.internal.pageSize.height;
@@ -399,7 +400,7 @@ const MarksheetReport = () => {
       pageW / 2, pageH - 14, { align: 'center' }
     );
 
-    doc.save(`Marksheet-${student.roll_no}-${student.name}-${examType}.pdf`);
+    await saveDocument(doc, `attendance-${periodLabel}-${classLabel}.pdf`);
     toast.success(`Marksheet for ${student.name} downloaded!`);
   };
 
@@ -445,7 +446,7 @@ const MarksheetReport = () => {
         } catch { continue; }
       }
       if (!wb.SheetNames.length) { toast.error('No data found'); return; }
-      XLSX.writeFile(wb, `Marksheet-AllClasses-${examType}-${filters.academic_year}.xlsx`);
+      await saveWorkbook(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
       toast.success(`Downloaded! ${wb.SheetNames.length} class(es) for ${examType}`);
 
     } else if (!isTeacher && !filters.class_id && !filters.exam_type_id) {
@@ -468,7 +469,7 @@ const MarksheetReport = () => {
         XLSX.utils.book_append_sheet(wb, ws, cls.name.slice(0, 31));
       }
       if (!wb.SheetNames.length) { toast.error('No data found'); return; }
-      XLSX.writeFile(wb, `Marksheet-AllClasses-${filters.academic_year}.xlsx`);
+      await saveWorkbook(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
       toast.success(`Downloaded! ${wb.SheetNames.length} class sheets`);
 
     } else if (filters.class_id && !filters.exam_type_id) {
@@ -496,7 +497,7 @@ const MarksheetReport = () => {
         { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 30 }
       ];
       XLSX.utils.book_append_sheet(wb, ws, className.slice(0, 31));
-      XLSX.writeFile(wb, `Marksheet-${className}-AllExams-${filters.academic_year}.xlsx`);
+      await saveWorkbook(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
       toast.success('Downloaded! All exams in one sheet');
 
     } else {
@@ -522,7 +523,7 @@ const MarksheetReport = () => {
         { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 30 }
       ];
       XLSX.utils.book_append_sheet(wb, ws, examType.slice(0, 31));
-      XLSX.writeFile(wb, `Marksheet-${className}-${examType}-${filters.academic_year}.xlsx`);
+      await saveWorkbook(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
       toast.success('Excel downloaded!');
     }
 
@@ -533,7 +534,7 @@ const MarksheetReport = () => {
 };
 
   // ── EXPORT ALL PDF ────────────────────────────────────────────
-const exportPDF = () => {
+    const exportPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
     doc.setFillColor(30, 64, 175);
     doc.rect(0, 0, doc.internal.pageSize.width, 36, 'F');
@@ -589,7 +590,7 @@ const exportPDF = () => {
       },
       margin: { left: 14, right: 14 }
     });
-    doc.save(`Marksheet-${examType}-${className}.pdf`);
+    await saveDocument(doc, `attendance-${periodLabel}-${classLabel}.pdf`);
     toast.success('PDF downloaded!');
     setShowExport(false);
   };

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { saveWorkbook, saveDocument } from '../utils/exportUtils';
 
 const AttendanceReport = () => {
   const { user } = useAuth();
@@ -240,13 +241,13 @@ const exportExcel = async () => {
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
-  XLSX.writeFile(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
+  await saveWorkbook(wb, `attendance-${periodLabel}-${classLabel}.xlsx`);
   setShowExport(false);
   toast.success('✅ Excel downloaded successfully!');
 };
 
 // ===== EXPORT PDF =====
-const exportPDF = () => {
+ const exportPDF = async () => {
   const doc = new jsPDF({ orientation: 'landscape' });
 
   doc.setFontSize(16);
@@ -286,7 +287,7 @@ const exportPDF = () => {
     margin: { left: 14, right: 14 },
   });
 
-  doc.save(`attendance-${periodLabel}-${classLabel}.pdf`);
+  await saveDocument(doc, `attendance-${periodLabel}-${classLabel}.pdf`);
   setShowExport(false);
   toast.success('✅ PDF downloaded successfully!');
 };
