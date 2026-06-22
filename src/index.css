@@ -392,26 +392,31 @@ tbody tr:last-child td { border-bottom: none; }
     max-width: 100%;
   }
   
-  /* ─── GLOBAL RESPONSIVE TABLES ─── */
+ /* ─── GLOBAL RESPONSIVE TABLES ─── */
   
-  /* Remove horizontal scroll containment on mobile */
-  .table-wrapper { overflow-x: visible; }
+  /* Remove horizontal scroll containment on mobile for standard tables */
+  .table-wrapper:not(.keep-desktop-table) { overflow-x: visible; }
   
-  /* Force tables and all elements to act like stacked block cards */
-  table, thead, tbody, th, td, tr { 
+  /* Force normal tables to act like stacked block cards, but EXCLUDE reports */
+  .table-wrapper:not(.keep-desktop-table) table, 
+  .table-wrapper:not(.keep-desktop-table) thead, 
+  .table-wrapper:not(.keep-desktop-table) tbody, 
+  .table-wrapper:not(.keep-desktop-table) th, 
+  .table-wrapper:not(.keep-desktop-table) td, 
+  .table-wrapper:not(.keep-desktop-table) tr { 
     display: block; 
     width: 100%;
   }
   
-  /* Hide the desktop header row entirely on mobile screens */
-  thead tr { 
+  /* Hide the desktop header row entirely on standard mobile views */
+  .table-wrapper:not(.keep-desktop-table) thead tr { 
     position: absolute;
     top: -9999px;
     left: -9999px;
   }
   
-  /* Convert every row into an isolated, clean vertical card */
-  tbody tr { 
+  /* Convert standard table rows into separate cards */
+  .table-wrapper:not(.keep-desktop-table) tbody tr { 
     background: var(--card-bg);
     border: 1px solid var(--border) !important;
     border-radius: 10px;
@@ -420,32 +425,50 @@ tbody tr:last-child td { border-bottom: none; }
     box-shadow: var(--shadow);
   }
   
-  /* Keep background consistent when tapping a row card */
-  tbody tr:hover { background: var(--card-bg); }
+  .table-wrapper:not(.keep-desktop-table) tbody tr:hover { background: var(--card-bg); }
   
-  /* Structure the cells to stack up-and-down with breathing room */
-  td { 
+  /* Structure the standard cells to stack up-and-down */
+  .table-wrapper:not(.keep-desktop-table) td { 
     display: flex;
-    justify-content: space-between; /* Keeps titles left, actions/data right */
+    justify-content: space-between; 
     align-items: center;
     text-align: right;
     padding: 8px 14px;
-    border-bottom: 1px dashed #f1f5f9; /* Subtle divider lines inside the card */
+    border-bottom: 1px dashed #f1f5f9; 
     font-size: 13px;
   }
   
-  /* Clean up the last item in the card */
-  td:last-child { 
+  .table-wrapper:not(.keep-desktop-table) td:last-child { 
     border-bottom: none; 
   }
 
-  /* Make sure actions, badge buttons, and texts align smoothly */
-  td .btn, td .badge {
+  .table-wrapper:not(.keep-desktop-table) td .btn, 
+  .table-wrapper:not(.keep-desktop-table) td .badge {
     margin: 2px 0;
   }
 
   /* Buttons in tables */
   .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* FORCE EXCLUDED REPORT TABLES TO KEEP PREVIOUS HORIZONTAL SCROLL */
+  .keep-desktop-table {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  .keep-desktop-table table {
+    display: table !important;
+    width: max-content !important; 
+    min-width: 100%;
+  }
+  .keep-desktop-table thead { display: table-header-group !important; }
+  .keep-desktop-table tbody { display: table-row-group !important; }
+  .keep-desktop-table tr { display: table-row !important; }
+  .keep-desktop-table th, .keep-desktop-table td { 
+    display: table-cell !important; 
+    width: auto !important;
+    text-align: left !important;
+  }
 }
 
 @media (max-width: 480px) {
