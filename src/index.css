@@ -401,11 +401,66 @@ tbody tr:last-child td { border-bottom: none; }
     max-width: 100%;
   }
 
-  /* Table scroll */
+  /* Table scroll
   .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* Buttons in tables */
-  .btn-sm { padding: 4px 8px; font-size: 11px; }
+  /* .btn-sm { padding: 4px 8px; font-size: 11px; } */ */
+  
+  /* ─── GLOBAL RESPONSIVE TABLES ─── */
+  
+  /* Remove horizontal scroll containment on mobile */
+  .table-wrapper { overflow-x: visible; }
+  
+  /* Force tables and all elements to act like stacked block cards */
+  table, thead, tbody, th, td, tr { 
+    display: block; 
+    width: 100%;
+  }
+  
+  /* Hide the desktop header row entirely on mobile screens */
+  thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  /* Convert every row into an isolated, clean vertical card */
+  tbody tr { 
+    background: var(--card-bg);
+    border: 1px solid var(--border) !important;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    padding: 8px 4px;
+    box-shadow: var(--shadow);
+  }
+  
+  /* Keep background consistent when tapping a row card */
+  tbody tr:hover { background: var(--card-bg); }
+  
+  /* Structure the cells to stack up-and-down with breathing room */
+  td { 
+    display: flex;
+    justify-content: space-between; /* Keeps titles left, actions/data right */
+    align-items: center;
+    text-align: right;
+    padding: 8px 14px;
+    border-bottom: 1px dashed #f1f5f9; /* Subtle divider lines inside the card */
+    font-size: 13px;
+  }
+  
+  /* Clean up the last item in the card */
+  td:last-child { 
+    border-bottom: none; 
+  }
+
+  /* Make sure actions, badge buttons, and texts align smoothly */
+  td .btn, td .badge {
+    margin: 2px 0;
+  }
+
+  /* Buttons in tables */
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
 }
 
 @media (max-width: 480px) {
