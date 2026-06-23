@@ -19,6 +19,9 @@ const AttendanceReport = () => {
   const [loading, setLoading] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
+  
+  // New state for local filtering
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [filters, setFilters] = useState({
     from_month: new Date().getMonth() + 1,
@@ -107,7 +110,7 @@ const AttendanceReport = () => {
     if (status === 'absent') return '#ef4444';
     if (status === 'late') return '#f59e0b';
     if (status === 'halfday') return '#8b5cf6';
-    return '#cbd5e1'; // light slate for unmarked days
+    return '#cbd5e1'; 
   };
 
   const getDailyPresentCount = (day) => {
@@ -138,10 +141,22 @@ const AttendanceReport = () => {
   };
 
   const getAveragePresentDays = () => {
-    if (!rawData.length) return 0;
-    const totalPresent = rawData.reduce((acc, row) => acc + (row.present_days || 0), 0);
-    return Math.round(totalPresent / rawData.length);
+    if (!filteredData.length) return 0;
+    const totalPresent = filteredData.reduce((acc, row) => acc + (row.present_days || 0), 0);
+    return Math.round(totalPresent / filteredData.length);
   };
+
+  // Real-time calculation filtering by Name or Roll No / ID
+  const filteredData = rawData.filter(row => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    
+    const nameMatch = (row.full_name || '').toLowerCase().includes(query);
+    const rollNoMatch = row.roll_no ? String(row.roll_no).toLowerCase().includes(query) : false;
+    const idMatch = row.id ? String(row.id).toLowerCase().includes(query) : false;
+    
+    return nameMatch || rollNoMatch || idMatch;
+  });
 
   // ===== EXPORT EXCEL =====
   const exportExcel = async () => {
@@ -172,7 +187,7 @@ const AttendanceReport = () => {
         return monthDailyData[String(personId)]?.[dateKey] || monthDailyData[personId]?.[dateKey] || null;
       };
 
-      const monthData = [...rawData].sort((a, b) => {
+      const monthData = [...filteredData].sort((a, b) => {
         const classCompare = (a.class_name || '').localeCompare(b.class_name || '');
         if (classCompare !== 0) return classCompare;
         return (a.full_name || '').localeCompare(b.full_name || '');
@@ -247,7 +262,7 @@ const AttendanceReport = () => {
     doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 29);
 
     const headers = ['No.', 'Name', ...dayNumbers.map(String), 'P', 'A', 'L', 'H', '%'];
-    const body = rawData.map((row, i) => [
+    const body = filteredData.map((row, i) => [
       i + 1,
       row.full_name,
       ...dayNumbers.map(day => getStatusLabel(getStatus(row.id, day))),
@@ -352,7 +367,7 @@ const AttendanceReport = () => {
       <div className="page-header">
         <div>
           <h1>Attendance Report</h1>
-          <p>{rawData.length} records • {periodLabel} • {classLabel}</p>
+          <p>{filteredData.length} records • {periodLabel} • {classLabel}</p>
         </div>
         <div className="dropdown-export">
           <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>
@@ -376,8 +391,22 @@ const AttendanceReport = () => {
         </div>
       </div>
 
-      <div style={{background:'#fff', padding:'14px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
-        <div style={{display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center'}}>
+      {/* Filters Form Panel Block */}
+      <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
+        <div style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'center'}}>
+          
+          {/* SEARCH FIELD ADDITION */}
+          <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
+            <input 
+              type="text" 
+              className="form-control" 
+              placeholder="🔍 Search name or roll no..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{width:'100%', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'14px'}}
+            />
+          </div>
+
           <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
             <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>FROM</span>
             <select className="form-control" value={filters.from_month} onChange={e => setFilters({...filters, from_month: parseInt(e.target.value)})}>
@@ -447,7 +476,7 @@ const AttendanceReport = () => {
               
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
                 <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
-                  <div style={{fontSize:'22px', fontWeight:'800'}}>{rawData.length}</div>
+                  <div style={{fontSize:'22px', fontWeight:'800'}}>{filteredData.length}</div>
                   <div style={{fontSize:'12px', opacity:0.85}}>Total students</div>
                 </div>
                 <div>
@@ -457,14 +486,16 @@ const AttendanceReport = () => {
               </div>
             </div>
 
-            {rawData.map((row, i) => {
+            {filteredData.map((row, i) => {
               const pct = getPercentage(row);
               return (
                 <div key={row.id || i} className="mobile-card-container">
                   <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
                     <div>
                       <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>{row.full_name}</h3>
-                      <span style={{fontSize:'11px', opacity:0.75}}>{row.class_name || classLabel}</span>
+                      <span style={{fontSize:'11px', opacity:0.75}}>
+                        {row.roll_no ? `Roll No: ${row.roll_no} • ` : ''}{row.class_name || classLabel}
+                      </span>
                     </div>
                     <div style={{background:'rgba(255,255,255,0.2)', padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'800'}}>
                       {pct}%
@@ -518,6 +549,12 @@ const AttendanceReport = () => {
               );
             })}
 
+            {filteredData.length === 0 && (
+              <div style={{padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:'12px'}}>
+                <p>No students match your search filter.</p>
+              </div>
+            )}
+
             <div style={{display:'flex', justifyContent:'space-around', padding:'12px', background:'#fff', borderRadius:'12px', border:'1px solid #e2e8f0', marginTop:'14px'}}>
               <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#3b82f6'}}/><span style={{fontSize:'12px'}}>Present</span></div>
               <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#ef4444'}}/><span style={{fontSize:'12px'}}>Absent</span></div>
@@ -543,9 +580,9 @@ const AttendanceReport = () => {
 
             <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'16px'}}>
               {[
-                { label:'Total People', value: rawData.length, color:'#1e40af', icon:'👥' },
-                { label:'Avg Present', value: rawData.length ? Math.round(rawData.reduce((a,r) => a + (r.present_days||0), 0) / rawData.length) : 0, color:'#10b981', icon:'✅' },
-                { label:'Avg Absent', value: rawData.length ? Math.round(rawData.reduce((a,r) => a + (r.absent_days||0), 0) / rawData.length) : 0, color:'#ef4444', icon:'❌' },
+                { label:'Total People', value: filteredData.length, color:'#1e40af', icon:'👥' },
+                { label:'Avg Present', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.present_days||0), 0) / filteredData.length) : 0, color:'#10b981', icon:'✅' },
+                { label:'Avg Absent', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.absent_days||0), 0) / filteredData.length) : 0, color:'#ef4444', icon:'❌' },
                 { label:'Working Days', value: daysInMonth, color:'#f59e0b', icon:'📅' },
               ].map(s => (
                 <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'14px 16px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
@@ -594,14 +631,16 @@ const AttendanceReport = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rawData.map((row, i) => {
+                    {filteredData.map((row, i) => {
                       const pct = getPercentage(row);
                       return (
                         <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
                           <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontWeight:'600'}}>{i + 1}</td>
                           <td style={{padding:'10px', whiteSpace:'nowrap'}}>
                             <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>{row.full_name}</div>
-                            {row.class_name && <div style={{fontSize:'10px', color:'#94a3b8'}}>{row.class_name}</div>}
+                            <div style={{fontSize:'10px', color:'#94a3b8'}}>
+                              {row.roll_no ? `Roll No: ${row.roll_no}` : row.class_name || ''}
+                            </div>
                           </td>
                           {dayNumbers.map(day => {
                             const status = getStatus(row.id, day);
@@ -609,7 +648,7 @@ const AttendanceReport = () => {
                             return (
                               <td key={day} style={{padding:'4px 2px', textAlign:'center'}}>
                                 {status ? (
-                                  <div style={{width:'9px', height:'9px', borderRadius:'50%', background:color, margin:'0 auto'}} title={status} />
+                                  <div style={{width:'9px', height:'9px', borderRadius:'50%', background:color, margin:'0 auto划分'}} title={status} />
                                 ) : (
                                   <div style={{width:'9px', height:'9px', margin:'0 auto'}} />
                                 )}
