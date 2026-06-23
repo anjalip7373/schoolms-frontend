@@ -107,7 +107,7 @@ const AttendanceReport = () => {
     if (status === 'absent') return '#ef4444';
     if (status === 'late') return '#f59e0b';
     if (status === 'halfday') return '#8b5cf6';
-    return '#cbd5e1'; // default slate color for non-marked or dash values
+    return '#cbd5e1'; // light slate for unmarked days
   };
 
   const getDailyPresentCount = (day) => {
@@ -215,7 +215,6 @@ const AttendanceReport = () => {
         wsData.push([]);
       });
 
-      const ws = XLSX.utils.book_new();
       const wsSheet = XLSX.utils.aoa_to_sheet(wsData);
       wsSheet['!cols'] = [
         { wch: 5 }, { wch: 22 }, { wch: 14 },
@@ -276,13 +275,10 @@ const AttendanceReport = () => {
 
   return (
     <AppLayout title="Attendance Report" subtitle="Monthly day-wise attendance sheet">
-      {/* Styles Injection block to seamlessly support the clean card structures */}
       <style>{`
-        /* Desktop view wrappers default */
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
 
-        /* Media trigger targeted directly up to Tablet sizes */
         @media (max-width: 1024px) {
           .desktop-report-view { display: none !important; }
           .mobile-report-view { display: block !important; }
@@ -328,9 +324,21 @@ const AttendanceReport = () => {
             margin-bottom: 8px;
           }
           .mobile-dot-string {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px 6px;
+            justify-items: center;
+          }
+          .mobile-day-box {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+          }
+          .mobile-day-num {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
           }
           .mobile-day-dot {
             width: 12px;
@@ -368,7 +376,6 @@ const AttendanceReport = () => {
         </div>
       </div>
 
-      {/* Filters Setup */}
       <div style={{background:'#fff', padding:'14px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
         <div style={{display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center'}}>
           <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
@@ -418,16 +425,14 @@ const AttendanceReport = () => {
         </div>
       )}
 
-      {/* Main Core Display Views */}
       {loading ? (
         <div className="loading"><div className="spinner"></div><p>Loading attendance sheet...</p></div>
       ) : showInUI ? (
         <>
           {/* ========================================== */}
-          {/* 1. BRAND NEW ANDROID VIEW (PORTRAIT ONLY)  */}
+          {/* 1. MOBILE ANDROID VIEW (PORTRAIT GRIDS)    */}
           {/* ========================================== */}
           <div className="mobile-report-view">
-            {/* Top Dashboard Summary Header */}
             <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'16px', padding:'20px', marginBottom:'20px', color:'#fff'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                 <div>
@@ -440,7 +445,6 @@ const AttendanceReport = () => {
                 </div>
               </div>
               
-              {/* Primary Header Stats block pairs */}
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
                 <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
                   <div style={{fontSize:'22px', fontWeight:'800'}}>{rawData.length}</div>
@@ -453,12 +457,10 @@ const AttendanceReport = () => {
               </div>
             </div>
 
-            {/* Individual Student Custom Dashboard Map Loop */}
             {rawData.map((row, i) => {
               const pct = getPercentage(row);
               return (
                 <div key={row.id || i} className="mobile-card-container">
-                  {/* Top Header Card Band */}
                   <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
                     <div>
                       <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>{row.full_name}</h3>
@@ -469,7 +471,6 @@ const AttendanceReport = () => {
                     </div>
                   </div>
 
-                  {/* Quantitative Box breakdown strings */}
                   <div className="mobile-grid-stats">
                     <div className="mobile-stat-box" style={{background:'#f0fdf4'}}>
                       <span className="mobile-stat-num" style={{color:'#16a34a'}}>{row.present_days || 0}</span>
@@ -489,11 +490,8 @@ const AttendanceReport = () => {
                     </div>
                   </div>
 
-                  {/* Calendar Row Indicator Array Map Dots */}
                   <div className="mobile-dot-calendar">
                     <div className="mobile-dot-title">Attendance progress</div>
-                    
-                    {/* Visual Progress Bar matching the top right status */}
                     <div style={{width:'100%', height:'8px', background:'#e2e8f0', borderRadius:'10px', overflow:'hidden', marginBottom:'14px'}}>
                       <div style={{width: `${pct}%`, height:'100%', background: pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626', borderRadius:'10px'}} />
                     </div>
@@ -504,12 +502,14 @@ const AttendanceReport = () => {
                         const status = getStatus(row.id, day);
                         const dotColor = getDotColor(status);
                         return (
-                          <div
-                            key={day}
-                            className="mobile-day-dot"
-                            style={{background: dotColor}}
-                            title={`Day ${day}: ${status || 'No record'}`}
-                          />
+                          <div key={day} className="mobile-day-box">
+                            <span className="mobile-day-num">{day}</span>
+                            <div
+                              className="mobile-day-dot"
+                              style={{background: dotColor}}
+                              title={`Day ${day}: ${status || 'No record'}`}
+                            />
+                          </div>
                         );
                       })}
                     </div>
@@ -518,7 +518,6 @@ const AttendanceReport = () => {
               );
             })}
 
-            {/* Bottom Legend Band for Mobile interface */}
             <div style={{display:'flex', justifyContent:'space-around', padding:'12px', background:'#fff', borderRadius:'12px', border:'1px solid #e2e8f0', marginTop:'14px'}}>
               <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#3b82f6'}}/><span style={{fontSize:'12px'}}>Present</span></div>
               <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#ef4444'}}/><span style={{fontSize:'12px'}}>Absent</span></div>
@@ -528,10 +527,9 @@ const AttendanceReport = () => {
           </div>
 
           {/* ========================================== */}
-          {/* 2. ORIGINAL DESKTOP SPREADSHEET TABLE VIEW */}
+          {/* 2. DESKTOP ORIGINAL WIDE OVERVIEW SHEET    */}
           {/* ========================================== */}
           <div className="desktop-report-view">
-            {/* Header Banner */}
             <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'14px', padding:'18px 24px', marginBottom:'16px', color:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
               <div>
                 <h2 style={{fontSize:'20px', fontWeight:'800', margin:0}}>📋 Attendance Sheet</h2>
@@ -543,7 +541,6 @@ const AttendanceReport = () => {
               </div>
             </div>
 
-            {/* Summary Stats Grid */}
             <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'16px'}}>
               {[
                 { label:'Total People', value: rawData.length, color:'#1e40af', icon:'👥' },
@@ -558,7 +555,6 @@ const AttendanceReport = () => {
               ))}
             </div>
 
-            {/* Daily Chart Header bar */}
             <div style={{background:'#fff', borderRadius:'14px', padding:'16px 20px', marginBottom:'16px', border:'1px solid #e2e8f0'}}>
               <div style={{fontSize:'12px', fontWeight:'700', color:'#64748b', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'0.5px'}}>📊 Daily Attendance Status — {periodLabel}</div>
               <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'70px'}}>
@@ -580,7 +576,6 @@ const AttendanceReport = () => {
               </div>
             </div>
 
-            {/* Wide spreadsheet rendering */}
             <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
               <div style={{overflowX:'auto'}}>
                 <table style={{width:'100%', borderCollapse:'collapse', minWidth:'800px'}}>
@@ -648,7 +643,6 @@ const AttendanceReport = () => {
               </div>
             </div>
 
-            {/* Desktop Legend */}
             <div style={{display:'flex', gap:'16px', padding:'12px 16px', background:'#fff', borderRadius:'10px', border:'1px solid #e2e8f0', flexWrap:'wrap', alignItems:'center'}}>
               <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Legend:</span>
               {[
