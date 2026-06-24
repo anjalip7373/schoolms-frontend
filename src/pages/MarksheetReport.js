@@ -19,7 +19,6 @@ const MarksheetReport = () => {
   const [showExport, setShowExport] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Mobile Accordion Toggle State
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
   const currentYear = new Date().getFullYear();
@@ -410,7 +409,7 @@ const MarksheetReport = () => {
         for (const et of examTypes) {
           try {
             const { data } = await API.get('/marks/marksheet', {
-              params: { class_id: filters.class_id, font_type_id: et.id, academic_year: filters.academic_year }
+              params: { class_id: filters.class_id, exam_type_id: et.id, academic_year: filters.academic_year }
             });
             if (!data.length) continue;
             const { rows: etRows, subjects: etSubjects } = buildData(data);
@@ -492,10 +491,11 @@ const MarksheetReport = () => {
   return (
     <AppLayout title="Marksheet Report" subtitle="View and export student marksheets">
       <style>{`
+        /* Breakpoint is increased to 1300px to fully switch wide layouts into cards on landscapes */
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1300px) {
           .desktop-report-view { display: none !important; }
           .mobile-report-view { 
             display: block !important; 
@@ -563,230 +563,233 @@ const MarksheetReport = () => {
         }
       `}</style>
 
-      <div className="page-header">
-        <div>
-          <h1>Marksheet Report</h1>
-          <p>{rows.length} students • {examType || 'Select exam type'} • {filters.academic_year}</p>
+      {/* Strict boundary force container */}
+      <div style={{ width: '100%', overflowX: 'hidden' }}>
+        <div className="page-header">
+          <div>
+            <h1>Marksheet Report</h1>
+            <p>{rows.length} students • {examType || 'Select exam type'} • {filters.academic_year}</p>
+          </div>
+          {(rows.length > 0 || (!isTeacher && !filters.class_id && filters.exam_type_id) || (!isTeacher && filters.class_id)) && (
+            <div className="dropdown-export">
+              <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
+              {showExport && (
+                <div className="dropdown-menu">
+                  <button className="dropdown-item" onClick={exportExcel}>
+                    📊 {!isTeacher && !filters.class_id ? 'Excel — All Classes' : !filters.exam_type_id ? 'Excel — All Exams' : 'Excel (.xlsx)'}
+                  </button>
+                  {(filters.class_id || isTeacher) && filters.exam_type_id && rows.length > 0 && (
+                    <button className="dropdown-item" onClick={exportPDF}>📄 PDF</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        {(rows.length > 0 || (!isTeacher && !filters.class_id && filters.exam_type_id) || (!isTeacher && filters.class_id)) && (
-          <div className="dropdown-export">
-            <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
-            {showExport && (
-              <div className="dropdown-menu">
-                <button className="dropdown-item" onClick={exportExcel}>
-                  📊 {!isTeacher && !filters.class_id ? 'Excel — All Classes' : !filters.exam_type_id ? 'Excel — All Exams' : 'Excel (.xlsx)'}
-                </button>
-                {(filters.class_id || isTeacher) && filters.exam_type_id && rows.length > 0 && (
-                  <button className="dropdown-item" onClick={exportPDF}>📄 PDF</button>
-                )}
-              </div>
+
+        <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
+          <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
+            {!isTeacher && (
+              <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
+                <option value="">All Classes</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             )}
+            <select className="form-control" value={filters.exam_type_id} onChange={e => setFilters({...filters, exam_type_id: e.target.value})}>
+              <option value="">Select Exam Type *</option>
+              {examTypes.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            <select className="form-control" value={filters.academic_year} onChange={e => setFilters({...filters, academic_year: e.target.value})}>
+              {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <button className="btn btn-outline btn-sm" onClick={fetchMarksheet}>🔄 Refresh</button>
+          </div>
+
+          {rows.length > 0 || search ? (
+            <div style={{marginTop:'12px'}}>
+              <input
+                className="form-control"
+                placeholder="🔍 Search by student name or roll no..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{maxWidth:'360px', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1'}}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {loading ? (
+          <div className="loading"><div className="spinner"></div><p>Loading marksheets...</p></div>
+        ) : rows.length > 0 ? (
+          <>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px,1fr))', gap:'12px', marginBottom:'16px'}}>
+              {[
+                { label:'Total', value: allRows.length, color:'#1e40af', icon:'👥' },
+                { label:'Passed', value: allRows.filter(r => r.passed).length, color:'#10b981', icon:'✅' },
+                { label:'Failed', value: allRows.filter(r => !r.passed).length, color:'#ef4444', icon:'❌' },
+                { label:'Average', value: allRows.length ? `${(allRows.reduce((a,r) => a+parseFloat(r.percentage),0)/allRows.length).toFixed(1)}%` : '0%', color:'#f59e0b', icon:'📊' },
+              ].map(s => (
+                <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'12px 14px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
+                  <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
+                  <div style={{fontSize:'22px', fontWeight:'800', color:'#1e293b', marginTop:'4px'}}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ========================================== */}
+            {/* 1. BRAND NEW MOBILE PORTRAIT ACCORDION VIEW*/}
+            {/* ========================================== */}
+            <div className="mobile-report-view">
+              {rows.map((row) => {
+                const isOpen = expandedStudentId === row.id;
+                return (
+                  <div key={row.id} className="mobile-student-card">
+                    <div className="mobile-card-header" onClick={() => toggleStudentCard(row.id)}>
+                      <div className="mobile-header-top">
+                        <h3 className="mobile-header-title">
+                          {row.name} {row.roll_no ? `[${row.roll_no}]` : ''}
+                        </h3>
+                        <span className="mobile-header-badge" style={{
+                          background: row.passed ? '#dcfce7' : '#fee2e2',
+                          color: row.passed ? '#16a34a' : '#dc2626'
+                        }}>
+                          Result: {row.passed ? 'PASS' : 'FAIL'}
+                        </span>
+                      </div>
+                      <div className="mobile-header-stats">
+                        <div>Total: <strong>{row.total}/{row.maxTotal}</strong></div>
+                        <div>%: <strong>{row.percentage}%</strong></div>
+                        <div>Grade: <strong>{row.grade}</strong></div>
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <div className="mobile-collapsible-content">
+                        <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
+                        <div style={{marginBottom:'14px'}}>
+                          {subjects.map(s => {
+                            const m = row.marks[s.id];
+                            const isAbsent = m?.is_absent;
+                            const obtained = m?.obtained;
+                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < s.pass_marks;
+
+                            return (
+                              <div key={s.id} className="mobile-subject-row">
+                                <span className="mobile-subj-name">• {s.name}:</span>
+                                <span className="mobile-subj-score" style={{
+                                  color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
+                                }}>
+                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${s.max_marks}` : '—'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{fontSize:'13px', color:'#475569', marginBottom:'14px'}}>
+                          <strong>Remark:</strong> <span style={{fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || 'No remark added'}</span>
+                        </div>
+
+                        <button
+                          onClick={() => exportSingleStudentPDF(row)}
+                          style={{
+                            width:'100%', background:'#1e40af', color:'#fff', border:'none',
+                            padding:'10px', borderRadius:'8px', fontWeight:'700', fontSize:'13px',
+                            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px'
+                          }}
+                        >
+                          📄 View Full Marksheet
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ========================================== */}
+            {/* 2. ORIGINAL DESKTOP OVERVIEW SPREADSHEET   */}
+            {/* ========================================== */}
+            <div className="desktop-report-view">
+              <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
+                <div style={{overflowX:'auto'}}>
+                  <table style={{width:'100%', borderCollapse:'collapse', minWidth:'700px'}}>
+                    <thead>
+                      <tr style={{background:'#1e40af'}}>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', width:'36px'}}>#</th>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'80px'}}>ROLL NO</th>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'150px'}}>STUDENT NAME</th>
+                        {!isTeacher && <th style={{padding:'11px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'80px'}}>CLASS</th>}
+                        {subjects.map(s => (
+                          <th key={s.id} style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'75px'}}>
+                            {s.name}<br/><span style={{opacity:0.7, fontSize:'9px'}}>/{s.max_marks} (P:{s.pass_marks})</span>
+                          </th>
+                        ))}
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'65px'}}>TOTAL</th>
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'48px'}}>GRADE</th>
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'58px'}}>RESULT</th>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'left', minWidth:'120px'}}>REMARK</th>
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'80px'}}>MARKSHEET</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, i) => (
+                        <tr key={row.id} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                          <td style={{padding:'10px', fontSize:'12px', color:'#64748b', textAlign:'center'}}>{i + 1}</td>
+                          <td style={{padding:'10px'}}>
+                            <code style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'11px'}}>{row.roll_no}</code>
+                          </td>
+                          <td style={{padding:'10px', fontWeight:'700', color:'#1e293b'}}>{row.name}</td>
+                          {!isTeacher && <td style={{padding:'10px', fontSize:'12px', color:'#64748b'}}>{row.class_name}</td>}
+                          {subjects.map(s => {
+                            const m = row.marks[s.id];
+                            const obtained = m?.obtained;
+                            const isAbsent = m?.is_absent;
+                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < s.pass_marks;
+                            return (
+                              <td key={s.id} style={{padding:'8px 6px', textAlign:'center'}}>
+                                {isAbsent ? (
+                                  <span style={{background:'#fef3c7', color:'#d97706', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'800', border:'1px solid #fcd34d'}}>AB</span>
+                                ) : obtained !== undefined ? (
+                                  <span style={{background: failed ? '#fee2e2' : '#f0fdf4', color: failed ? '#dc2626' : '#16a34a', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'700'}}>{obtained}</span>
+                                ) : (
+                                  <span style={{color:'#94a3b8'}}>—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td style={{padding:'10px', textAlign:'center', fontWeight:'800', color:'#1e40af'}}>{row.total}/{row.maxTotal}</td>
+                          <td style={{padding:'10px', textAlign:'center'}}>
+                            <span style={{background: parseFloat(row.percentage) >= 35 ? '#dcfce7' : '#fee2e2', color: parseFloat(row.percentage) >= 35 ? '#16a34a' : '#dc2626', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{row.percentage}%</span>
+                          </td>
+                          <td style={{padding:'10px', textAlign:'center'}}>
+                            <span style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'800'}}>{row.grade}</span>
+                          </td>
+                          <td style={{padding:'10px', textAlign:'center'}}>
+                            <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
+                          </td>
+                          <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || '—'}</td>
+                          <td style={{padding:'8px', textAlign:'center'}}>
+                            <button onClick={() => exportSingleStudentPDF(row)} style={{background:'#1e40af', color:'#fff', border:'none', borderRadius:'6px', padding:'5px 10px', cursor:'pointer', fontSize:'11px', fontWeight:'700', fontFamily:'inherit'}}>📄 Marksheet</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="card">
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <p style={{fontWeight:'700', color:'#1e293b'}}>{isTeacher ? 'Select Exam Type to view your class marksheet' : 'Select Class and Exam Type to view marksheet'}</p>
+            </div>
           </div>
         )}
       </div>
-
-      <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
-        <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
-          {!isTeacher && (
-            <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
-              <option value="">All Classes</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
-          <select className="form-control" value={filters.exam_type_id} onChange={e => setFilters({...filters, exam_type_id: e.target.value})}>
-            <option value="">Select Exam Type *</option>
-            {examTypes.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-          </select>
-          <select className="form-control" value={filters.academic_year} onChange={e => setFilters({...filters, academic_year: e.target.value})}>
-            {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button className="btn btn-outline btn-sm" onClick={fetchMarksheet}>🔄 Refresh</button>
-        </div>
-
-        {rows.length > 0 || search ? (
-          <div style={{marginTop:'12px'}}>
-            <input
-              className="form-control"
-              placeholder="🔍 Search by student name or roll no..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{maxWidth:'360px', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1'}}
-            />
-          </div>
-        ) : null}
-      </div>
-
-      {loading ? (
-        <div className="loading"><div className="spinner"></div><p>Loading marksheets...</p></div>
-      ) : rows.length > 0 ? (
-        <>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px,1fr))', gap:'12px', marginBottom:'16px'}}>
-            {[
-              { label:'Total', value: allRows.length, color:'#1e40af', icon:'👥' },
-              { label:'Passed', value: allRows.filter(r => r.passed).length, color:'#10b981', icon:'✅' },
-              { label:'Failed', value: allRows.filter(r => !r.passed).length, color:'#ef4444', icon:'❌' },
-              { label:'Average', value: allRows.length ? `${(allRows.reduce((a,r) => a+parseFloat(r.percentage),0)/allRows.length).toFixed(1)}%` : '0%', color:'#f59e0b', icon:'📊' },
-            ].map(s => (
-              <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'12px 14px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
-                <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
-                <div style={{fontSize:'22px', fontWeight:'800', color:'#1e293b', marginTop:'4px'}}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* ========================================== */}
-          {/* 1. MOBILE PORTRAIT ACCORDION VIEW          */}
-          {/* ========================================== */}
-          <div className="mobile-report-view">
-            {rows.map((row) => {
-              const isOpen = expandedStudentId === row.id;
-              return (
-                <div key={row.id} className="mobile-student-card">
-                  <div className="mobile-card-header" onClick={() => toggleStudentCard(row.id)}>
-                    <div className="mobile-header-top">
-                      <h3 className="mobile-header-title">
-                        {row.name} {row.roll_no ? `[${row.roll_no}]` : ''}
-                      </h3>
-                      <span className="mobile-header-badge" style={{
-                        background: row.passed ? '#dcfce7' : '#fee2e2',
-                        color: row.passed ? '#16a34a' : '#dc2626'
-                      }}>
-                        Result: {row.passed ? 'PASS' : 'FAIL'}
-                      </span>
-                    </div>
-                    <div className="mobile-header-stats">
-                      <div>Total: <strong>{row.total}/{row.maxTotal}</strong></div>
-                      <div>%: <strong>{row.percentage}%</strong></div>
-                      <div>Grade: <strong>{row.grade}</strong></div>
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <div className="mobile-collapsible-content">
-                      <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
-                      <div style={{marginBottom:'14px'}}>
-                        {subjects.map(s => {
-                          const m = row.marks[s.id];
-                          const isAbsent = m?.is_absent;
-                          const obtained = m?.obtained;
-                          const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < s.pass_marks;
-
-                          return (
-                            <div key={s.id} className="mobile-subject-row">
-                              <span className="mobile-subj-name">• {s.name}:</span>
-                              <span className="mobile-subj-score" style={{
-                                color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
-                              }}>
-                                {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${s.max_marks}` : '—'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{fontSize:'13px', color:'#475569', marginBottom:'14px'}}>
-                        <strong>Remark:</strong> <span style={{fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || 'No remark added'}</span>
-                      </div>
-
-                      <button
-                        onClick={() => exportSingleStudentPDF(row)}
-                        style={{
-                          width:'100%', background:'#1e40af', color:'#fff', border:'none',
-                          padding:'10px', borderRadius:'8px', fontWeight:'700', fontSize:'13px',
-                          display:'flex', alignItems:'center', justifyContent:'center', gap:'6px'
-                        }}
-                      >
-                        📄 View Full Marksheet
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ========================================== */}
-          {/* 2. ORIGINAL DESKTOP OVERVIEW SPREADSHEET   */}
-          {/* ========================================== */}
-          <div className="desktop-report-view">
-            <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
-              <div style={{overflowX:'auto'}}>
-                <table style={{width:'100%', borderCollapse:'collapse', minWidth:'700px'}}>
-                  <thead>
-                    <tr style={{background:'#1e40af'}}>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', width:'36px'}}>#</th>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'80px'}}>ROLL NO</th>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'150px'}}>STUDENT NAME</th>
-                      {!isTeacher && <th style={{padding:'11px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'80px'}}>CLASS</th>}
-                      {subjects.map(s => (
-                        <th style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'75px'}}>
-                          {s.name}<br/><span style={{opacity:0.7, fontSize:'9px'}}>/{s.max_marks} (P:{s.pass_marks})</span>
-                        </th>
-                      ))}
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'65px'}}>TOTAL</th>
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'48px'}}>GRADE</th>
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'58px'}}>RESULT</th>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'left', minWidth:'120px'}}>REMARK</th>
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'80px'}}>MARKSHEET</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row, i) => (
-                      <tr key={row.id} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
-                        <td style={{padding:'10px', fontSize:'12px', color:'#64748b', textAlign:'center'}}>{i + 1}</td>
-                        <td style={{padding:'10px'}}>
-                          <code style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'11px'}}>{row.roll_no}</code>
-                        </td>
-                        <td style={{padding:'10px', fontWeight:'700', color:'#1e293b'}}>{row.name}</td>
-                        {!isTeacher && <td style={{padding:'10px', fontSize:'12px', color:'#64748b'}}>{row.class_name}</td>}
-                        {subjects.map(s => {
-                          const m = row.marks[s.id];
-                          const obtained = m?.obtained;
-                          const isAbsent = m?.is_absent;
-                          const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < s.pass_marks;
-                          return (
-                            <td key={s.id} style={{padding:'8px 6px', textAlign:'center'}}>
-                              {isAbsent ? (
-                                <span style={{background:'#fef3c7', color:'#d97706', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'800', border:'1px solid #fcd34d'}}>AB</span>
-                              ) : obtained !== undefined ? (
-                                <span style={{background: failed ? '#fee2e2' : '#f0fdf4', color: failed ? '#dc2626' : '#16a34a', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'700'}}>{obtained}</span>
-                              ) : (
-                                <span style={{color:'#94a3b8'}}>—</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td style={{padding:'10px', textAlign:'center', fontWeight:'800', color:'#1e40af'}}>{row.total}/{row.maxTotal}</td>
-                        <td style={{padding:'10px', textAlign:'center'}}>
-                          <span style={{background: parseFloat(row.percentage) >= 35 ? '#dcfce7' : '#fee2e2', color: parseFloat(row.percentage) >= 35 ? '#16a34a' : '#dc2626', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{row.percentage}%</span>
-                        </td>
-                        <td style={{padding:'10px', textAlign:'center'}}>
-                          <span style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'800'}}>{row.grade}</span>
-                        </td>
-                        <td style={{padding:'10px', textAlign:'center'}}>
-                          <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
-                        </td>
-                        <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || '—'}</td>
-                        <td style={{padding:'8px', textAlign:'center'}}>
-                          <button onClick={() => exportSingleStudentPDF(row)} style={{background:'#1e40af', color:'#fff', border:'none', borderRadius:'6px', padding:'5px 10px', cursor:'pointer', fontSize:'11px', fontWeight:'700', fontFamily:'inherit'}}>📄 Marksheet</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="card">
-          <div className="empty-state">
-            <div className="empty-icon">📋</div>
-            <p style={{fontWeight:'700', color:'#1e293b'}}>{isTeacher ? 'Select Exam Type to view your class marksheet' : 'Select Class and Exam Type to view marksheet'}</p>
-          </div>
-        </div>
-      )}
     </AppLayout>
   );
 };

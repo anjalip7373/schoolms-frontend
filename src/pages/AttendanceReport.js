@@ -287,10 +287,11 @@ const AttendanceReport = () => {
   return (
     <AppLayout title="Attendance Report" subtitle="Monthly day-wise attendance sheet">
       <style>{`
+        /* Breakpoint is increased to 1300px to fully match Tablet landscape widths */
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1300px) {
           .desktop-report-view { display: none !important; }
           .mobile-report-view { 
             display: block !important; 
@@ -367,338 +368,343 @@ const AttendanceReport = () => {
         }
       `}</style>
 
-      <div className="page-header">
-        <div>
-          <h1>Attendance Report</h1>
-          <p>{filteredData.length} records • {periodLabel} • {classLabel}</p>
-        </div>
-        <div className="dropdown-export">
-          <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>
-            📤 Export ▾
-          </button>
-          {showExport && (
-            <div className="dropdown-menu">
-              <button className="dropdown-item" onClick={exportExcel}>📊 Excel (.xlsx)</button>
-              <button
-                className="dropdown-item"
-                onClick={showInUI ? exportPDF : () => toast.error('PDF only available for single month + single class')}
-                style={{
-                  opacity: showInUI ? 1 : 0.4,
-                  cursor: showInUI ? 'pointer' : 'not-allowed',
-                  color: showInUI ? '' : '#94a3b8'
-                }}>
-                📄 PDF {!showInUI && '(Select 1 month + 1 class)'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
-        <div style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'center'}}>
-          <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="🔍 Search name or roll no..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{width:'100%', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'14px'}}
-            />
+      {/* Main Wrapper forcing layout container boundaries */}
+      <div style={{ width: '100%', overflowX: 'hidden' }}>
+        <div className="page-header">
+          <div>
+            <h1>Attendance Report</h1>
+            <p>{filteredData.length} records • {periodLabel} • {classLabel}</p>
           </div>
-
-          <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-            <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>FROM</span>
-            <select className="form-control" value={filters.from_month} onChange={e => setFilters({...filters, from_month: parseInt(e.target.value)})}>
-              {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-            </select>
-            <select className="form-control" value={filters.from_year} onChange={e => setFilters({...filters, from_year: parseInt(e.target.value)})}>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-            <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>TO</span>
-            <select className="form-control" value={filters.to_month} onChange={e => setFilters({...filters, to_month: parseInt(e.target.value)})}>
-              {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-            </select>
-            <select className="form-control" value={filters.to_year} onChange={e => setFilters({...filters, to_year: parseInt(e.target.value)})}>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          {!isTeacher && (
-            <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
-              <option value="">All Classes</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
-          {!isTeacher && (
-            <div style={{display:'flex', gap:'6px'}}>
-              <button className={"btn btn-sm " + (filters.person_type === 'student' ? 'btn-primary' : 'btn-outline')}
-                onClick={() => setFilters({...filters, person_type: 'student'})}>👨‍🎓 Students</button>
-              {canSeeEmployees && (
-                <button className={"btn btn-sm " + (filters.person_type === 'employee' ? 'btn-primary' : 'btn-outline')}
-                  onClick={() => setFilters({...filters, person_type: 'employee'})}>👨‍💼 Employees</button>
-              )}
-            </div>
-          )}
-          <button className="btn btn-outline btn-sm" onClick={fetchReport}>🔄 Refresh</button>
-        </div>
-      </div>
-
-      {showDownloadPopup && (
-        <div style={{background:'linear-gradient(135deg, #fef3c7, #fff7ed)', border:'2px solid #f59e0b', borderRadius:'16px', padding:'32px', textAlign:'center', marginBottom:'20px'}}>
-          <div style={{fontSize:'52px', marginBottom:'12px'}}>📊</div>
-          <h2 style={{fontSize:'20px', fontWeight:'800', color:'#92400e'}}>Large Dataset Selected</h2>
-          <p style={{color:'#78350f', marginBottom:'20px'}}>Please use the Export Excel button to fetch full logs.</p>
-          <button className="btn btn-primary" onClick={exportExcel}>📊 Download Excel Report</button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading"><div className="spinner"></div><p>Loading attendance sheet...</p></div>
-      ) : showInUI ? (
-        <>
-          {/* ========================================== */}
-          {/* 1. MOBILE ANDROID VIEW (PORTRAIT GRIDS)    */}
-          {/* ========================================== */}
-          <div className="mobile-report-view">
-            <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'16px', padding:'20px', marginBottom:'20px', color:'#fff'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                <div>
-                  <h2 style={{fontSize:'22px', fontWeight:'800', margin:0}}>Attendance Sheet</h2>
-                  <p style={{margin:'2px 0 0', opacity:0.85, fontSize:'13px'}}>{classLabel} • {filters.person_type === 'student' ? 'Students' : 'Employees'} • {fullMonths[filters.from_month - 1]} {filters.from_year}</p>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:'24px', fontWeight:'800'}}>{shortMonths[filters.from_month - 1]}</div>
-                  <div style={{fontSize:'12px', opacity:0.7}}>{filters.from_year}</div>
-                </div>
-              </div>
-              
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
-                <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
-                  <div style={{fontSize:'22px', fontWeight:'800'}}>{filteredData.length}</div>
-                  <div style={{fontSize:'12px', opacity:0.85}}>Total students</div>
-                </div>
-                <div>
-                  <div style={{fontSize:'22px', fontWeight:'800'}}>{getAveragePresentDays()}</div>
-                  <div style={{fontSize:'12px', opacity:0.85}}>Avg present days</div>
-                </div>
-              </div>
-            </div>
-
-            {filteredData.map((row, i) => {
-              const pct = getPercentage(row);
-              return (
-                <div key={row.id || i} className="mobile-card-container">
-                  <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
-                    <div>
-                      <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>{row.full_name}</h3>
-                      <span style={{fontSize:'11px', opacity:0.75}}>
-                        {row.roll_no ? `Roll No: ${row.roll_no} • ` : ''}{row.class_name || classLabel}
-                      </span>
-                    </div>
-                    <div style={{background:'rgba(255,255,255,0.2)', padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'800'}}>
-                      {pct}%
-                    </div>
-                  </div>
-
-                  <div className="mobile-grid-stats">
-                    <div className="mobile-stat-box" style={{background:'#f0fdf4'}}>
-                      <span className="mobile-stat-num" style={{color:'#16a34a'}}>{row.present_days || 0}</span>
-                      <span className="mobile-stat-lbl">Present</span>
-                    </div>
-                    <div className="mobile-stat-box" style={{background:'#fef2f2'}}>
-                      <span className="mobile-stat-num" style={{color:'#dc2626'}}>{row.absent_days || 0}</span>
-                      <span className="mobile-stat-lbl">Absent</span>
-                    </div>
-                    <div className="mobile-stat-box" style={{background:'#fffbeb'}}>
-                      <span className="mobile-stat-num" style={{color:'#d97706'}}>{row.late_days || 0}</span>
-                      <span className="mobile-stat-lbl">Late</span>
-                    </div>
-                    <div className="mobile-stat-box" style={{background:'#f5f3ff'}}>
-                      <span className="mobile-stat-num" style={{color:'#7c3aed'}}>{row.halfday_days || 0}</span>
-                      <span className="mobile-stat-lbl">Half day</span>
-                    </div>
-                  </div>
-
-                  <div className="mobile-dot-calendar">
-                    <div className="mobile-dot-title">Attendance progress</div>
-                    <div style={{width:'100%', height:'8px', background:'#e2e8f0', borderRadius:'10px', overflow:'hidden', marginBottom:'14px'}}>
-                      <div style={{width: `${pct}%`, height:'100%', background: pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626', borderRadius:'10px'}} />
-                    </div>
-
-                    <div className="mobile-dot-title">Day-by-day ({shortMonths[filters.from_month - 1]})</div>
-                    <div className="mobile-dot-string">
-                      {dayNumbers.map(day => {
-                        const status = getStatus(row.id, day);
-                        const dotColor = getDotColor(status);
-                        return (
-                          <div key={day} className="mobile-day-box">
-                            <span className="mobile-day-num">{day}</span>
-                            <div
-                              className="mobile-day-dot"
-                              style={{background: dotColor}}
-                              title={`Day ${day}: ${status || 'No record'}`}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {filteredData.length === 0 && (
-              <div style={{padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:'12px'}}>
-                <p>No students match your search filter.</p>
+          <div className="dropdown-export">
+            <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>
+              📤 Export ▾
+            </button>
+            {showExport && (
+              <div className="dropdown-menu">
+                <button className="dropdown-item" onClick={exportExcel}>📊 Excel (.xlsx)</button>
+                <button
+                  className="dropdown-item"
+                  onClick={showInUI ? exportPDF : () => toast.error('PDF only available for single month + single class')}
+                  style={{
+                    opacity: showInUI ? 1 : 0.4,
+                    cursor: showInUI ? 'pointer' : 'not-allowed',
+                    color: showInUI ? '' : '#94a3b8'
+                  }}>
+                  📄 PDF {!showInUI && '(Select 1 month + 1 class)'}
+                </button>
               </div>
             )}
-
-            <div style={{display:'flex', justifyContent:'space-around', padding:'12px', background:'#fff', borderRadius:'12px', border:'1px solid #e2e8f0', marginTop:'14px'}}>
-              <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#3b82f6'}}/><span style={{fontSize:'12px'}}>Present</span></div>
-              <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#ef4444'}}/><span style={{fontSize:'12px'}}>Absent</span></div>
-              <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#f59e0b'}}/><span style={{fontSize:'12px'}}>Late</span></div>
-              <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#8b5cf6'}}/><span style={{fontSize:'12px'}}>Half Day</span></div>
-            </div>
           </div>
+        </div>
 
-          {/* ========================================== */}
-          {/* 2. DESKTOP ORIGINAL WIDE OVERVIEW SHEET    */}
-          {/* ========================================== */}
-          <div className="desktop-report-view">
-            <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'14px', padding:'18px 24px', marginBottom:'16px', color:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-              <div>
-                <h2 style={{fontSize:'20px', fontWeight:'800', margin:0}}>📋 Attendance Sheet</h2>
-                <p style={{margin:'4px 0 0', opacity:0.85, fontSize:'13px'}}>{classLabel} • {filters.person_type === 'student' ? 'Students' : 'Employees'} • {periodLabel}</p>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'24px', fontWeight:'800'}}>{fullMonths[filters.from_month - 1]}</div>
-                <div style={{fontSize:'13px', opacity:0.8}}>{filters.from_year}</div>
-              </div>
+        <div style={{background:'#fff', padding:'14px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
+          <div style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'center'}}>
+            <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="🔍 Search name or roll no..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{width:'100%', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'14px'}}
+              />
             </div>
 
-            <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'16px'}}>
-              {[
-                { label:'Total People', value: filteredData.length, color:'#1e40af', icon:'👥' },
-                { label:'Avg Present', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.present_days||0), 0) / filteredData.length) : 0, color:'#10b981', icon:'✅' },
-                { label:'Avg Absent', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.absent_days||0), 0) / filteredData.length) : 0, color:'#ef4444', icon:'❌' },
-                { label:'Working Days', value: daysInMonth, color:'#f59e0b', icon:'📅' },
-              ].map(s => (
-                <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'14px 16px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
-                  <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
-                  <div style={{fontSize:'26px', fontWeight:'800', color:'#1e293b', lineHeight:1.2, marginTop:'4px'}}>{s.value}</div>
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>FROM</span>
+              <select className="form-control" value={filters.from_month} onChange={e => setFilters({...filters, from_month: parseInt(e.target.value)})}>
+                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+              </select>
+              <select className="form-control" value={filters.from_year} onChange={e => setFilters({...filters, from_year: parseInt(e.target.value)})}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>TO</span>
+              <select className="form-control" value={filters.to_month} onChange={e => setFilters({...filters, to_month: parseInt(e.target.value)})}>
+                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+              </select>
+              <select className="form-control" value={filters.to_year} onChange={e => setFilters({...filters, to_year: parseInt(e.target.value)})}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            {!isTeacher && (
+              <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
+                <option value="">All Classes</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+            {!isTeacher && (
+              <div style={{display:'flex', gap:'6px'}}>
+                <button className={"btn btn-sm " + (filters.person_type === 'student' ? 'btn-primary' : 'btn-outline')}
+                  onClick={() => setFilters({...filters, person_type: 'student'})}>👨‍🎓 Students</button>
+                {canSeeEmployees && (
+                  <button className={"btn btn-sm " + (filters.person_type === 'employee' ? 'btn-primary' : 'btn-outline')}
+                    onClick={() => setFilters({...filters, person_type: 'employee'})}>👨‍💼 Employees</button>
+                )}
+              </div>
+            )}
+            <button className="btn btn-outline btn-sm" onClick={fetchReport}>🔄 Refresh</button>
+          </div>
+        </div>
+
+        {showDownloadPopup && (
+          <div style={{background:'linear-gradient(135deg, #fef3c7, #fff7ed)', border:'2px solid #f59e0b', borderRadius:'16px', padding:'32px', textAlign:'center', marginBottom:'20px'}}>
+            <div style={{fontSize:'52px', marginBottom:'12px'}}>📊</div>
+            <h2 style={{fontSize:'20px', fontWeight:'800', color:'#92400e'}}>Large Dataset Selected</h2>
+            <p style={{color:'#78350f', marginBottom:'20px'}}>Please use the Export Excel button to fetch full logs.</p>
+            <button className="btn btn-primary" onClick={exportExcel}>📊 Download Excel Report</button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="loading"><div className="spinner"></div><p>Loading attendance sheet...</p></div>
+        ) : showInUI ? (
+          <>
+            {/* ========================================== */}
+            {/* 1. MOBILE ANDROID VIEW (PORTRAIT GRIDS)    */}
+            {/* ========================================== */}
+            <div className="mobile-report-view">
+              <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'16px', padding:'20px', marginBottom:'20px', color:'#fff'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <div>
+                    <h2 style={{fontSize:'22px', fontWeight:'800', margin:0}}>Attendance Sheet</h2>
+                    <p style={{margin:'2px 0 0', opacity:0.85, fontSize:'13px'}}>{classLabel} • {filters.person_type === 'student' ? 'Students' : 'Employees'} • {fullMonths[filters.from_month - 1]} {filters.from_year}</p>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:'24px', fontWeight:'800'}}>{shortMonths[filters.from_month - 1]}</div>
+                    <div style={{fontSize:'12px', opacity:0.7}}>{filters.from_year}</div>
+                  </div>
                 </div>
-              ))}
-            </div>
+                
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
+                  <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
+                    <div style={{fontSize:'22px', fontWeight:'800'}}>{filteredData.length}</div>
+                    <div style={{fontSize:'12px', opacity:0.85}}>Total students</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:'22px', fontWeight:'800'}}>{getAveragePresentDays()}</div>
+                    <div style={{fontSize:'12px', opacity:0.85}}>Avg present days</div>
+                  </div>
+                </div>
+              </div>
 
-            <div style={{background:'#fff', borderRadius:'14px', padding:'16px 20px', marginBottom:'16px', border:'1px solid #e2e8f0'}}>
-              <div style={{fontSize:'12px', fontWeight:'700', color:'#64748b', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'0.5px'}}>📊 Daily Attendance Status — {periodLabel}</div>
-              <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'70px'}}>
-                {dayNumbers.map(day => {
-                  const count = getDailyPresentCount(day);
-                  const heightPct = maxDailyCount > 0 ? (count / maxDailyCount) : 0;
-                  return (
-                    <div key={day} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', minWidth:'3px'}}>
-                      <div style={{
-                        width:'100%', borderRadius:'3px 3px 0 0',
-                        background: count > 0 ? '#3b82f6' : '#e2e8f0',
-                        height:`${Math.max(heightPct * 55, count > 0 ? 8 : 3)}px`,
-                        transition:'height 0.3s ease'
-                      }} title={`Day ${day}: ${count} present`} />
-                      <span style={{fontSize:'8px', color:'#94a3b8'}}>{day}</span>
+              {filteredData.map((row, i) => {
+                const pct = getPercentage(row);
+                return (
+                  <div key={row.id || i} className="mobile-card-container">
+                    <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
+                      <div>
+                        <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>{row.full_name}</h3>
+                        <span style={{fontSize:'11px', opacity:0.75}}>
+                          {row.roll_no ? `Roll No: ${row.roll_no} • ` : ''}{row.class_name || classLabel}
+                        </span>
+                      </div>
+                      <div style={{background:'rgba(255,255,255,0.2)', padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'800'}}>
+                        {pct}%
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
-              <div style={{overflowX:'auto'}}>
-                <table style={{width:'100%', borderCollapse:'collapse', minWidth:'800px'}}>
-                  <thead>
-                    <tr style={{background:'#1e40af'}}>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'40px'}}>NO.</th>
-                      <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'130px'}}>NAME</th>
-                      {dayNumbers.map(d => (
-                        <th key={d} style={{padding:'8px 2px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', width:'22px', minWidth:'22px'}}>{d}</th>
-                      ))}
-                      <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>P</th>
-                      <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>A</th>
-                      <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>L</th>
-                      <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>H</th>
-                      <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredData.map((row, i) => {
-                      const pct = getPercentage(row);
-                      return (
-                        <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
-                          <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontWeight:'600'}}>{i + 1}</td>
-                          <td style={{padding:'10px', whiteSpace:'nowrap'}}>
-                            <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>{row.full_name}</div>
-                            <div style={{fontSize:'10px', color:'#94a3b8'}}>
-                              {row.roll_no ? `Roll No: ${row.roll_no}` : row.class_name || ''}
+                    <div className="mobile-grid-stats">
+                      <div className="mobile-stat-box" style={{background:'#f0fdf4'}}>
+                        <span className="mobile-stat-num" style={{color:'#16a34a'}}>{row.present_days || 0}</span>
+                        <span className="mobile-stat-lbl">Present</span>
+                      </div>
+                      <div className="mobile-stat-box" style={{background:'#fef2f2'}}>
+                        <span className="mobile-stat-num" style={{color:'#dc2626'}}>{row.absent_days || 0}</span>
+                        <span className="mobile-stat-lbl">Absent</span>
+                      </div>
+                      <div className="mobile-stat-box" style={{background:'#fffbeb'}}>
+                        <span className="mobile-stat-num" style={{color:'#d97706'}}>{row.late_days || 0}</span>
+                        <span className="mobile-stat-lbl">Late</span>
+                      </div>
+                      <div className="mobile-grid-stats" style={{background:'#f5f3ff', borderBottom:'none', width:'100%'}}>
+                        <div className="mobile-stat-box" style={{width:'100%'}}>
+                          <span className="mobile-stat-num" style={{color:'#7c3aed'}}>{row.halfday_days || 0}</span>
+                          <span className="mobile-stat-lbl">Half day</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mobile-dot-calendar">
+                      <div className="mobile-dot-title">Attendance progress</div>
+                      <div style={{width:'100%', height:'8px', background:'#e2e8f0', borderRadius:'10px', overflow:'hidden', marginBottom:'14px'}}>
+                        <div style={{width: `${pct}%`, height:'100%', background: pct >= 75 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626', borderRadius:'10px'}} />
+                      </div>
+
+                      <div className="mobile-dot-title">Day-by-day ({shortMonths[filters.from_month - 1]})</div>
+                      <div className="mobile-dot-string">
+                        {dayNumbers.map(day => {
+                          const status = getStatus(row.id, day);
+                          const dotColor = getDotColor(status);
+                          return (
+                            <div key={day} className="mobile-day-box">
+                              <span className="mobile-day-num">{day}</span>
+                              <div
+                                className="mobile-day-dot"
+                                style={{background: dotColor}}
+                                title={`Day ${day}: ${status || 'No record'}`}
+                              />
                             </div>
-                          </td>
-                          {dayNumbers.map(day => {
-                            const status = getStatus(row.id, day);
-                            const color = getDotColor(status);
-                            return (
-                              <td key={day} style={{padding:'4px 2px', textAlign:'center'}}>
-                                {status ? (
-                                  <div style={{width:'9px', height:'9px', borderRadius:'50%', background:color, margin:'0 auto划分'}} title={status} />
-                                ) : (
-                                  <div style={{width:'9px', height:'9px', margin:'0 auto'}} />
-                                )}
-                              </td>
-                            );
-                          })}
-                          <td style={{padding:'8px 4px', textAlign:'center'}}>
-                            <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.present_days || 0}</span>
-                          </td>
-                          <td style={{padding:'8px 4px', textAlign:'center'}}>
-                            <span style={{background:'#fee2e2', color:'#dc2626', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.absent_days || 0}</span>
-                          </td>
-                          <td style={{padding:'8px 4px', textAlign:'center'}}>
-                            <span style={{background:'#fef3c7', color:'#d97706', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.late_days || 0}</span>
-                          </td>
-                          <td style={{padding:'8px 4px', textAlign:'center'}}>
-                            <span style={{background:'#ede9fe', color:'#7c3aed', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.halfday_days || 0}</span>
-                          </td>
-                          <td style={{padding:'8px 4px', textAlign:'center'}}>
-                            <span style={{
-                              background: pct >= 75 ? '#dcfce7' : pct >= 50 ? '#fef3c7' : '#fee2e2',
-                              color: pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626',
-                              padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'
-                            }}>{pct}%</span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredData.length === 0 && (
+                <div style={{padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:'12px'}}>
+                  <p>No students match your search filter.</p>
+                </div>
+              )}
+
+              <div style={{display:'flex', justifyContent:'space-around', padding:'12px', background:'#fff', borderRadius:'12px', border:'1px solid #e2e8f0', marginTop:'14px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#3b82f6'}}/><span style={{fontSize:'12px'}}>Present</span></div>
+                <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#ef4444'}}/><span style={{fontSize:'12px'}}>Absent</span></div>
+                <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#f59e0b'}}/><span style={{fontSize:'12px'}}>Late</span></div>
+                <div style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'10px', height:'10px', borderRadius:'50%', background:'#8b5cf6'}}/><span style={{fontSize:'12px'}}>Half Day</span></div>
               </div>
             </div>
 
-            <div style={{display:'flex', gap:'16px', padding:'12px 16px', background:'#fff', borderRadius:'10px', border:'1px solid #e2e8f0', flexWrap:'wrap', alignItems:'center'}}>
-              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Legend:</span>
-              {[
-                {color:'#3b82f6', label:'Present (P)'},
-                {color:'#ef4444', label:'Absent (A)'},
-                {color:'#f59e0b', label:'Late (L)'},
-                {color:'#8b5cf6', label:'Half Day (H)'},
-              ].map(l => (
-                <div key={l.label} style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                  <div style={{width:'10px', height:'10px', borderRadius:'50%', background:l.color}} />
-                  <span style={{fontSize:'12px', color:'#64748b'}}>{l.label}</span>
+            {/* ========================================== */}
+            {/* 2. DESKTOP ORIGINAL WIDE OVERVIEW SHEET    */}
+            {/* ========================================== */}
+            <div className="desktop-report-view">
+              <div style={{background:'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius:'14px', padding:'18px 24px', marginBottom:'16px', color:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <div>
+                  <h2 style={{fontSize:'20px', fontWeight:'800', margin:0}}>📋 Attendance Sheet</h2>
+                  <p style={{margin:'4px 0 0', opacity:0.85, fontSize:'13px'}}>{classLabel} • {filters.person_type === 'student' ? 'Students' : 'Employees'} • {periodLabel}</p>
                 </div>
-              ))}
+                <div style={{textAlign:'right'}}>
+                  <div style={{fontSize:'24px', fontWeight:'800'}}>{fullMonths[filters.from_month - 1]}</div>
+                  <div style={{fontSize:'13px', opacity:0.8}}>{filters.from_year}</div>
+                </div>
+              </div>
+
+              <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'16px'}}>
+                {[
+                  { label:'Total People', value: filteredData.length, color:'#1e40af', icon:'👥' },
+                  { label:'Avg Present', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.present_days||0), 0) / filteredData.length) : 0, color:'#10b981', icon:'✅' },
+                  { label:'Avg Absent', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.absent_days||0), 0) / filteredData.length) : 0, color:'#ef4444', icon:'❌' },
+                  { label:'Working Days', value: daysInMonth, color:'#f59e0b', icon:'📅' },
+                ].map(s => (
+                  <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'14px 16px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
+                    <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
+                    <div style={{fontSize:'26px', fontWeight:'800', color:'#1e293b', lineHeight:1.2, marginTop:'4px'}}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{background:'#fff', borderRadius:'14px', padding:'16px 20px', marginBottom:'16px', border:'1px solid #e2e8f0'}}>
+                <div style={{fontSize:'12px', fontWeight:'700', color:'#64748b', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'0.5px'}}>📊 Daily Attendance Status — {periodLabel}</div>
+                <div style={{display:'flex', alignItems:'flex-end', gap:'2px', height:'70px'}}>
+                  {dayNumbers.map(day => {
+                    const count = getDailyPresentCount(day);
+                    const heightPct = maxDailyCount > 0 ? (count / maxDailyCount) : 0;
+                    return (
+                      <div key={day} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', minWidth:'3px'}}>
+                        <div style={{
+                          width:'100%', borderRadius:'3px 3px 0 0',
+                          background: count > 0 ? '#3b82f6' : '#e2e8f0',
+                          height:`${Math.max(heightPct * 55, count > 0 ? 8 : 3)}px`,
+                          transition:'height 0.3s ease'
+                        }} title={`Day ${day}: ${count} present`} />
+                        <span style={{fontSize:'8px', color:'#94a3b8'}}>{day}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
+                <div style={{overflowX:'auto'}}>
+                  <table style={{width:'100%', borderCollapse:'collapse', minWidth:'800px'}}>
+                    <thead>
+                      <tr style={{background:'#1e40af'}}>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'40px'}}>NO.</th>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'130px'}}>NAME</th>
+                        {dayNumbers.map(d => (
+                          <th key={d} style={{padding:'8px 2px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', width:'22px', minWidth:'22px'}}>{d}</th>
+                        ))}
+                        <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>P</th>
+                        <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>A</th>
+                        <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>L</th>
+                        <th style={{padding:'11px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'36px'}}>H</th>
+                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredData.map((row, i) => {
+                        const pct = getPercentage(row);
+                        return (
+                          <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                            <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontWeight:'600'}}>{i + 1}</td>
+                            <td style={{padding:'10px', whiteSpace:'nowrap'}}>
+                              <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>{row.full_name}</div>
+                              <div style={{fontSize:'10px', color:'#94a3b8'}}>
+                                {row.roll_no ? `Roll No: ${row.roll_no}` : row.class_name || ''}
+                              </div>
+                            </td>
+                            {dayNumbers.map(day => {
+                              const status = getStatus(row.id, day);
+                              const color = getDotColor(status);
+                              return (
+                                <td key={day} style={{padding:'4px 2px', textAlign:'center'}}>
+                                  {status ? (
+                                    <div style={{width:'9px', height:'9px', borderRadius:'50%', background:color, margin:'0 auto'}} title={status} />
+                                  ) : (
+                                    <div style={{width:'9px', height:'9px', margin:'0 auto'}} />
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td style={{padding:'8px 4px', textAlign:'center'}}>
+                              <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.present_days || 0}</span>
+                            </td>
+                            <td style={{padding:'8px 4px', textAlign:'center'}}>
+                              <span style={{background:'#fee2e2', color:'#dc2626', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.absent_days || 0}</span>
+                            </td>
+                            <td style={{padding:'8px 4px', textAlign:'center'}}>
+                              <span style={{background:'#fef3c7', color:'#d97706', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.late_days || 0}</span>
+                            </td>
+                            <td style={{padding:'8px 4px', textAlign:'center'}}>
+                              <span style={{background:'#ede9fe', color:'#7c3aed', padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'}}>{row.halfday_days || 0}</span>
+                            </td>
+                            <td style={{padding:'8px 4px', textAlign:'center'}}>
+                              <span style={{
+                                background: pct >= 75 ? '#dcfce7' : pct >= 50 ? '#fef3c7' : '#fee2e2',
+                                color: pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626',
+                                padding:'2px 6px', borderRadius:'10px', fontSize:'11px', fontWeight:'700'
+                              }}>{pct}%</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{display:'flex', gap:'16px', padding:'12px 16px', background:'#fff', borderRadius:'10px', border:'1px solid #e2e8f0', flexWrap:'wrap', alignItems:'center'}}>
+                <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Legend:</span>
+                {[
+                  {color:'#3b82f6', label:'Present (P)'},
+                  {color:'#ef4444', label:'Absent (A)'},
+                  {color:'#f59e0b', label:'Late (L)'},
+                  {color:'#8b5cf6', label:'Half Day (H)'},
+                ].map(l => (
+                  <div key={l.label} style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                    <div style={{width:'10px', height:'10px', borderRadius:'50%', background:l.color}} />
+                    <span style={{fontSize:'12px', color:'#64748b'}}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </AppLayout>
   );
 };
