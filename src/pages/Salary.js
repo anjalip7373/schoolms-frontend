@@ -48,28 +48,25 @@ const Salary = () => {
   const years = []; for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
 
   const fetchAll = async () => {
-  setLoading(true);
-  try {
-    const roleType = user.role === 'principal' ? 'employee' : undefined;
-    
-    // Convert month/year into from/to range the backend expects
-    const monthStr = String(filters.month).padStart(2, '0');
-    const params = {
-      from_month: filters.month,
-      from_year: filters.year,
-      to_month: filters.month,
-      to_year: filters.year,
-    };
+    setLoading(true);
+    try {
+      const roleType = user.role === 'principal' ? 'employee' : undefined;
+      const params = {
+        from_month: filters.month,
+        from_year: filters.year,
+        to_month: filters.month,
+        to_year: filters.year,
+      };
 
-    const [slipsRes, empRes] = await Promise.all([
-      API.get('/salary', { params }),
-      API.get('/employees', { params: roleType ? { role_type: roleType } : {} })
-    ]);
-    setSlips(slipsRes.data);
-    setEmployees(empRes.data);
-  } catch (err) { toast.error('Failed to load data'); }
-  finally { setLoading(false); }
-};
+      const [slipsRes, empRes] = await Promise.all([
+        API.get('/salary', { params }),
+        API.get('/employees', { params: roleType ? { role_type: roleType } : {} })
+      ]);
+      setSlips(slipsRes.data);
+      setEmployees(empRes.data);
+    } catch (err) { toast.error('Failed to load data'); }
+    finally { setLoading(false); }
+  };
 
   useEffect(() => { fetchAll(); }, [filters]);
 
@@ -101,75 +98,208 @@ const Salary = () => {
     } catch (err) { toast.error('Failed to load slip'); }
   };
 
-  const selectedEmp = employees.find(e => e.id == form.employee_id);
+  const triggerWhatsAppShare = (s) => {
+    const phone = s.phone?.toString().replace(/[\s\-\(\)\+]/g,'');
+    const withCountry = phone?.startsWith('91') ? phone : '91' + phone;
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthLabel = s.month ? (() => { const parts = s.month.split('-'); return `${monthNames[parseInt(parts[1])-1]} ${parts[0]}`; })() : s.month;
+    const message =
+      `Salary Slip Ready - ${monthLabel}\n\n` +
+      `Dear ${s.full_name}, your salary slip for ${monthLabel} is ready!\n\n` +
+      `Net Salary: Rs. ${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\n` +
+      `Please check your email${s.email ? ` (${s.email})` : ''} for the PDF.\n\n` +
+      `SchoolMS - School Management System`;
+    window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   return (
     <AppLayout title="Salary Slip" subtitle="Generate and manage salary slips">
-      <div className="page-header">
-        <div><h1>Salary Slips</h1><p>{slips.length} records</p></div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>💵 Generate Salary Slip</button>
-      </div>
+      {/* Dynamic Breakpoint Injection for Strict Layout Constraints */}
+      <style>{`
+        .desktop-salary-view { display: block; }
+        .mobile-salary-view { display: none; }
 
-      <div className="filter-bar" style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
-        <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})}>
-          {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-        </select>
-        <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})}>
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
+        @media (max-width: 1300px) {
+          .desktop-salary-view { display: none !important; }
+          .mobile-salary-view { 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100% !important;
+          }
 
-      <div className="card">
-        <div className="table-wrapper">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
-              <thead>
-                <tr><th>Slip No</th><th>Employee</th><th>Role</th><th>Month</th><th>Net Salary</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {slips.map(s => (
-                  <tr key={s.id}>
-                    <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.slip_no}</code></td>
-                    <td><strong>{s.full_name}</strong><br/><small style={{color:'#64748b'}}>{s.emp_id}</small></td>
-                    <td><span className="badge badge-info">{s.role_name}</span></td>
-                    <td>{s.month}</td>
-                    <td><strong style={{color:'#16a34a'}}>₹ {parseFloat(s.net_salary).toLocaleString()}</strong></td>
-                    <td><span className={"badge " + (s.status === 'paid' ? 'badge-success' : 'badge-warning')}>{s.status}</span></td>
-                    <td>
-                      <div style={{display:'flex', gap:'6px'}}>
-                        {s.status !== 'paid' && <button className="btn btn-success btn-sm" onClick={() => markPaid(s.id)}>✅ Paid</button>}
-                        <button className="btn btn-outline btn-sm" onClick={() => viewSlip(s.id)}>👁️ View</button>
-                       <button className="btn btn-whatsapp btn-sm" onClick={() => {
-  const phone = s.phone?.toString().replace(/[\s\-\(\)\+]/g,'');
-  const withCountry = phone?.startsWith('91') ? phone : '91' + phone;
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthLabel = s.month ? (() => { const parts = s.month.split('-'); return `${monthNames[parseInt(parts[1])-1]} ${parts[0]}`; })() : s.month;
-  const message =
-    `Salary Slip Ready - ${monthLabel}\n\n` +
-    `Dear ${s.full_name}, your salary slip for ${monthLabel} is ready!\n\n` +
-    `Net Salary: Rs. ${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\n` +
-    `Please check your email${s.email ? ` (${s.email})` : ''} for the PDF.\n\n` +
-    `SchoolMS - School Management System`;
-  window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`, '_blank');
-}}>
-  <svg className="wa-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-  Share
-</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!slips.length && !loading && (
-                  <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">💵</div><p>No salary slips found</p></div></td></tr>
-                )}
-              </tbody>
-            </table>
-          )}
+          .mobile-salary-card {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          }
+          .mobile-card-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+          }
+          .mobile-emp-info h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; }
+          .mobile-emp-info p { font-size: 12px; color: #64748b; margin: 2px 0 0 0; }
+          
+          .mobile-card-details {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+          }
+          .mobile-detail-item { display: flex; flex-direction: column; }
+          .mobile-detail-lbl { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+          .mobile-detail-val { font-size: 13px; font-weight: 700; color: #334155; }
+
+          .mobile-card-actions {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+          }
+          .mobile-action-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 8px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+          }
+        }
+      `}</style>
+
+      {/* Strict Container Boundaries Force */}
+      <div style={{ width: '100%', overflowX: 'hidden' }}>
+        <div className="page-header">
+          <div><h1>Salary Slips</h1><p>{slips.length} records</p></div>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>💵 Generate Salary Slip</button>
         </div>
+
+        <div className="filter-bar" style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
+          <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})}>
+            {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+          </select>
+          <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+
+        {loading ? (
+          <div className="loading"><div className="spinner"></div><p>Loading payroll entries...</p></div>
+        ) : (
+          <>
+            {/* ========================================== */}
+            {/* 1. BRAND NEW MOBILE CARD-VIEW DECK LAYOUT */}
+            {/* ========================================== */}
+            <div className="mobile-salary-view">
+              {slips.map((s) => (
+                <div key={s.id} className="mobile-salary-card">
+                  <div className="mobile-card-row-top">
+                    <div className="mobile-emp-info">
+                      <h3>{s.full_name}</h3>
+                      <p>ID: {s.emp_id || '—'} • <span className="badge badge-info" style={{fontSize:'10px', padding:'2px 6px'}}>{s.role_name}</span></p>
+                    </div>
+                    <span className={"badge " + (s.status === 'paid' ? 'badge-success' : 'badge-warning')} style={{padding:'4px 10px', fontSize:'11px'}}>
+                      {s.status?.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="mobile-card-details">
+                    <div className="mobile-detail-item">
+                      <span className="mobile-detail-lbl">Slip Number</span>
+                      <span className="mobile-detail-val" style={{fontFamily:'JetBrains Mono', fontSize:'12px'}}>{s.slip_no}</span>
+                    </div>
+                    <div className="mobile-detail-item">
+                      <span className="mobile-detail-lbl">Month Period</span>
+                      <span className="mobile-detail-val">{s.month}</span>
+                    </div>
+                    <div className="mobile-detail-item" style={{gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px'}}>
+                      <span className="mobile-detail-lbl">Net Disbursed Salary</span>
+                      <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontWeight:'800'}}>
+                        ₹ {parseFloat(s.net_salary).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mobile-card-actions">
+                    {s.status !== 'paid' && (
+                      <button className="btn btn-success mobile-action-btn" onClick={() => markPaid(s.id)}>
+                        ✅ Paid
+                      </button>
+                    )}
+                    <button className="btn btn-outline mobile-action-btn" onClick={() => viewSlip(s.id)}>
+                      👁️ View Slip
+                    </button>
+                    <button className="btn btn-whatsapp mobile-action-btn" onClick={() => triggerWhatsAppShare(s)}>
+                      Share
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {!slips.length && (
+                <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
+                  <div style={{fontSize:'36px', marginBottom:'8px'}}>💵</div>
+                  <p>No salary slips generated for this period.</p>
+                </div>
+              )}
+            </div>
+
+            {/* ========================================== */}
+            {/* 2. DESKTOP GRID MATRIX OVERVIEW TABLE BLOCK*/}
+            {/* ========================================== */}
+            <div className="desktop-salary-view">
+              <div className="card">
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr><th>Slip No</th><th>Employee</th><th>Role</th><th>Month</th><th>Net Salary</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {slips.map(s => (
+                        <tr key={s.id}>
+                          <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.slip_no}</code></td>
+                          <td><strong>{s.full_name}</strong><br/><small style={{color:'#64748b'}}>{s.emp_id}</small></td>
+                          <td><span className="badge badge-info">{s.role_name}</span></td>
+                          <td>{s.month}</td>
+                          <td><strong style={{color:'#16a34a'}}>₹ {parseFloat(s.net_salary).toLocaleString()}</strong></td>
+                          <td><span className={"badge " + (s.status === 'paid' ? 'badge-success' : 'badge-warning')}>{s.status}</span></td>
+                          <td>
+                            <div style={{display:'flex', gap:'6px'}}>
+                              {s.status !== 'paid' && <button className="btn btn-success btn-sm" onClick={() => markPaid(s.id)}>✅ Paid</button>}
+                              <button className="btn btn-outline btn-sm" onClick={() => viewSlip(s.id)}>👁️ View</button>
+                              <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(s)}>
+                                <svg className="wa-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                </svg>
+                                Share
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {!slips.length && (
+                        <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">💵</div><p>No salary slips found</p></div></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Generation Form Modal Popup Layout */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -228,6 +358,7 @@ const Salary = () => {
         </div>
       )}
 
+      {/* Slip Display Modal Rendering Trigger */}
       {showSlip && slip && (
         <div className="modal-overlay" onClick={() => setShowSlip(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -235,24 +366,7 @@ const Salary = () => {
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
                 <button className="btn btn-primary btn-sm" onClick={printSlip}>🖨️ Print</button>
-                <button className="btn btn-whatsapp btn-sm" onClick={() => {
-  const phone = slip.phone?.toString().replace(/[\s\-\(\)\+]/g,'');
-  const withCountry = phone?.startsWith('91') ? phone : '91' + phone;
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthLabel = slip.month ? (() => { const parts = slip.month.split('-'); return `${monthNames[parseInt(parts[1])-1]} ${parts[0]}`; })() : slip.month;
-  const message =
-    `Salary Slip Ready - ${monthLabel}\n\n` +
-    `Dear ${slip.full_name}, your salary slip for ${monthLabel} is ready!\n\n` +
-    `Net Salary: Rs. ${parseFloat(slip.net_salary || 0).toLocaleString('en-IN')}\n\n` +
-    `Please check your email${slip.email ? ` (${slip.email})` : ''} for the PDF.\n\n` +
-    `SchoolMS - School Management System`;
-  window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`, '_blank');
-}}>
-  <svg className="wa-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-  Share
-</button>
+                <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>
             </div>
