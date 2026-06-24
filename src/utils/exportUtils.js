@@ -1,9 +1,14 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { toast } from 'react-toastify';
+
+// Native plugin: saves a base64 file DIRECTLY to the public Downloads
+// folder via Android's MediaStore.Downloads API. No Share sheet, no
+// permission popup on Android 10+ (MediaStore writes are always allowed).
+// On Android 6-9 it requests WRITE_EXTERNAL_STORAGE once, then never again.
+const DownloadSaver = registerPlugin('DownloadSaver');
 
 // Remove ALL non-ASCII characters from any string
 const cleanText = (str) => {
@@ -14,21 +19,26 @@ const cleanText = (str) => {
     .trim();
 };
 
-// Saves a file directly to the device's public Downloads folder.
-// Directory.ExternalStorage = root of public external storage on Android,
-// so path: 'Download/filename' puts it right in the visible Downloads folder.
-const saveToDownloads = async (base64Data, fileName) => {
-  toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
+// ─── CORE NATIVE SAVE LOGIC ──────────────────────────────────────────────
+// Saves straight to /storage/emulated/0/Download — no Share sheet popup.
+const saveDirectToDownloads = async (base64Data, fileName, mimeType) => {
+  try {
+    toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
 
-  await Filesystem.writeFile({
-    path: `Download/${fileName}`,
-    data: base64Data,
-    directory: Directory.ExternalStorage,
-    recursive: true,
-  });
+    await DownloadSaver.saveToDownloads({
+      fileName,
+      base64Data,
+      mimeType,
+    });
 
-  toast.success(`Saved to Downloads: ${fileName}`, { autoClose: 4000 });
+    toast.success(`Saved to Downloads: ${fileName}`, { autoClose: 4000 });
+  } catch (err) {
+    console.error(`${fileName} save failed:`, err);
+    toast.error(`Save failed: ${err?.message || JSON.stringify(err)}`, { autoClose: 5000 });
+  }
 };
+
+// ─── EXCEL ───────────────────────────────────────────────────────────────
 
 export const exportToExcel = async (data, columns, filename) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -39,17 +49,18 @@ export const exportToExcel = async (data, columns, filename) => {
   const cleanName = `${cleanText(filename)}.xlsx`;
 
   if (Capacitor.isNativePlatform()) {
-    try {
-      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-      await saveToDownloads(base64, cleanName);
-    } catch (err) {
-      console.error('Excel export failed:', err);
-      toast.error(`Excel export failed: ${err?.message || err}`);
-    }
+    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    await saveDirectToDownloads(
+      base64,
+      cleanName,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
   } else {
     XLSX.writeFile(wb, cleanName);
   }
 };
+
+// ─── PDF ─────────────────────────────────────────────────────────────────
 
 export const exportToPDF = async (data, columns, filename, title) => {
   const isLandscape = columns.length > 6;
@@ -90,17 +101,14 @@ export const exportToPDF = async (data, columns, filename, title) => {
   const cleanName = `${cleanText(filename)}.pdf`;
 
   if (Capacitor.isNativePlatform()) {
-    try {
-      const base64 = doc.output('datauristring').split(',')[1];
-      await saveToDownloads(base64, cleanName);
-    } catch (err) {
-      console.error('PDF export failed:', err);
-      toast.error(`PDF export failed: ${err?.message || err}`);
-    }
+    const base64 = doc.output('datauristring').split(',')[1];
+    await saveDirectToDownloads(base64, cleanName, 'application/pdf');
   } else {
     doc.save(cleanName);
   }
 };
+
+// ─── WHATSAPP ────────────────────────────────────────────────────────────
 
 export const shareOnWhatsApp = (phone, message) => {
   const cleaned = phone?.replace(/\D/g, '');
@@ -109,30 +117,22 @@ export const shareOnWhatsApp = (phone, message) => {
 };
 
 // ─── SHARED NATIVE SAVE HELPERS ─────────────────────────────────────────────
-// Use these in AttendanceReport.js and MarksheetReport.js to replace
-// XLSX.writeFile(wb, filename) and doc.save(filename) calls.
+// Used directly by AttendanceReport.js and MarksheetReport.js as drop-in
+// replacements for XLSX.writeFile(wb, filename) and doc.save(filename).
 
 /**
  * Drop-in replacement for XLSX.writeFile(wb, filename)
- * Works on both web (browser download) and Android (saves to Downloads folder)
+ * Saves directly to Downloads on Android, normal download on web.
  */
 export const saveWorkbook = async (wb, filename) => {
   const cleanName = cleanText(filename);
   if (Capacitor.isNativePlatform()) {
-    try {
-      toast.info(`Saving ${cleanName}...`, { autoClose: 2000 });
-      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-      await Filesystem.writeFile({
-        path: `Download/${cleanName}`,
-        data: base64,
-        directory: Directory.ExternalStorage,
-        recursive: true,
-      });
-      toast.success(`Saved to Downloads: ${cleanName}`, { autoClose: 4000 });
-    } catch (err) {
-      console.error('Excel save failed:', err);
-      toast.error(`Save failed: ${err?.message || err}`);
-    }
+    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    await saveDirectToDownloads(
+      base64,
+      cleanName,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
   } else {
     XLSX.writeFile(wb, cleanName);
   }
@@ -140,25 +140,13 @@ export const saveWorkbook = async (wb, filename) => {
 
 /**
  * Drop-in replacement for doc.save(filename)
- * Works on both web (browser download) and Android (saves to Downloads folder)
+ * Saves directly to Downloads on Android, normal download on web.
  */
 export const saveDocument = async (doc, filename) => {
   const cleanName = cleanText(filename);
   if (Capacitor.isNativePlatform()) {
-    try {
-      toast.info(`Saving ${cleanName}...`, { autoClose: 2000 });
-      const base64 = doc.output('datauristring').split(',')[1];
-      await Filesystem.writeFile({
-        path: `Download/${cleanName}`,
-        data: base64,
-        directory: Directory.ExternalStorage,
-        recursive: true,
-      });
-      toast.success(`Saved to Downloads: ${cleanName}`, { autoClose: 4000 });
-    } catch (err) {
-      console.error('PDF save failed:', err);
-      toast.error(`Save failed: ${err?.message || err}`);
-    }
+    const base64 = doc.output('datauristring').split(',')[1];
+    await saveDirectToDownloads(base64, cleanName, 'application/pdf');
   } else {
     doc.save(cleanName);
   }

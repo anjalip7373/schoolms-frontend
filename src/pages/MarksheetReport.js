@@ -143,7 +143,6 @@ const MarksheetReport = () => {
   const className = classes.find(c => c.id == filters.class_id)?.name || 'All Classes';
   const examType = examTypes.find(e => e.id == filters.exam_type_id)?.name || '';
 
-  // ── SINGLE STUDENT MARKSHEET PDF GENERATION ──
   const exportSingleStudentPDF = async (student) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.width;
@@ -347,7 +346,6 @@ const MarksheetReport = () => {
     toast.success(`Marksheet for ${student.name} downloaded!`);
   };
 
-  // ── EXPORT ALL EXCEL ──────────────────────────────────────────
   const exportExcel = async () => {
     setShowExport(false);
     const wb = XLSX.utils.book_new();
@@ -362,9 +360,7 @@ const MarksheetReport = () => {
       const dataRows = clsRows.map((r, i) => [
         i + 1, r.roll_no, r.name,
         ...clsSubjects.map(s => r.marks[s.id]?.obtained ?? '—'),
-        r.total, r.maxTotal, `${r.percentage}%`,
-        r.grade, r.passed ? 'PASS' : 'FAIL',
-        r.overall_remark || '—'
+        r.total, r.maxTotal, `${r.percentage}%`, r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
       ]);
       return [title, [], headers, ...dataRows, [], []];
     };
@@ -414,7 +410,7 @@ const MarksheetReport = () => {
         for (const et of examTypes) {
           try {
             const { data } = await API.get('/marks/marksheet', {
-              params: { class_id: filters.class_id, exam_type_id: et.id, academic_year: filters.academic_year }
+              params: { class_id: filters.class_id, font_type_id: et.id, academic_year: filters.academic_year }
             });
             if (!data.length) continue;
             const { rows: etRows, subjects: etSubjects } = buildData(data);
@@ -448,7 +444,6 @@ const MarksheetReport = () => {
     }
   };
 
-  // ── EXPORT ALL PDF ────────────────────────────────────────────
   const exportPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
     doc.setFillColor(30, 64, 175); doc.rect(0, 0, doc.internal.pageSize.width, 36, 'F');
@@ -502,7 +497,13 @@ const MarksheetReport = () => {
 
         @media (max-width: 1024px) {
           .desktop-report-view { display: none !important; }
-          .mobile-report-view { display: block !important; }
+          .mobile-report-view { 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            padding: 4px;
+          }
 
           .mobile-student-card {
             background: #fff;
@@ -511,6 +512,7 @@ const MarksheetReport = () => {
             margin-bottom: 12px;
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            width: 100% !important;
           }
           .mobile-card-header {
             padding: 14px 16px;
@@ -583,7 +585,6 @@ const MarksheetReport = () => {
         )}
       </div>
 
-      {/* Filter Panel */}
       <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
         <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
           {!isTeacher && (
@@ -619,7 +620,6 @@ const MarksheetReport = () => {
         <div className="loading"><div className="spinner"></div><p>Loading marksheets...</p></div>
       ) : rows.length > 0 ? (
         <>
-          {/* Summary Stats Cards */}
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px,1fr))', gap:'12px', marginBottom:'16px'}}>
             {[
               { label:'Total', value: allRows.length, color:'#1e40af', icon:'👥' },
@@ -635,14 +635,13 @@ const MarksheetReport = () => {
           </div>
 
           {/* ========================================== */}
-          {/* 1. BRAND NEW MOBILE PORTRAIT ACCORDION VIEW*/}
+          {/* 1. MOBILE PORTRAIT ACCORDION VIEW          */}
           {/* ========================================== */}
           <div className="mobile-report-view">
             {rows.map((row) => {
               const isOpen = expandedStudentId === row.id;
               return (
                 <div key={row.id} className="mobile-student-card">
-                  {/* Permanent Static Top Block */}
                   <div className="mobile-card-header" onClick={() => toggleStudentCard(row.id)}>
                     <div className="mobile-header-top">
                       <h3 className="mobile-header-title">
@@ -662,7 +661,6 @@ const MarksheetReport = () => {
                     </div>
                   </div>
 
-                  {/* Toggle Accordion Breakdown Section */}
                   {isOpen && (
                     <div className="mobile-collapsible-content">
                       <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
@@ -721,7 +719,7 @@ const MarksheetReport = () => {
                       <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'150px'}}>STUDENT NAME</th>
                       {!isTeacher && <th style={{padding:'11px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'80px'}}>CLASS</th>}
                       {subjects.map(s => (
-                        <th key={s.id} style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'75px'}}>
+                        <th style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'75px'}}>
                           {s.name}<br/><span style={{opacity:0.7, fontSize:'9px'}}>/{s.max_marks} (P:{s.pass_marks})</span>
                         </th>
                       ))}

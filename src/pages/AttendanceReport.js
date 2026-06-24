@@ -20,7 +20,6 @@ const AttendanceReport = () => {
   const [showExport, setShowExport] = useState(false);
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   
-  // New state for local filtering
   const [searchQuery, setSearchQuery] = useState('');
 
   const [filters, setFilters] = useState({
@@ -146,7 +145,6 @@ const AttendanceReport = () => {
     return Math.round(totalPresent / filteredData.length);
   };
 
-  // Real-time calculation filtering by Name or Roll No / ID
   const filteredData = rawData.filter(row => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
@@ -158,7 +156,6 @@ const AttendanceReport = () => {
     return nameMatch || rollNoMatch || idMatch;
   });
 
-  // ===== EXPORT EXCEL =====
   const exportExcel = async () => {
     const wb = XLSX.utils.book_new();
     const monthRanges = [];
@@ -244,7 +241,6 @@ const AttendanceReport = () => {
     toast.success('✅ Excel downloaded successfully!');
   };
 
-  // ===== EXPORT PDF =====
   const exportPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape' });
     doc.setFontSize(16);
@@ -296,7 +292,13 @@ const AttendanceReport = () => {
 
         @media (max-width: 1024px) {
           .desktop-report-view { display: none !important; }
-          .mobile-report-view { display: block !important; }
+          .mobile-report-view { 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            padding: 4px;
+          }
           
           .mobile-card-container {
             background: #fff;
@@ -305,6 +307,7 @@ const AttendanceReport = () => {
             overflow: hidden;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            width: 100% !important;
           }
           .mobile-card-header {
             padding: 16px;
@@ -391,11 +394,8 @@ const AttendanceReport = () => {
         </div>
       </div>
 
-      {/* Filters Form Panel Block */}
       <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
         <div style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'center'}}>
-          
-          {/* SEARCH FIELD ADDITION */}
           <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
             <input 
               type="text" 
