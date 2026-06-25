@@ -6,65 +6,67 @@ const AppLayout = ({ children, title, subtitle }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="app-layout-container">
-      {/* Strict UI Engine Injection to enforce tablet floating drawers and remove page overlaps */}
+    <div className="system-layout-root">
+      {/* Strict grid calculation engine to stop horizontal overlaps on small screens / tablets */}
       <style>{`
-        .app-layout-container {
-          display: flex;
+        .system-layout-root {
+          display: grid;
+          grid-template-columns: 260px 1fr; /* Fixed sidebar width, right side takes dynamic remaining space */
           width: 100vw;
           min-height: 100vh;
-          overflow-x: hidden;
+          overflow: hidden;
           background: #f8fafc;
-          position: relative;
         }
-        
+
         .main-viewport-wrapper {
-          flex: 1;
           display: flex;
           flex-direction: column;
-          min-width: 0;
+          min-width: 0; /* CRITICAL: Allows flex child to shrink below contents safely preventing breakage */
           width: 100%;
-          overflow-x: hidden;
+          height: 100vh;
+          overflow-y: auto; /* Handles page scrolling inside viewport natively */
         }
 
         .page-content {
           flex: 1;
           padding: 24px;
           width: 100%;
-          max-width: 100%;
           box-sizing: border-box;
         }
 
-        /* ── TABLET PORTRAIT & LANDSCAPE OVERRIDES (MAX-WIDTH: 1366px) ── */
-        @media (max-width: 1366px) {
-          /* 1. Reset original positioning to force sidebar off-screen drawer rules */
-          .app-layout-container > aside,
-          .app-layout-container .sidebar,
+        /* ── SYSTEM ADAPTABILITY OVERRIDES FOR PORTRAIT TABLETS & SMALL MOBILES ── */
+        @media (max-width: 1024px) {
+          .system-layout-root {
+            display: block; /* Fallback layout engine for portrait mobile phones */
+            position: relative;
+          }
+
+          /* Turns sidebar layout container into an absolute overlay panel menu */
+          .system-layout-root > aside,
+          .system-layout-root .sidebar,
           [class*="sidebar"] {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             bottom: 0 !important;
-            width: 280px !important;
+            width: 260px !important;
             height: 100vh !important;
-            z-index: 99999 !important; /* Ensure it stays above everything */
+            z-index: 99999 !important;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             transform: ${sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
           }
 
-          /* 2. Force structural content viewport wrapper to span full 100% screen width */
           .main-viewport-wrapper {
-            padding-left: 0 !important;
-            margin-left: 0 !important;
             width: 100% !important;
-            max-width: 100% !important;
+            height: auto !important;
+            overflow-y: visible !important;
           }
 
           .page-content {
             padding: 16px !important;
           }
 
-          /* 3. Re-align topbar and force real original 3-line hamburger menu to show up */
+          /* Force Topbar hamburger trigger to flex display standard states */
           .topbar {
             display: flex !important;
             align-items: center !important;
@@ -92,7 +94,7 @@ const AppLayout = ({ children, title, subtitle }) => {
         }
       `}</style>
 
-      {/* Dim overlay background that appears and allows click-away closing */}
+      {/* Background dark dimmed layer for mobile pull-out triggers closure handling */}
       {sidebarOpen && (
         <div
           className="custom-sidebar-dimmer"
@@ -101,17 +103,17 @@ const AppLayout = ({ children, title, subtitle }) => {
             top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(15, 23, 42, 0.4)',
             backdropFilter: 'blur(3px)',
-            zIndex: 99990, /* Placed right underneath the sidebar drawer index layer */
+            zIndex: 99990,
             cursor: 'pointer'
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Navigation frame block */}
+      {/* Navigation panel anchor frame code module */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Core main wrapper tracking content updates dynamically */}
+      {/* Right side isolated clean scroll track container viewport workspace */}
       <div className="main-viewport-wrapper">
         <Topbar
           title={title}
