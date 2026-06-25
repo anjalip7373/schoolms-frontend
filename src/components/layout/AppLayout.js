@@ -7,7 +7,6 @@ const AppLayout = ({ children, title, subtitle }) => {
 
   return (
     <div className="app-layout">
-      {/* Absolute positioning fix to handle tablet portrait and landscape toggle alignment */}
       <style>{`
         .app-layout {
           display: flex;
@@ -23,6 +22,7 @@ const AppLayout = ({ children, title, subtitle }) => {
           min-width: 0;
           width: 100%;
           overflow-x: hidden;
+          transition: padding-left 0.3s ease;
         }
         .page-content {
           flex: 1;
@@ -68,27 +68,27 @@ const AppLayout = ({ children, title, subtitle }) => {
             border-radius: 6px !important;
             font-size: 18px !important;
             cursor: pointer !important;
-            z-index: 9999 !important;
+            z-index: 10000 !important; /* Raised z-index to guarantee click layer availability */
           }
         }
       `}</style>
 
-      {/* Background Dim Blur Overlay sheet layout */}
+      {/* Dim Blur Overlay layer visible whenever open state is true */}
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(15, 23, 42, 0.3)',
-            backdropFilter: 'blur(2px)',
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(3px)',
             zIndex: 999
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Core navigation controls frame modules */}
+      {/* Core navigation controls frame modules passing parameters */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content">
