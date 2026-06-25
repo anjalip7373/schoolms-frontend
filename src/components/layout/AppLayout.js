@@ -7,7 +7,7 @@ const AppLayout = ({ children, title, subtitle }) => {
 
   return (
     <div className="app-layout">
-      {/* Dynamic Responsive Injector to force perfect layout stretching on Portrait tablets */}
+      {/* Structural layout rules forcing tablet portrait behavior modifications */}
       <style>{`
         .app-layout {
           display: flex;
@@ -32,7 +32,7 @@ const AppLayout = ({ children, title, subtitle }) => {
           box-sizing: border-box;
         }
 
-        /* ── TABLET PORTRAIT AND MOBILE BREAKPOINT OVERRIDES ── */
+        /* ── GLOBAL TABLET RESPONSIVE SYSTEM RE-ALIGNMENT ── */
         @media (max-width: 1300px) {
           .app-layout {
             position: relative;
@@ -46,17 +46,35 @@ const AppLayout = ({ children, title, subtitle }) => {
           .page-content {
             padding: 16px !important;
           }
+
+          /* Force global top bar header menu buttons visibility */
+          .main-content > div:first-of-type button,
+          .main-content [class*="menu"],
+          .main-content [class*="hamburger"],
+          .main-content [onClick*="onMenuClick"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
         }
       `}</style>
 
-      {/* Mobile overlay — click to close sidebar */}
+      {/* Mobile & Tablet overlay — click to close sidebar */}
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.3)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 999
+          }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
+      {/* Actual core navigation container layout */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content">

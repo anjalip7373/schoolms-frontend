@@ -409,7 +409,7 @@ const MarksheetReport = () => {
         for (const et of examTypes) {
           try {
             const { data } = await API.get('/marks/marksheet', {
-              params: { class_id: filters.class_id, exam_type_id: et.id, academic_year: filters.academic_year }
+              params: { class_id: filters.class_id, font_type_id: et.id, academic_year: filters.academic_year }
             });
             if (!data.length) continue;
             const { rows: etRows, subjects: etSubjects } = buildData(data);
@@ -491,10 +491,10 @@ const MarksheetReport = () => {
   return (
     <AppLayout title="Marksheet Report" subtitle="View and export student marksheets">
       <style>{`
-        /* Breakpoint is increased to 1300px to fully switch wide layouts into cards on landscapes */
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
 
+        /* Breakpoint forces grid tables to shift into accordion summary blocks */
         @media (max-width: 1300px) {
           .desktop-report-view { display: none !important; }
           .mobile-report-view { 
@@ -513,6 +513,7 @@ const MarksheetReport = () => {
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             width: 100% !important;
+            box-sizing: border-box;
           }
           .mobile-card-header {
             padding: 14px 16px;
@@ -563,7 +564,6 @@ const MarksheetReport = () => {
         }
       `}</style>
 
-      {/* Strict boundary force container */}
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
           <div>
@@ -637,7 +637,7 @@ const MarksheetReport = () => {
             </div>
 
             {/* ========================================== */}
-            {/* 1. BRAND NEW MOBILE PORTRAIT ACCORDION VIEW*/}
+            {/* 1. MOBILE PORTRAIT ACCORDION VIEW          */}
             {/* ========================================== */}
             <div className="mobile-report-view">
               {rows.map((row) => {
@@ -729,7 +729,7 @@ const MarksheetReport = () => {
                         <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
                         <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'48px'}}>GRADE</th>
                         <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'58px'}}>RESULT</th>
-                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'left', minWidth:'120px'}}>REMARK</th>
+                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'120px'}}>REMARK</th>
                         <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'80px'}}>MARKSHEET</th>
                       </tr>
                     </thead>
