@@ -7,7 +7,7 @@ const AppLayout = ({ children, title, subtitle }) => {
 
   return (
     <div className="app-layout">
-      {/* Absolute strict positioning layout rules to force sliding behavior on tablets */}
+      {/* Global strict override to fix layout breaks on landscape and portrait tablets */}
       <style>{`
         .app-layout {
           display: flex;
@@ -16,48 +16,50 @@ const AppLayout = ({ children, title, subtitle }) => {
           overflow-x: hidden;
           background: #f8fafc;
         }
-        .main-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-          width: 100%;
-          overflow-x: hidden;
-        }
-        .page-content {
-          flex: 1;
-          padding: 24px;
-          width: 100%;
-          max-width: 100%;
-          box-sizing: border-box;
-        }
 
-        /* ── TABLET AND MOBILE SYSTEM TRANSITION OVERRIDES ── */
-        @media (max-width: 1300px) {
+        /* ── GLOBAL TABLET AND MOBILE RESPONSIVE RE-ARCHITECTURE ── */
+        @media (max-width: 1366px) {
           .app-layout {
             position: relative;
           }
-          
-          /* Removes the fixed desktop left sidebar spacing completely */
-          .main-content, .app-layout > .main-content {
+
+          /* 1. Sidebar turns into a smooth off-screen slide drawer */
+          .app-layout > aside, 
+          .app-layout .sidebar,
+          [class*="sidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            width: 260px !important;
+            z-index: 10000 !important;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transform: ${sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
+          }
+
+          /* 2. Forces main viewport content to stretch beautifully to full width */
+          .main-content {
             padding-left: 0 !important;
             margin-left: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
+            flex: 1 !important;
           }
+          
           .page-content {
             padding: 16px !important;
+            width: 100% !important;
           }
 
-          /* Force Topbar hamburger button to become active and touchable */
+          /* 3. Forces top header bar to seamlessly show the original 3-line hamburger button */
           .topbar {
             display: flex !important;
-            align-items: center;
-            padding-left: 12px !important;
+            align-items: center !important;
+            padding-left: 16px !important;
           }
           .topbar-left {
             display: flex !important;
-            align-items: center;
+            align-items: center !important;
             gap: 12px !important;
           }
           .hamburger-btn {
@@ -71,38 +73,12 @@ const AppLayout = ({ children, title, subtitle }) => {
             border-radius: 6px !important;
             font-size: 18px !important;
             cursor: pointer !important;
-            z-index: 10001 !important;
-          }
-
-          /* Captures the sidebar and turns it into a responsive sliding drawer */
-          .sidebar-wrapper {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            bottom: 0 !important;
-            width: 260px !important; /* Matches standard sidebar widths */
-            z-index: 10000 !important;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            transform: translateX(-100%) !important; /* Hides sidebar off-screen initially */
-            box-shadow: 5px 0 25px rgba(0,0,0,0.15);
-          }
-          
-          /* Slider Active Class Trigger rule */
-          .sidebar-wrapper.open {
-            transform: translateX(0) !important; /* Slides sidebar into the view screen */
-          }
-
-          /* Forces children elements inside wrapper to expand correctly */
-          .sidebar-wrapper > div, .sidebar-wrapper .sidebar, .sidebar-wrapper [class*="sidebar"] {
-            width: 100% !important;
-            height: 100% !important;
-            display: block !important;
-            visibility: visible !important;
+            z-index: 10005 !important;
           }
         }
       `}</style>
 
-      {/* Dim Overlay backdrop panel layout background sheets layer */}
+      {/* Dim overlay background that appears and allows click-away closing */}
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
@@ -111,16 +87,13 @@ const AppLayout = ({ children, title, subtitle }) => {
             top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(15, 23, 42, 0.4)',
             backdropFilter: 'blur(3px)',
-            zIndex: 9999 /* Just right underneath the sidebar drawer */
+            zIndex: 9999
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Custom Wrapper component tracking the open state condition directly */}
-      <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : ''}`}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content">
         <Topbar
