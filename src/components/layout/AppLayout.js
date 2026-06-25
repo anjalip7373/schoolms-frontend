@@ -7,7 +7,7 @@ const AppLayout = ({ children, title, subtitle }) => {
 
   return (
     <div className="app-layout">
-      {/* Structural layout rules forcing tablet portrait behavior modifications */}
+      {/* Absolute positioning fix to handle tablet portrait and landscape toggle alignment */}
       <style>{`
         .app-layout {
           display: flex;
@@ -32,12 +32,11 @@ const AppLayout = ({ children, title, subtitle }) => {
           box-sizing: border-box;
         }
 
-        /* ── GLOBAL TABLET RESPONSIVE SYSTEM RE-ALIGNMENT ── */
+        /* ── TABLET RESPONSIVE SYSTEM BUTTON FIXED ALIGNMENT ── */
         @media (max-width: 1300px) {
           .app-layout {
             position: relative;
           }
-          /* Forces right main wrapper page to take full portrait screen boundaries */
           .main-content {
             width: 100% !important;
             max-width: 100% !important;
@@ -47,19 +46,34 @@ const AppLayout = ({ children, title, subtitle }) => {
             padding: 16px !important;
           }
 
-          /* Force global top bar header menu buttons visibility */
-          .main-content > div:first-of-type button,
-          .main-content [class*="menu"],
-          .main-content [class*="hamburger"],
-          .main-content [onClick*="onMenuClick"] {
+          /* Forces Topbar hamburger button to sit gracefully at the green zone */
+          .topbar {
+            display: flex !important;
+            align-items: center;
+            padding-left: 12px !important;
+          }
+          .topbar-left {
+            display: flex !important;
+            align-items: center;
+            gap: 12px !important;
+          }
+          .hamburger-btn {
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #334155 !important;
+            padding: 8px 12px !important;
+            border-radius: 6px !important;
+            font-size: 18px !important;
+            cursor: pointer !important;
+            z-index: 9999 !important;
           }
         }
       `}</style>
 
-      {/* Mobile & Tablet overlay — click to close sidebar */}
+      {/* Background Dim Blur Overlay sheet layout */}
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
@@ -74,7 +88,7 @@ const AppLayout = ({ children, title, subtitle }) => {
         />
       )}
 
-      {/* Actual core navigation container layout */}
+      {/* Core navigation controls frame modules */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content">
