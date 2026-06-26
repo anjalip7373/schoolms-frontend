@@ -42,7 +42,21 @@ const Salary = () => {
   const [showSlip, setShowSlip] = useState(false);
   const [filters, setFilters] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const slipRef = useRef();
+  
+  // Original print hook backup state
   const printSlip = useReactToPrint({ content: () => slipRef.current });
+
+  // ─── NEW ADD-ON: DYNAMIC STORAGE DOWNLOAD BRIDGE FOR ANDROID ───
+  const handleAndroidDownloadAndPrint = () => {
+    const originalTitle = document.title;
+    if (slip && slip.slip_no) {
+      document.title = `Salary-Slip-${slip.slip_no}-${slip.month || 'payroll'}`;
+    }
+    printSlip();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
+  };
 
   // ─── NEW ADD-ON: SEARCH FILTER STATE ───
   const [searchQuery, setSearchQuery] = useState('');
@@ -388,7 +402,8 @@ const Salary = () => {
             <div className="modal-header no-print">
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button className="btn btn-primary btn-sm" onClick={printSlip}>🖨️ Print</button>
+                {/* ─── ENHANCED PRINT DIRECT SAVE HANDLE FOR ANDROID/TABLETS ─── */}
+                <button className="btn btn-primary btn-sm" onClick={handleAndroidDownloadAndPrint}>🖨️ Print</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>

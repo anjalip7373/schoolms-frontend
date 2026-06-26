@@ -66,7 +66,20 @@ const Fees = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const receiptRef = useRef();
 
+  // Original print layout instance hooks
   const printReceipt = useReactToPrint({ content: () => receiptRef.current });
+
+  // ─── NEW ADD-ON: DYNAMIC STORAGE DOWNLOAD BRIDGE FOR ANDROID ───
+  const handleAndroidDownloadAndPrint = () => {
+    const originalTitle = document.title;
+    if (receipt && receipt.receipt_no) {
+      document.title = `Fee-Receipt-${receipt.receipt_no}`;
+    }
+    printReceipt();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -307,7 +320,8 @@ const Fees = () => {
             <div className="modal-header no-print">
               <h2>🧾 Fee Receipt</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button className="btn btn-primary btn-sm" onClick={printReceipt}>🖨️ Print</button>
+                {/* ─── ENHANCED PRINT DIRECT SAVE HANDLE FOR ANDROID/TABLETS ─── */}
+                <button className="btn btn-primary btn-sm" onClick={handleAndroidDownloadAndPrint}>🖨️ Print</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
                   receipt.phone,
                   `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: Rs.${receipt.amount}\nPayment Method: ${receipt.payment_method || 'N/A'}\nDate: ${receipt.payment_date?.split('T')[0]}`
