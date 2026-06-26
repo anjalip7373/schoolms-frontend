@@ -110,19 +110,10 @@ body {
 .btn-logout { background: #ef4444; color: #fff; }
 .btn-logout:hover { background: #dc2626; }
 .btn-whatsapp {
-  background: #25d366;
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  background: #25d366; color: #fff; display: inline-flex; align-items: center; gap: 6px;
 }
 .btn-whatsapp:hover { background: #1da851; }
-.btn-whatsapp .wa-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  fill: white;
-}
+.btn-whatsapp .wa-icon { width: 16px; height: 16px; flex-shrink: 0; fill: white; }
 
 /* Page */
 .page-content { padding: 24px; flex: 1; }
@@ -232,15 +223,6 @@ tbody tr:last-child td { border-bottom: none; }
 .att-btn.halfday { border-color: #8b5cf6; color: #8b5cf6; background: transparent; }
 .att-btn.halfday.active { background: #8b5cf6; color: #fff; }
 
-/* Receipt print styles */
-@media print {
-  .no-print { display: none !important; }
-  .print-only { display: block !important; }
-  body { background: white; }
-  .modal-overlay { position: static; background: none; padding: 0; }
-  .modal { box-shadow: none; max-height: none; }
-}
-
 /* Login */
 .login-page {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -260,7 +242,6 @@ tbody tr:last-child td { border-bottom: none; }
 .loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--text-muted); flex-direction: column; gap: 12px; }
 .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
@@ -272,7 +253,6 @@ tbody tr:last-child td { border-bottom: none; }
   font-size: 12px; font-weight: 700; border: 1.5px solid #bfdbfe; cursor: pointer; transition: all 0.15s;
 }
 .class-tag:hover, .class-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-
 .dropdown-export { position: relative; display: inline-block; }
 .dropdown-menu {
   position: absolute; right: 0; top: calc(100% + 6px); background: #fff;
@@ -285,195 +265,155 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .dropdown-item:hover { background: var(--bg); }
 
+/* Hamburger default desktop hidden states */
+.hamburger-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text); padding: 4px 8px; border-radius: 6px; line-height: 1; margin-right: 8px; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 99; }
 
-/* ─── MOBILE RESPONSIVE ─────────────────────────────────────── */
-
-/* Hamburger button — hidden on desktop */
-.hamburger-btn {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--text);
-  padding: 4px 8px;
-  border-radius: 6px;
-  line-height: 1;
-  margin-right: 8px;
-}
-
-/* Sidebar overlay for mobile */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 99;
-}
-
-@media (max-width: 768px) {
-  /* Show hamburger on mobile */
-  .hamburger-btn { display: block; }
-
-  /* Sidebar hidden by default on mobile */
-  .sidebar {
-    width: 260px;
-    transform: translateX(-260px);
-    transition: transform 0.3s ease;
-    z-index: 100;
-  }
-
-  /* Sidebar open state */
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
-  /* Show overlay when sidebar is open */
-  .sidebar-overlay {
-    display: block;
-  }
-
-  /* Main content takes full width */
-  .main-content { margin-left: 0; }
-
-  /* Topbar adjustments */
-  .topbar {
-    padding: 0 12px;
-    height: 56px;
-  }
-  .topbar-left {
-    display: flex;
-    align-items: center;
-  }
-  .topbar-left h2 { font-size: 15px; }
+/* ─── ADD-ON: EXCLUSIVE STRICT RULES FOR TABLET ENGINES (MAX-WIDTH: 1300PX) ─── */
+@media (max-width: 1300px) {
+  .hamburger-btn { display: block !important; }
+  .sidebar { width: 260px; transform: translateX(-260px) !important; transition: transform 0.3s ease; z-index: 1000; }
+  .sidebar.open { transform: translateX(0) !important; }
+  .sidebar-overlay { display: block !important; z-index: 999; }
+  .main-content { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; }
+  .topbar { padding: 0 16px; height: 64px; }
+  .topbar-left { display: flex; align-items: center; }
   .topbar-left p { display: none; }
+}
 
-  /* Hide user name on mobile, show only avatar */
-  .user-info { display: none; }
-  .user-badge { padding: 4px; background: none; }
-  .logout-text { display: none; }
-  .btn-logout { padding: 6px 8px; }
-
-  /* Page content padding */
-  .page-content { padding: 16px 12px; }
-
-  /* Stats grid — 2 columns on mobile */
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .stat-card { padding: 14px; }
-  .stat-card .stat-value { font-size: 22px; }
-
-  /* Page header stack on mobile */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
+/* Original mobile fallback layout styles intact */
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px; } .stat-card .stat-value { font-size: 22px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .page-header h1 { font-size: 18px; }
-
-  /* Filter bar stack on mobile */
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  .filter-bar { flex-direction: column; align-items: stretch; }
   .filter-bar .form-control { width: 100%; min-width: unset; }
-  .search-input { min-width: unset !important; width: 100% !important; }
-
-  /* Form grid single column on mobile */
   .form-grid { grid-template-columns: 1fr; }
-
-  /* Modal full screen on mobile */
   .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal {
-    border-radius: 16px 16px 0 0;
-    max-height: 92vh;
-    max-width: 100%;
-  }
-  
- /* ─── GLOBAL RESPONSIVE TABLES ─── */
-  
-  /* Remove horizontal scroll containment on mobile for standard tables */
-  .table-wrapper:not(.keep-desktop-table) { overflow-x: visible; }
-  
-  /* Force normal tables to act like stacked block cards, but EXCLUDE reports */
-  .table-wrapper:not(.keep-desktop-table) table, 
-  .table-wrapper:not(.keep-desktop-table) thead, 
-  .table-wrapper:not(.keep-desktop-table) tbody, 
-  .table-wrapper:not(.keep-desktop-table) th, 
-  .table-wrapper:not(.keep-desktop-table) td, 
-  .table-wrapper:not(.keep-desktop-table) tr { 
-    display: block; 
-    width: 100%;
-  }
-  
-  /* Hide the desktop header row entirely on standard mobile views */
-  .table-wrapper:not(.keep-desktop-table) thead tr { 
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
-  
-  /* Convert standard table rows into separate cards */
-  .table-wrapper:not(.keep-desktop-table) tbody tr { 
-    background: var(--card-bg);
-    border: 1px solid var(--border) !important;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    padding: 8px 4px;
-    box-shadow: var(--shadow);
-  }
-  
-  .table-wrapper:not(.keep-desktop-table) tbody tr:hover { background: var(--card-bg); }
-  
-  /* Structure the standard cells to stack up-and-down */
-  .table-wrapper:not(.keep-desktop-table) td { 
-    display: flex;
-    justify-content: space-between; 
-    align-items: center;
-    text-align: right;
-    padding: 8px 14px;
-    border-bottom: 1px dashed #f1f5f9; 
-    font-size: 13px;
-  }
-  
-  .table-wrapper:not(.keep-desktop-table) td:last-child { 
-    border-bottom: none; 
-  }
+  .modal { border-radius: 16px 16px 0 0; max-height: 92vh; max-width: 100%; }
+}
 
-  .table-wrapper:not(.keep-desktop-table) td .btn, 
-  .table-wrapper:not(.keep-desktop-table) td .badge {
-    margin: 2px 0;
-  }
-
-  /* Buttons in tables */
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-
-  /* FORCE EXCLUDED REPORT TABLES TO KEEP PREVIOUS HORIZONTAL SCROLL */
-  .keep-desktop-table {
+/* ─── ADD-ON: TABLET PORTRAIT OVERFLOW CONTROL FOR STUDENTS, EMPLOYEES & REPORTS ─── */
+@media (max-width: 1300px) {
+  /* Enforces table containers to enable native touch scrolling horizontally instead of breaking boundaries */
+  .table-wrapper {
     overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    background: var(--card-bg) !important;
   }
-  .keep-desktop-table table {
+
+  /* Keeps the table component structure clean inside portrait containers */
+  .table-wrapper table {
     display: table !important;
-    width: max-content !important; 
-    min-width: 100%;
+    width: max-content !important;
+    min-width: 100% !important;
   }
-  .keep-desktop-table thead { display: table-header-group !important; }
-  .keep-desktop-table tbody { display: table-row-group !important; }
-  .keep-desktop-table tr { display: table-row !important; }
-  .keep-desktop-table th, .keep-desktop-table td { 
+
+  .table-wrapper thead { display: table-header-group !important; }
+  .table-wrapper tbody { display: table-row-group !important; }
+  .table-wrapper tr { display: table-row !important; }
+  .table-wrapper th, 
+  .table-wrapper td { 
     display: table-cell !important; 
-    width: auto !important;
-    text-align: left !important;
+    white-space: nowrap !important; /* Columns squeeze nahi honge, horizontal scroll banega */
+    padding: 10px 12px !important;
+  }
+
+  /* Ensures filters don't shrink on reports panel grids */
+  .filter-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
   }
 }
 
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-card .stat-icon { font-size: 22px; }
-  .stat-card .stat-value { font-size: 20px; }
-  .topbar-left h2 { font-size: 14px; }
+/* ─── ADD-ON: STRICT VERTICAL MOBILE/TABLET STACK FOR ALL TABLES ─── */
+@media (max-width: 1024px) {
+  /* 1. Viewport boundaries lock karke left-right scroll khatam karne ke liye */
+  .page-content, .main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important; /* Horizontally bilkul nahi bhagega */
+  }
+
+  /* 2. Table ko grid blocks (cards) mein badalna taaki sab up-down scroll ho */
+  .table-wrapper {
+    overflow-x: hidden !important; /* Left-right scroll band */
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .table-wrapper table, 
+  .table-wrapper tbody, 
+  .table-wrapper tr, 
+  .table-wrapper td { 
+    display: block !important; 
+    width: 100% !important;
+  }
+
+  /* Table head (headers) ko hide karenge kyunki ab data vertical card banega */
+  .table-wrapper thead { 
+    display: none !important; 
+  }
+
+  /* 3. Har ek row ko ek clean vertical card banana */
+  .table-wrapper tbody tr { 
+    background: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    margin-bottom: 16px !important; /* Har data ke beech vertical gap */
+    padding: 12px !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  /* 4. Har ek cell (column data) ko up-down line mein set karna */
+  .table-wrapper td { 
+    display: flex !important;
+    justify-content: space-between !important; /* Label left me, value right me */
+    align-items: center !important;
+    padding: 8px 4px !important;
+    border-bottom: 1px dashed #f1f5f9 !important; /* Divider lines */
+    text-align: right !important;
+    font-size: 13px !important;
+  }
+
+  .table-wrapper td:last-child { 
+    border-bottom: none !important; 
+    padding-top: 12px !important; /* Action buttons (Edit/Delete) ke liye space */
+    justify-content: center !important; /* Buttons ko center me fit karne ke liye */
+    gap: 8px !important;
+  }
+
+  /* 5. Pure content par CSS labels lagana taaki user ko pata chale kaunsa data kya hai */
+  /* Students page mobile alignment */
+  .table-wrapper td:nth-of-type(1)::before { content: "Roll No"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(2)::before { content: "Name"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(3)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(4)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
+  
+  /* Employees page mobile alignment */
+  .table-wrapper td:nth-of-type(1)::before { content: "Emp ID"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(5)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(6)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(7)::before { content: "Subject"; float: left; font-weight: 700; color: var(--text-muted); }
+  .table-wrapper td:nth-of-type(8)::before { content: "Salary"; float: left; font-weight: 700; color: var(--text-muted); }
+  
+  /* Reports page components */
+  .filter-bar {
+    display: flex !important;
+    flex-direction: column !important; /* Filters bhi up-down stack ho jayenge */
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .filter-bar .form-control, .search-input {
+    width: 100% !important; /* Inputs full width vertical stretch */
+  }
 }
