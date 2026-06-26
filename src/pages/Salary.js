@@ -73,7 +73,7 @@ const Salary = () => {
 
   useEffect(() => { fetchAll(); }, [filters]);
 
-  // ─── NEW ADD-ON: CLIENT-SIDE RE-MAP SEARCH FILTER ENGINE ───
+  // ─── NEW ADD-ON: FILTER ENGINE FOR DESKTOP & ANDROID BOTH ───
   const filteredSlips = slips.filter(s => {
     const name = s.full_name?.toLowerCase() || '';
     const empId = s.emp_id?.toLowerCase() || '';
@@ -195,26 +195,25 @@ const Salary = () => {
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>💵 Generate Salary Slip</button>
         </div>
 
-        {/* Filters and New Search Add-on container wrapper */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-          {/* ─── NEW ADD-ON: STRICT VERTICAL FULL WIDTH SEARCH BAR ─── */}
+        {/* ─── ENHANCED RESPONSIVE FILTER BAR WITH SEARCH FILTER ADD-ON ─── */}
+        <div className="filter-bar" style={{ background: '#fff', padding: '16px 20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          
+          {/* Universal Search bar - Triggers cards on Tab, table rows on Desktop */}
           <input
             type="text"
-            className="form-control"
+            className="form-control search-input"
             placeholder="🔍 Search employee by name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '10px 14px', fontSize: '14px' }}
+            style={{ minWidth: '240px', flex: 1 }}
           />
 
-          <div className="filter-bar" style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', margin:0, border:'1px solid #e2e8f0'}}>
-            <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})}>
-              {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-            </select>
-            <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})}>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
+          <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})} style={{ width: 'auto', minWidth: '120px' }}>
+            {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+          </select>
+          <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})} style={{ width: 'auto', minWidth: '120px' }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
 
         {loading ? (
@@ -273,7 +272,7 @@ const Salary = () => {
               {!filteredSlips.length && (
                 <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
                   <div style={{fontSize:'36px', marginBottom:'8px'}}>💵</div>
-                  <p>No matching salary slips found for this period.</p>
+                  <p>No matching salary slips found.</p>
                 </div>
               )}
             </div>
