@@ -44,6 +44,9 @@ const Salary = () => {
   const slipRef = useRef();
   const printSlip = useReactToPrint({ content: () => slipRef.current });
 
+  // ─── NEW ADD-ON: SEARCH FILTER STATE ───
+  const [searchQuery, setSearchQuery] = useState('');
+
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = []; for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
 
@@ -69,6 +72,14 @@ const Salary = () => {
   };
 
   useEffect(() => { fetchAll(); }, [filters]);
+
+  // ─── NEW ADD-ON: CLIENT-SIDE RE-MAP SEARCH FILTER ENGINE ───
+  const filteredSlips = slips.filter(s => {
+    const name = s.full_name?.toLowerCase() || '';
+    const empId = s.emp_id?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+    return name.includes(query) || empId.includes(query);
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -180,17 +191,30 @@ const Salary = () => {
       {/* Strict Container Boundaries Force */}
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
-          <div><h1>Salary Slips</h1><p>{slips.length} records</p></div>
+          <div><h1>Salary Slips</h1><p>{filteredSlips.length} records</p></div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>💵 Generate Salary Slip</button>
         </div>
 
-        <div className="filter-bar" style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
-          <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})}>
-            {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-          </select>
-          <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})}>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+        {/* Filters and New Search Add-on container wrapper */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+          {/* ─── NEW ADD-ON: STRICT VERTICAL FULL WIDTH SEARCH BAR ─── */}
+          <input
+            type="text"
+            className="form-control"
+            placeholder="🔍 Search employee by name or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '10px 14px', fontSize: '14px' }}
+          />
+
+          <div className="filter-bar" style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', margin:0, border:'1px solid #e2e8f0'}}>
+            <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})}>
+              {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+            </select>
+            <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})}>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
 
         {loading ? (
@@ -201,7 +225,7 @@ const Salary = () => {
             {/* 1. BRAND NEW MOBILE CARD-VIEW DECK LAYOUT */}
             {/* ========================================== */}
             <div className="mobile-salary-view">
-              {slips.map((s) => (
+              {filteredSlips.map((s) => (
                 <div key={s.id} className="mobile-salary-card">
                   <div className="mobile-card-row-top">
                     <div className="mobile-emp-info">
@@ -246,10 +270,10 @@ const Salary = () => {
                 </div>
               ))}
 
-              {!slips.length && (
+              {!filteredSlips.length && (
                 <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
                   <div style={{fontSize:'36px', marginBottom:'8px'}}>💵</div>
-                  <p>No salary slips generated for this period.</p>
+                  <p>No matching salary slips found for this period.</p>
                 </div>
               )}
             </div>
@@ -265,7 +289,7 @@ const Salary = () => {
                       <tr><th>Slip No</th><th>Employee</th><th>Role</th><th>Month</th><th>Net Salary</th><th>Status</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
-                      {slips.map(s => (
+                      {filteredSlips.map(s => (
                         <tr key={s.id}>
                           <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.slip_no}</code></td>
                           <td><strong>{s.full_name}</strong><br/><small style={{color:'#64748b'}}>{s.emp_id}</small></td>
@@ -287,7 +311,7 @@ const Salary = () => {
                           </td>
                         </tr>
                       ))}
-                      {!slips.length && (
+                      {!filteredSlips.length && (
                         <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">💵</div><p>No salary slips found</p></div></td></tr>
                       )}
                     </tbody>
