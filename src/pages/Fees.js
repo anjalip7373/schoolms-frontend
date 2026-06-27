@@ -6,7 +6,7 @@ import { shareOnWhatsApp } from '../utils/exportUtils';
 import { useReactToPrint } from 'react-to-print';
 
 const FeeReceipt = React.forwardRef(({ receipt }, ref) => (
-  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto'}}>
+  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
     <div style={{textAlign:'center', borderBottom:'2px solid #1e40af', paddingBottom:'16px', marginBottom:'20px'}}>
       <h1 style={{fontSize:'22px', fontWeight:'800', color:'#1e40af'}}>🏫 SchoolMS</h1>
       <p style={{fontSize:'13px', color:'#64748b'}}>Fee Payment Receipt</p>
@@ -66,19 +66,20 @@ const Fees = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const receiptRef = useRef();
 
-  // RESTORED ORIGINAL PRINT ENGINE UNTOUCHED
   const printReceipt = useReactToPrint({ content: () => receiptRef.current });
 
-  // SAFE TITLE OVERRIDE ADD-ON FOR DIRECT CAPACITOR DOWNLOAD
-  const handlePrintAndSave = () => {
+  // ─── SAFE NATIVE DOWNLOAD OVERRIDE ───
+  const downloadReceiptPDFDirectly = () => {
     const originalTitle = document.title;
-    if (receipt && receipt.receipt_no) {
-      document.title = `Fee-Receipt-${receipt.receipt_no}`;
+    try {
+      if (receipt && receipt.receipt_no) {
+        document.title = `Fee-Receipt-${receipt.receipt_no}`;
+      }
+      printReceipt();
+      setTimeout(() => { document.title = originalTitle; }, 1000);
+    } catch (err) {
+      toast.error("Download failed");
     }
-    printReceipt();
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 1000);
   };
 
   const fetchAll = async () => {
@@ -167,30 +168,17 @@ const Fees = () => {
               <tbody>
                 {payments.map(p => (
                   <tr key={p.id}>
-                    <td>
-                      <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
-                        {p.receipt_no}
-                      </code>
-                    </td>
+                    <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{p.receipt_no}</code></td>
                     <td><strong>{p.full_name}</strong><br/><small style={{color:'#64748b'}}>{p.roll_no}</small></td>
                     <td>{p.class_name}</td>
                     <td><span className="badge badge-info">{p.fee_type_name}</span></td>
-                    <td>
-                      <span className={"badge " + (
-                        p.payment_method === 'Cash' ? 'badge-success' :
-                        p.payment_method === 'UPI' ? 'badge-info' : 'badge-warning'
-                      )}>
-                        {p.payment_method || 'Cash'}
-                      </span>
-                    </td>
+                    <td><span className={"badge " + (p.payment_method === 'Cash' ? 'badge-success' : p.payment_method === 'UPI' ? 'badge-info' : 'badge-warning')}>{p.payment_method || 'Cash'}</span></td>
                     <td><strong style={{color:'#16a34a'}}>Rs. {parseFloat(p.amount).toLocaleString()}</strong></td>
                     <td>{p.payment_date?.split('T')[0]}</td>
                     <td>
                       <div style={{display:'flex', gap:'6px'}}>
                         <button className="btn btn-outline btn-sm" onClick={() => viewReceipt(p.id)}>👁️ View</button>
-                        <button className="btn btn-whatsapp btn-sm" onClick={() => shareWhatsApp(p)}>
-                          Share
-                        </button>
+                        <button className="btn btn-whatsapp btn-sm" onClick={() => shareWhatsApp(p)}>Share</button>
                       </div>
                     </td>
                   </tr>
@@ -271,8 +259,7 @@ const Fees = () => {
             <div className="modal-header no-print">
               <h2>🧾 Fee Receipt</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                {/* WHATSAPP SHARE IS FULLY RESTORED AND SAVING ROUTE ENHANCED */}
-                <button className="btn btn-primary btn-sm" onClick={handlePrintAndSave}>🖨️ Print / Download PDF</button>
+                <button className="btn btn-primary btn-sm" onClick={downloadReceiptPDFDirectly}>🖨️ Print / Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
                   receipt.phone,
                   `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: Rs.${receipt.amount}`
