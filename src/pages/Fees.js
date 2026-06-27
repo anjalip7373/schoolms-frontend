@@ -3,7 +3,7 @@ import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { shareOnWhatsApp } from '../utils/exportUtils';
-import { useReactToPrint } from 'react-to-print';
+import { downloadFeeReceiptPDF } from '../utils/downloadHelper';
 
 const FeeReceipt = React.forwardRef(({ receipt }, ref) => (
   <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
@@ -259,7 +259,7 @@ const Fees = () => {
             <div className="modal-header no-print">
               <h2>🧾 Fee Receipt</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button className="btn btn-primary btn-sm" onClick={downloadReceiptPDFDirectly}>🖨️ Print / Download PDF</button>
+               <button onClick={() => downloadFeeReceiptPDF(receipt)}>⬇️ Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
                   receipt.phone,
                   `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: Rs.${receipt.amount}`

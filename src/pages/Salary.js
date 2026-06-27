@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { shareOnWhatsApp } from '../utils/exportUtils';
 import { useReactToPrint } from 'react-to-print';
 import { useAuth } from '../context/AuthContext';
+import { downloadSalarySlipPDF } from '../utils/downloadHelper';
 
 const SalarySlipPrint = React.forwardRef(({ slip }, ref) => (
   <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background:'#fff'}}>
@@ -280,7 +281,7 @@ const Salary = () => {
             <div className="modal-header no-print">
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button className="btn btn-primary btn-sm" onClick={downloadSalaryPDFDirectly}>🖨️ Print / Download PDF</button>
+                <button onClick={() => downloadSalarySlipPDF(slip)}>⬇️ Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>
