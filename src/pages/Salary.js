@@ -7,7 +7,7 @@ import { useReactToPrint } from 'react-to-print';
 import { useAuth } from '../context/AuthContext';
 
 const SalarySlipPrint = React.forwardRef(({ slip }, ref) => (
-  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
+  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto'}}>
     <div style={{textAlign:'center', borderBottom:'2px solid #1e40af', paddingBottom:'16px', marginBottom:'20px'}}>
       <h1 style={{fontSize:'22px', fontWeight:'800', color:'#1e40af'}}>🏫 SchoolMS</h1>
       <p style={{fontSize:'13px', color:'#64748b'}}>Salary Slip — {slip?.month}</p>
@@ -42,62 +42,24 @@ const Salary = () => {
   const [showSlip, setShowSlip] = useState(false);
   const [filters, setFilters] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const slipRef = useRef();
+  
+  // RESTORED ORIGINAL PRINT ENGINE UNTOUCHED
+  const printSlip = useReactToPrint({ content: () => slipRef.current });
 
-  // ─── NEW BLOB DOWNLOAD LOGIC FOR ANDROID WEBVIEW BYPASS ───
-  const downloadSalaryPDFDirectly = () => {
-    try {
-      const htmlContent = `
-        <html>
-          <head>
-            <title>Salary-Slip-${slip?.slip_no || 'Payroll'}</title>
-            <style>
-              body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px; color: #1e293b; }
-              .card { max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 8px; }
-              .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 16px; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-              .total-box { background: #f0fdf4; padding: 16px; text-align: center; border-radius: 6px; font-size: 20px; font-weight: bold; color: #16a34a; }
-            </style>
-          </head>
-          <body>
-            <div class="card">
-              <div class="header">
-                <h1 style="color:#1e40af;margin:0;">🏫 SchoolMS</h1>
-                <p style="color:#64748b;margin:4px 0 0;">Salary Slip — ${slip?.month || ''}</p>
-              </div>
-              <table>
-                <tr><td>Slip No</td><td><strong>${slip?.slip_no || ''}</strong></td></tr>
-                <tr><td>Employee</td><td><strong>${slip?.full_name || ''}</strong></td></tr>
-                <tr><td>Employee ID</td><td>${slip?.emp_id || ''}</td></tr>
-                <tr><td>Role</td><td>${slip?.role_name || ''}</td></tr>
-                <tr><td>Basic Salary</td><td>₹ ${slip?.basic_salary || '0'}</td></tr>
-                <tr><td>Deductions</td><td>₹ ${slip?.deductions || '0'}</td></tr>
-                <tr><td>Net Salary</td><td><strong>₹ ${slip?.net_salary || '0'}</strong></td></tr>
-              </table>
-              <div class="total-box">₹ ${slip?.net_salary || '0'}</div>
-            </div>
-            <script>window.onload = function() { window.print(); }</script>
-          </body>
-        </html>
-      `;
-
-      // Native Blob Conversion mechanism
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Salary-Slip-${slip?.slip_no || 'Payroll'}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success("File generated successfully!");
-    } catch (err) {
-      toast.error("Generation failed");
+  // SAFE TITLE OVERRIDE ADD-ON FOR DIRECT CAPACITOR DOWNLOAD
+  const handlePrintAndSave = () => {
+    const originalTitle = document.title;
+    if (slip && slip.slip_no) {
+      document.title = `Salary-Slip-${slip.slip_no}`;
     }
+    printSlip();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = []; for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
 
@@ -105,7 +67,13 @@ const Salary = () => {
     setLoading(true);
     try {
       const roleType = user.role === 'principal' ? 'employee' : undefined;
-      const params = { from_month: filters.month, from_year: filters.year, to_month: filters.month, to_year: filters.year };
+      const params = {
+        from_month: filters.month,
+        from_year: filters.year,
+        to_month: filters.month,
+        to_year: filters.year,
+      };
+
       const [slipsRes, empRes] = await Promise.all([
         API.get('/salary', { params }),
         API.get('/employees', { params: roleType ? { role_type: roleType } : {} })
@@ -158,83 +126,257 @@ const Salary = () => {
     const withCountry = phone?.startsWith('91') ? phone : '91' + phone;
     const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const monthLabel = s.month ? (() => { const parts = s.month.split('-'); return `${monthNames[parseInt(parts[1])-1]} ${parts[0]}`; })() : s.month;
-    const message = `Salary Slip Ready - ${monthLabel}\n\nNet Salary: Rs. ${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\nSchoolMS`;
-    window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`, '_blank');
+    const message =
+      `Salary Slip Ready - ${monthLabel}\n\n` +
+      `Dear ${s.full_name}, your salary slip for ${monthLabel} is ready!\n\n` +
+      `Net Salary: Rs. ${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\n` +
+      `Please check your email${s.email ? ` (${s.email})` : ''} for the PDF.\n\n` +
+      `SchoolMS - School Management System`;
+    window.open(`https://wa.me/${withCountry}?text={encodeURIComponent(message)}`, '_blank');
   };
 
   return (
     <AppLayout title="Salary Slip" subtitle="Generate and manage salary slips">
       <style>{`
-        .desktop-salary-view { display: block; } .mobile-salary-view { display: none; }
+        .desktop-salary-view { display: block; }
+        .mobile-salary-view { display: none; }
+
         @media (max-width: 1300px) {
-          .desktop-salary-view { display: none !important; } .mobile-salary-view { display: block !important; width: 100% !important; }
-          .mobile-salary-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
-          .mobile-card-row-top { display: flex; justify-content: space-between; }
-          .mobile-card-details { background: #f8fafc; border-radius: 10px; padding: 12px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-          .mobile-card-actions { display: flex; gap: 8px; }
-          .mobile-action-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: 700; border-radius: 8px; text-align: center; }
+          .desktop-salary-view { display: none !important; }
+          .mobile-salary-view { 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          .mobile-salary-card {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          }
+          .mobile-card-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+          }
+          .mobile-emp-info h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; }
+          .mobile-emp-info p { font-size: 12px; color: #64748b; margin: 2px 0 0 0; }
+          
+          .mobile-card-details {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+          }
+          .mobile-detail-item { display: flex; flex-direction: column; }
+          .mobile-detail-lbl { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+          .mobile-detail-val { font-size: 13px; font-weight: 700; color: #334155; }
+
+          .mobile-card-actions {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+          }
+          .mobile-action-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 8px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+          }
         }
       `}</style>
 
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
-          <h1>Salary Slips</h1>
+          <div><h1>Salary Slips</h1><p>{filteredSlips.length} records</p></div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>💵 Generate Salary Slip</button>
         </div>
 
-        <div className="filter-bar" style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <input type="text" className="form-control" placeholder="🔍 Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ flex: 1 }} />
+        <div className="filter-bar" style={{ background: '#fff', padding: '16px 20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            className="form-control search-input"
+            placeholder="🔍 Search employee by name or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ minWidth: '240px', flex: 1 }}
+          />
+
+          <select className="form-control" value={filters.month} onChange={e => setFilters({...filters, month: e.target.value})} style={{ width: 'auto', minWidth: '120px' }}>
+            {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+          </select>
+          <select className="form-control" value={filters.year} onChange={e => setFilters({...filters, year: e.target.value})} style={{ width: 'auto', minWidth: '120px' }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
 
-        {loading ? <div className="loading"><div className="spinner"></div></div> : (
+        {loading ? (
+          <div className="loading"><div className="spinner"></div><p>Loading payroll entries...</p></div>
+        ) : (
           <>
             <div className="mobile-salary-view">
               {filteredSlips.map((s) => (
                 <div key={s.id} className="mobile-salary-card">
                   <div className="mobile-card-row-top">
-                    <h3>{s.full_name}</h3>
-                    <span className="badge badge-success">{s.status}</span>
+                    <div className="mobile-emp-info">
+                      <h3>{s.full_name}</h3>
+                      <p>ID: {s.emp_id || '—'} • <span className="badge badge-info" style={{fontSize:'10px', padding:'2px 6px'}}>{s.role_name}</span></p>
+                    </div>
+                    <span className={"badge " + (s.status === 'paid' ? 'badge-success' : 'badge-warning')} style={{padding:'4px 10px', fontSize:'11px'}}>
+                      {s.status?.toUpperCase()}
+                    </span>
                   </div>
+
                   <div className="mobile-card-details">
-                    <div>Slip: {s.slip_no}</div>
-                    <div>Salary: ₹ {parseFloat(s.net_salary).toLocaleString()}</div>
+                    <div className="mobile-detail-item">
+                      <span className="mobile-detail-lbl">Slip Number</span>
+                      <span className="mobile-detail-val" style={{fontFamily:'JetBrains Mono', fontSize:'12px'}}>{s.slip_no}</span>
+                    </div>
+                    <div className="mobile-detail-item">
+                      <span className="mobile-detail-lbl">Month Period</span>
+                      <span className="mobile-detail-val">{s.month}</span>
+                    </div>
+                    <div className="mobile-detail-item" style={{gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px'}}>
+                      <span className="mobile-detail-lbl">Net Disbursed Salary</span>
+                      <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontWeight:'800'}}>
+                        ₹ {parseFloat(s.net_salary).toLocaleString('en-IN')}
+                      </span>
+                    </div>
                   </div>
+
                   <div className="mobile-card-actions">
-                    <button className="btn btn-outline mobile-action-btn" onClick={() => viewSlip(s.id)}>👁️ View</button>
+                    {s.status !== 'paid' && (
+                      <button className="btn btn-success mobile-action-btn" onClick={() => markPaid(s.id)}>
+                        ✅ Paid
+                      </button>
+                    )}
+                    <button className="btn btn-outline mobile-action-btn" onClick={() => viewSlip(s.id)}>
+                      👁️ View Slip
+                    </button>
+                    <button className="btn btn-whatsapp mobile-action-btn" onClick={() => triggerWhatsAppShare(s)}>
+                      Share
+                    </button>
                   </div>
                 </div>
               ))}
+
+              {!filteredSlips.length && (
+                <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
+                  <div style={{fontSize:'36px', marginBottom:'8px'}}>💵</div>
+                  <p>No matching salary slips found.</p>
+                </div>
+              )}
             </div>
 
             <div className="desktop-salary-view">
-              <div className="card"><div className="table-wrapper">
-                <table>
-                  <thead><tr><th>Slip No</th><th>Employee</th><th>Month</th><th>Net Salary</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {filteredSlips.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.slip_no}</td>
-                        <td>{s.full_name}</td>
-                        <td>{s.month}</td>
-                        <td>₹ {parseFloat(s.net_salary).toLocaleString()}</td>
-                        <td><button className="btn btn-outline btn-sm" onClick={() => viewSlip(s.id)}>👁️ View</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div></div>
+              <div className="card">
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr><th>Slip No</th><th>Employee</th><th>Role</th><th>Month</th><th>Net Salary</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {filteredSlips.map(s => (
+                        <tr key={s.id}>
+                          <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.slip_no}</code></td>
+                          <td><strong>{s.full_name}</strong><br/><small style={{color:'#64748b'}}>{s.emp_id}</small></td>
+                          <td><span className="badge badge-info">{s.role_name}</span></td>
+                          <td>{s.month}</td>
+                          <td><strong style={{color:'#16a34a'}}>₹ {parseFloat(s.net_salary).toLocaleString()}</strong></td>
+                          <td><span className={"badge " + (s.status === 'paid' ? 'badge-success' : 'badge-warning')}>{s.status}</span></td>
+                          <td>
+                            <div style={{display:'flex', gap:'6px'}}>
+                              {s.status !== 'paid' && <button className="btn btn-success btn-sm" onClick={() => markPaid(s.id)}>✅ Paid</button>}
+                              <button className="btn btn-outline btn-sm" onClick={() => viewSlip(s.id)}>👁️ View</button>
+                              <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(s)}>
+                                Share
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </>
         )}
       </div>
 
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💵 Generate Salary Slip</h2>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-grid">
+                  <div className="form-group" style={{gridColumn:'1/-1'}}>
+                    <label>Employee <span>*</span></label>
+                    <select className="form-control" value={form.employee_id} onChange={e => {
+                      const emp = employees.find(em => em.id == e.target.value);
+                      setForm({...form, employee_id: e.target.value, basic_salary: emp?.salary || ''});
+                    }} required>
+                      <option value="">Select Employee</option>
+                      {employees.map(e => <option key={e.id} value={e.id}>{e.full_name} ({e.emp_id}) — {e.role_name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Month <span>*</span></label>
+                    <select className="form-control" value={form.month} onChange={e => setForm({...form, month: e.target.value})}>
+                      {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Year <span>*</span></label>
+                    <select className="form-control" value={form.year} onChange={e => setForm({...form, year: e.target.value})}>
+                      {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Basic Salary (₹) <span>*</span></label>
+                    <input type="number" className="form-control" value={form.basic_salary} onChange={e => setForm({...form, basic_salary: e.target.value})} required placeholder="0.00" />
+                  </div>
+                  <div className="form-group">
+                    <label>Deductions (₹)</label>
+                    <input type="number" className="form-control" value={form.deductions} onChange={e => setForm({...form, deductions: e.target.value})} placeholder="0.00" />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '⏳ Generating...' : '📄 Generate Slip'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showSlip && slip && (
         <div className="modal-overlay" onClick={() => setShowSlip(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header no-print">
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button className="btn btn-primary btn-sm" onClick={downloadSalaryPDFDirectly}>📥 Download File</button>
+                {/* WHATSAPP SHARE IS FULLY RESTORED AND SAVING ROUTE ENHANCED */}
+                <button className="btn btn-primary btn-sm" onClick={handlePrintAndSave}>🖨️ Print / Download PDF</button>
+                <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>
             </div>
