@@ -7,8 +7,7 @@ import { useReactToPrint } from 'react-to-print';
 import { useAuth } from '../context/AuthContext';
 
 const SalarySlipPrint = React.forwardRef(({ slip }, ref) => (
-  /* Added absolute layout ID wrapper for background canvas capture engine */
-  <div ref={ref} id="salary-slip-print-area" style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
+  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
     <div style={{textAlign:'center', borderBottom:'2px solid #1e40af', paddingBottom:'16px', marginBottom:'20px'}}>
       <h1 style={{fontSize:'22px', fontWeight:'800', color:'#1e40af'}}>🏫 SchoolMS</h1>
       <p style={{fontSize:'13px', color:'#64748b'}}>Salary Slip — {slip?.month}</p>
@@ -46,39 +45,23 @@ const Salary = () => {
   
   const printSlip = useReactToPrint({ content: () => slipRef.current });
 
-  // ─── NEW ROBUST ADD-ON: DIRECT MECHANICAL FILE STORAGE DOWNLOAD ENGINE ───
+  // ─── NEW ROBUST ADD-ON: MECHANICAL STORAGE HANDLER ───
   const downloadSalaryPDFDirectly = () => {
-    const element = document.getElementById('salary-slip-print-area');
-    if (!element) {
-      toast.error("Print template not ready yet");
-      return;
-    }
-
-    // Dynamic insertion of library if not cached locally inside the tablet instance WebView
-    const runConversion = () => {
-      const options = {
-        margin:       10,
-        filename:     `Salary-Slip-${slip?.slip_no || 'Payroll'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
-      };
-      window.html2pdf().set(options).from(element).save()
-        .then(() => toast.success("Downloaded to internal storage!"))
-        .catch(() => printSlip()); // Automatic fallback to standard module if render blocks
-    };
-
-    if (window.html2pdf) {
-      runConversion();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = runConversion;
-      document.body.appendChild(script);
+    const originalTitle = document.title;
+    try {
+      if (slip && slip.slip_no) {
+        document.title = `Salary-Slip-${slip.slip_no}-${slip.month || 'payroll'}`;
+      }
+      printSlip();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1500);
+    } catch (err) {
+      toast.error("Download initialization interrupted");
     }
   };
 
-  // ─── NEW ADD-ON: SEARCH FILTER STATE ───
+  // ─── SEARCH FILTER STATE ───
   const [searchQuery, setSearchQuery] = useState('');
 
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -107,7 +90,6 @@ const Salary = () => {
 
   useEffect(() => { fetchAll(); }, [filters]);
 
-  // ─── NEW ADD-ON: FILTER ENGINE FOR DESKTOP & ANDROID BOTH ───
   const filteredSlips = slips.filter(s => {
     const name = s.full_name?.toLowerCase() || '';
     const empId = s.emp_id?.toLowerCase() || '';
@@ -278,7 +260,6 @@ const Salary = () => {
         )}
       </div>
 
-      {/* Modal overlays configurations remain unchanged */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -336,8 +317,7 @@ const Salary = () => {
             <div className="modal-header no-print">
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                {/* ─── TRIGGERING HARDWARE INTERNAL DOWNLOAD HOOK ─── */}
-                <button className="btn btn-primary btn-sm" onClick={downloadSalaryPDFDirectly}>📥 Download PDF</button>
+                <button className="btn btn-primary btn-sm" onClick={downloadSalaryPDFDirectly}>🖨️ Print / Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>

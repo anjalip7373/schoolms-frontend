@@ -6,8 +6,7 @@ import { shareOnWhatsApp } from '../utils/exportUtils';
 import { useReactToPrint } from 'react-to-print';
 
 const FeeReceipt = React.forwardRef(({ receipt }, ref) => (
-  /* Added absolute layout ID wrapper for background canvas capture engine */
-  <div ref={ref} id="fees-receipt-print-area" style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
+  <div ref={ref} style={{padding:'32px', fontFamily:'Plus Jakarta Sans, sans-serif', maxWidth:'600px', margin:'0 auto', background: '#fff'}}>
     <div style={{textAlign:'center', borderBottom:'2px solid #1e40af', paddingBottom:'16px', marginBottom:'20px'}}>
       <h1 style={{fontSize:'22px', fontWeight:'800', color:'#1e40af'}}>🏫 SchoolMS</h1>
       <p style={{fontSize:'13px', color:'#64748b'}}>Fee Payment Receipt</p>
@@ -69,34 +68,19 @@ const Fees = () => {
 
   const printReceipt = useReactToPrint({ content: () => receiptRef.current });
 
-  // ─── NEW ROBUST ADD-ON: DIRECT MECHANICAL FILE STORAGE DOWNLOAD ENGINE ───
+  // ─── NEW ROBUST ADD-ON: MECHANICAL STORAGE HANDLER ───
   const downloadReceiptPDFDirectly = () => {
-    const element = document.getElementById('fees-receipt-print-area');
-    if (!element) {
-      toast.error("Receipt template not active yet");
-      return;
-    }
-
-    const runConversion = () => {
-      const options = {
-        margin:       10,
-        filename:     `Fee-Receipt-${receipt?.receipt_no || 'Download'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
-      };
-      window.html2pdf().set(options).from(element).save()
-        .then(() => toast.success("Receipt downloaded into local storage!"))
-        .catch(() => printReceipt()); // Automatic fallback to standard printer layout
-    };
-
-    if (window.html2pdf) {
-      runConversion();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = runConversion;
-      document.body.appendChild(script);
+    const originalTitle = document.title;
+    try {
+      if (receipt && receipt.receipt_no) {
+        document.title = `Fee-Receipt-${receipt.receipt_no}`;
+      }
+      printReceipt();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1500);
+    } catch (err) {
+      toast.error("Receipt download interrupted");
     }
   };
 
@@ -212,7 +196,6 @@ const Fees = () => {
         </div>
       </div>
 
-      {/* Forms configurations remain active and untouched */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'680px'}}>
@@ -283,8 +266,7 @@ const Fees = () => {
             <div className="modal-header no-print">
               <h2>🧾 Fee Receipt</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                {/* ─── TRIGGERING HARDWARE INTERNAL DOWNLOAD HOOK ─── */}
-                <button className="btn btn-primary btn-sm" onClick={downloadReceiptPDFDirectly}>📥 Download PDF</button>
+                <button className="btn btn-primary btn-sm" onClick={downloadReceiptPDFDirectly}>🖨️ Print / Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(receipt.phone, `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}`)}>Share</button>
                 <button className="modal-close" onClick={() => setShowReceipt(false)}>✕</button>
               </div>
