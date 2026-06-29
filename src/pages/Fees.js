@@ -69,13 +69,9 @@ const Fees = () => {
 
   const printReceipt = useReactToPrint({ content: () => receiptRef.current });
 
-  // ─── NEW ADD-ON: STRICT LOCAL FILE DOWNLOAD LOGIC FOR WEB/TABLET WEBVIEW ───
   const handleDownloadPDF = async (targetReceipt) => {
     try {
-      // 1. Core trigger via helper package
       await downloadFeeReceiptPDF(targetReceipt);
-      
-      // 2. Secondary Native fall-back handler for hybrid WebView containers
       const originalTitle = document.title;
       document.title = `Fee-Receipt-${targetReceipt?.receipt_no || 'Download'}`;
       
@@ -87,7 +83,6 @@ const Fees = () => {
       setTimeout(() => { document.title = originalTitle; }, 1000);
       toast.success("Download request processed!");
     } catch (err) {
-      // Direct printing stream routing if binary generation gets interrupted
       printReceipt();
     }
   };
@@ -193,6 +188,11 @@ const Fees = () => {
                     </td>
                   </tr>
                 ))}
+                {!payments.length && !loading && (
+                  <tr><td colSpan="8">
+                    <div className="empty-state"><div className="empty-icon">💰</div><p>No fee payments found</p></div>
+                  </td></tr>
+                )}
               </tbody>
             </table>
           )}
@@ -240,17 +240,20 @@ const Fees = () => {
                     <label>Amount (Rs.) <span>*</span></label>
                     <input type="number" className="form-control" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required placeholder="0.00" />
                   </div>
-                  <div className="form-group">
-                    <label>Payment Date <span>*</span></label>
-                    <input type="date" className="form-control" value={form.payment_date} onChange={e => setForm({...form, payment_date: e.target.value})} required />
+                  <div className="form-grid-row" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%', gridColumn:'1/-1'}}>
+                    <div className="form-group">
+                      <label>Payment Date <span>*</span></label>
+                      <input type="date" className="form-control" value={form.payment_date} onChange={e => setForm({...form, payment_date: e.target.value})} required />
+                    </div>
+                    <div className="form-group">
+                      <label>Payment Month</label>
+                      <input type="month" className="form-control" value={form.payment_month} onChange={e => setForm({...form, payment_month: e.target.value})} />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Payment Month</label>
-                    <input type="month" className="form-control" value={form.payment_month} onChange={e => setForm({...form, payment_month: e.target.value})} />
-                  </div>
-                  <div className="form-group">
+                  {/* FIXED REMARKS VALUE BINDING & ONAV_CHANGE STATE BLOCK */}
+                  <div className="form-group" style={{gridColumn:'1/-1'}}>
                     <label>Remarks</label>
-                    <input className="form-control" value={form.remarks} onChange={e => setSearch({...form, remarks: e.target.value})} placeholder="Optional remarks" />
+                    <input className="form-control" value={form.remarks} onChange={e => setForm({...form, remarks: e.target.value})} placeholder="Optional remarks" />
                   </div>
                 </div>
               </div>
@@ -269,7 +272,6 @@ const Fees = () => {
             <div className="modal-header">
               <h2>Fee Receipt</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                {/* ─── ENHANCED DIRECT DOWNLOAD IMPLEMENTATION LINKED ─── */}
                 <button className="btn btn-primary btn-sm" onClick={() => handleDownloadPDF(receipt)}>Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
                   receipt.phone,
