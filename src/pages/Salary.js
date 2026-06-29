@@ -46,17 +46,26 @@ const Salary = () => {
   
   const printSlip = useReactToPrint({ content: () => slipRef.current });
 
-  // ─── SAFE NATIVE DOWNLOAD OVERRIDE ───
-  const downloadSalaryPDFDirectly = () => {
+  // ─── NEW ADD-ON: STRICT LOCAL FILE DOWNLOAD LOGIC FOR WEB/TABLET WEBVIEW ───
+  const handleDownloadPDF = async (targetSlip) => {
     try {
+      // 1. Core trigger via helper package
+      await downloadSalarySlipPDF(targetSlip);
+      
+      // 2. Secondary Native fall-back handler for hybrid WebView containers
       const originalTitle = document.title;
-      if (slip && slip.slip_no) {
-        document.title = `Salary-Slip-${slip.slip_no}`;
+      document.title = `Salary-Slip-${targetSlip?.slip_no || 'Download'}`;
+      
+      const printTriggerButton = document.querySelector('.modal-header button');
+      if (printTriggerButton) {
+        printSlip();
       }
-      printSlip();
-      setTimeout(() => { document.title = originalTitle; }, 1200);
+      
+      setTimeout(() => { document.title = originalTitle; }, 1000);
+      toast.success("Download request processed!");
     } catch (err) {
-      toast.error("Execution failed");
+      // Direct printing stream routing if binary generation gets interrupted
+      printSlip();
     }
   };
 
@@ -180,7 +189,7 @@ const Salary = () => {
                     <div className="mobile-detail-item"><span className="mobile-detail-lbl">Month Period</span><span className="mobile-detail-val">{s.month}</span></div>
                     <div className="mobile-detail-item" style={{gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px'}}>
                       <span className="mobile-detail-lbl">Net Disbursed Salary</span>
-                      <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontWeight:'800'}}>₹ {parseFloat(s.net_salary).toLocaleString('en-IN')}</span>
+                      <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontfontWeight:'800'}}>₹ {parseFloat(s.net_salary).toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                   <div className="mobile-card-actions">
@@ -281,7 +290,8 @@ const Salary = () => {
             <div className="modal-header no-print">
               <h2>📄 Salary Slip</h2>
               <div style={{display:'flex', gap:'8px'}}>
-                <button onClick={() => downloadSalarySlipPDF(slip)}>⬇️ Download PDF</button>
+                {/* ─── ENHANCED DIRECT DOWNLOAD IMPLEMENTATION LINKED ─── */}
+                <button className="btn btn-primary btn-sm" onClick={() => handleDownloadPDF(slip)}>⬇️ Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => triggerWhatsAppShare(slip)}>Share</button>
                 <button className="modal-close" onClick={() => setShowSlip(false)}>✕</button>
               </div>
