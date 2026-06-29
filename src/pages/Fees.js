@@ -148,54 +148,178 @@ const Fees = () => {
 
   return (
     <AppLayout title="Fee Payment" subtitle="Manage student fee payments">
-      <div className="page-header">
-        <div><h1>Fee Payments</h1><p>{payments.length} records</p></div>
-        <button className="btn btn-primary" onClick={() => { setShowModal(true); setForm(emptyForm); }}>
-          Add Fee Payment
-        </button>
-      </div>
+      <style>{`
+        .desktop-fee-view { display: block; }
+        .mobile-fee-view { display: none; }
 
-      <div className="filter-bar">
-        <input className="form-control search-input" placeholder="Search by name or roll no..." value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+        @media (max-width: 1300px) {
+          .desktop-fee-view { display: none !important; }
+          .mobile-fee-view { 
+            display: block !important; 
+            width: 100% !important;
+            max-width: 100% !important;
+          }
 
-      <div className="card">
-        <div className="table-wrapper">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Receipt No</th><th>Student</th><th>Class</th>
-                  <th>Fee Type</th><th>Method</th><th>Amount</th>
-                  <th>Date</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map(p => (
-                  <tr key={p.id}>
-                    <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{p.receipt_no}</code></td>
-                    <td><strong>{p.full_name}</strong><br/><small style={{color:'#64748b'}}>{p.roll_no}</small></td>
-                    <td>{p.class_name}</td>
-                    <td><span className="badge badge-info">{p.fee_type_name}</span></td>
-                    <td><span className={"badge " + (p.payment_method === 'Cash' ? 'badge-success' : p.payment_method === 'UPI' ? 'badge-info' : 'badge-warning')}>{p.payment_method || 'Cash'}</span></td>
-                    <td><strong style={{color:'#16a34a'}}>Rs. {parseFloat(p.amount).toLocaleString()}</strong></td>
-                    <td>{p.payment_date?.split('T')[0]}</td>
-                    <td>
-                      <div style={{display:'flex', gap:'6px'}}>
-                        <button className="btn btn-outline btn-sm" onClick={() => viewReceipt(p.id)}>View</button>
-                        <button className="btn btn-whatsapp btn-sm" onClick={() => shareWhatsApp(p)}>Share</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!payments.length && !loading && (
-                  <tr><td colSpan="8">
-                    <div className="empty-state"><div className="empty-icon">💰</div><p>No fee payments found</p></div>
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
+          .mobile-fee-card {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          }
+          .mobile-card-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+          }
+          .mobile-student-info h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; }
+          .mobile-student-info p { font-size: 12px; color: #64748b; margin: 2px 0 0 0; }
+          
+          .mobile-card-details {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+          }
+          .mobile-detail-item { display: flex; flex-direction: column; }
+          .mobile-detail-lbl { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+          .mobile-detail-val { font-size: 13px; font-weight: 700; color: #334155; }
+
+          .mobile-card-actions {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+          }
+          .mobile-action-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 8px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+          }
+        }
+      `}</style>
+
+      <div style={{ width: '100%', overflowX: 'hidden' }}>
+        <div className="page-header">
+          <div><h1>Fee Payments</h1><p>{payments.length} records</p></div>
+          <button className="btn btn-primary" onClick={() => { setShowModal(true); setForm(emptyForm); }}>
+            Add Fee Payment
+          </button>
+        </div>
+
+        <div className="filter-bar">
+          <input className="form-control search-input" placeholder="Search by name or roll no..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+
+        {/* ─── FIXED PROPER MATCHED LABELS FOR RESPONSIVE CARDS ─── */}
+        <div className="mobile-fee-view">
+          {payments.map((p) => (
+            <div key={p.id} className="mobile-fee-card">
+              <div className="mobile-card-row-top">
+                <div className="mobile-student-info">
+                  <h3>{p.full_name}</h3>
+                  <p>Roll No: {p.roll_no || '—'}</p>
+                </div>
+                <span className="badge badge-info" style={{padding:'4px 10px', fontSize:'11px'}}>
+                  {p.class_name}
+                </span>
+              </div>
+
+              <div className="mobile-card-details">
+                <div className="mobile-detail-item">
+                  <span className="mobile-detail-lbl">Receipt No</span>
+                  <span className="mobile-detail-val" style={{fontFamily:'JetBrains Mono', fontSize:'12px'}}>{p.receipt_no}</span>
+                </div>
+                <div className="mobile-detail-item">
+                  <span className="mobile-detail-lbl">Fee Type</span>
+                  <span className="mobile-detail-val">{p.fee_type_name}</span>
+                </div>
+                <div className="mobile-detail-item">
+                  <span className="mobile-detail-lbl">Payment Method</span>
+                  <span className="mobile-detail-val">{p.payment_method || 'Cash'}</span>
+                </div>
+                <div className="mobile-detail-item">
+                  <span className="mobile-detail-lbl">Date</span>
+                  <span className="mobile-detail-val">{p.payment_date?.split('T')[0]}</span>
+                </div>
+                <div className="mobile-detail-item" style={{gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px'}}>
+                  <span className="mobile-detail-lbl">Amount Paid</span>
+                  <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontWeight:'800'}}>
+                    Rs. {parseFloat(p.amount).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mobile-card-actions">
+                <button className="btn btn-outline mobile-action-btn" onClick={() => viewReceipt(p.id)}>
+                  👁️ View
+                </button>
+                <button className="btn btn-whatsapp mobile-action-btn" onClick={() => shareWhatsApp(p)}>
+                  Share
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {!payments.length && !loading && (
+            <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
+              <div style={{fontSize:'36px', marginBottom:'8px'}}>💰</div>
+              <p>No fee payments found</p>
+            </div>
           )}
+        </div>
+
+        <div className="desktop-fee-view">
+          <div className="card">
+            <div className="table-wrapper">
+              {loading ? <div className="loading"><div className="spinner"></div></div> : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Receipt No</th><th>Student</th><th>Class</th>
+                      <th>Fee Type</th><th>Method</th><th>Amount</th>
+                      <th>Date</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map(p => (
+                      <tr key={p.id}>
+                        <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{p.receipt_no}</code></td>
+                        <td><strong>{p.full_name}</strong><br/><small style={{color:'#64748b'}}>{p.roll_no}</small></td>
+                        <td>{p.class_name}</td>
+                        <td><span className="badge badge-info">{p.fee_type_name}</span></td>
+                        <td><span className={"badge " + (p.payment_method === 'Cash' ? 'badge-success' : p.payment_method === 'UPI' ? 'badge-info' : 'badge-warning')}>{p.payment_method || 'Cash'}</span></td>
+                        <td><strong style={{color:'#16a34a'}}>Rs. {parseFloat(p.amount).toLocaleString()}</strong></td>
+                        <td>{p.payment_date?.split('T')[0]}</td>
+                        <td>
+                          <div style={{display:'flex', gap:'6px'}}>
+                            <button className="btn btn-outline btn-sm" onClick={() => viewReceipt(p.id)}>View</button>
+                            <button className="btn btn-whatsapp btn-sm" onClick={() => shareWhatsApp(p)}>Share</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!payments.length && !loading && (
+                      <tr><td colSpan="8">
+                        <div className="empty-state"><div className="empty-icon">💰</div><p>No fee payments found</p></div>
+                      </td></tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -250,7 +374,6 @@ const Fees = () => {
                       <input type="month" className="form-control" value={form.payment_month} onChange={e => setForm({...form, payment_month: e.target.value})} />
                     </div>
                   </div>
-                  {/* FIXED REMARKS VALUE BINDING & ONAV_CHANGE STATE BLOCK */}
                   <div className="form-group" style={{gridColumn:'1/-1'}}>
                     <label>Remarks</label>
                     <input className="form-control" value={form.remarks} onChange={e => setForm({...form, remarks: e.target.value})} placeholder="Optional remarks" />
