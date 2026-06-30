@@ -296,16 +296,19 @@ const Configuration = () => {
                 <tr style={{background:'#f8fafc'}}><th>Class</th><th>Exam Profile</th><th>Subject</th><th>Max Weightage Marks</th></tr>
               </thead>
               <tbody>
-                {examConfigs.map(cfg => (
-                  <tr key={cfg.id}>
-                    <td><strong>{cfg.class_name}</strong></td>
-                    <td><span className={`badge ${cfg.exam_type === 'Unit Test' ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
-                    <td>{cfg.subject_name}</td>
-                    <td><code style={{fontWeight:'700'}}>{cfg.max_marks} Marks</code></td>
-                  </tr>
-                ))}
-                {!examConfigs.length && (
-                  <tr><td colSpan="4" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped yet.</td></tr>
+                {examConfigs
+                  // ─── SAFE FILTER ADD-ON CONDITIONAL ───
+                  .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
+                  .map(cfg => (
+                    <tr key={cfg.id}>
+                      <td><strong>{cfg.class_name}</strong></td>
+                      <td><span className={`badge ${cfg.exam_type === 'Unit Test' ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
+                      <td>{cfg.subject_name}</td>
+                      <td><code style={{fontWeight:'700'}}>{cfg.max_marks} Marks</code></td>
+                    </tr>
+                  ))}
+                {examConfigs.filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass).length === 0 && (
+                  <tr><td colSpan="4" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped for this filtered criteria.</td></tr>
                 )}
               </tbody>
             </table>
