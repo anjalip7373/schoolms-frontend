@@ -162,9 +162,10 @@ const Configuration = () => {
   const [selectedConfigClass, setSelectedConfigClass] = useState('');
   const [selectedSubjectToAdd, setSelectedSubjectToAdd] = useState('');
 
-  // ─── ADD-ON STATES FOR STANDARD WISE EXAM CONFIG ───
-  const [examType, setExamType] = useState('Unit Test');
+  // ─── ADD-ON STATES FOR DYNAMIC EXAMS ───
+  const [examType, setExamType] = useState('Unit 1');
   const [maxMarks, setMaxMarks] = useState(20);
+  const [passMarks, setPassMarks] = useState(7);
   const [examConfigs, setExamConfigs] = useState([]);
 
   const fetchAll = async () => {
@@ -191,7 +192,13 @@ const Configuration = () => {
 
   const handleExamTypeChange = (type) => {
     setExamType(type);
-    setMaxMarks(type === 'Unit Test' ? 20 : 100);
+    if (type.startsWith('Unit')) {
+      setMaxMarks(20);
+      setPassMarks(7);
+    } else {
+      setMaxMarks(100);
+      setPassMarks(35);
+    }
   };
 
   const handleSaveExamMapping = async () => {
@@ -203,9 +210,10 @@ const Configuration = () => {
         class_id: selectedConfigClass,
         exam_type: examType,
         subject_id: selectedSubjectToAdd,
-        max_marks: maxMarks
+        max_marks: maxMarks,
+        pass_marks: passMarks
       });
-      toast.success('Exam marks criteria assigned successfully!');
+      toast.success('Exam criteria assigned successfully!');
       fetchAll();
     } catch (err) { toast.error('Failed to map exam structure'); }
   };
@@ -250,11 +258,11 @@ const Configuration = () => {
         </div>
       </div>
 
-      {/* ─── EXAM PATTERN ADD-ON CONFIG PANEL ─── */}
+      {/* ─── EXAM PATTERN ADD-ON CONFIG PANEL WITH PASS MARKS ─── */}
       <div className="card" style={{marginBottom:'24px', border:'2px solid #3b82f6'}}>
         <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
           <h3 style={{margin:0, fontSize:'16px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
-          <p style={{margin:'4px 0 0', fontSize:'13px', color:'#64748b'}}>Configure standard-wise Unit Test (20 Marks) or Semester (100 Marks) validation profiles</p>
+          <p style={{margin:'4px 0 0', fontSize:'13px', color:'#64748b'}}>Configure standard-wise Unit 1, Unit 2, Semester 1, Semester 2 validation profiles</p>
         </div>
         <div style={{padding:'20px 24px'}}>
           <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'20px'}}>
@@ -269,8 +277,10 @@ const Configuration = () => {
             <div className="form-group" style={{margin:0, minWidth:'150px'}}>
               <label style={{fontSize:'12px', fontWeight:'700'}}>2. Exam Type</label>
               <select className="form-control" value={examType} onChange={e => handleExamTypeChange(e.target.value)}>
-                <option value="Unit Test">Unit Test (20 Marks)</option>
-                <option value="Semester">Semester (100 Marks)</option>
+                <option value="Unit 1">Unit 1</option>
+                <option value="Unit 2">Unit 2</option>
+                <option value="Semester 1">Semester 1</option>
+                <option value="Semester 2">Semester 2</option>
               </select>
             </div>
 
@@ -282,9 +292,14 @@ const Configuration = () => {
               </select>
             </div>
 
-            <div className="form-group" style={{margin:0, width:'100px'}}>
+            <div className="form-group" style={{margin:0, width:'90px'}}>
               <label style={{fontSize:'12px', fontWeight:'700'}}>Max Marks</label>
               <input type="number" className="form-control" value={maxMarks} onChange={e => setMaxMarks(e.target.value)} />
+            </div>
+
+            <div className="form-group" style={{margin:0, width:'90px'}}>
+              <label style={{fontSize:'12px', fontWeight:'700'}}>Pass Marks</label>
+              <input type="number" className="form-control" value={passMarks} onChange={e => setPassMarks(e.target.value)} />
             </div>
 
             <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
@@ -293,22 +308,22 @@ const Configuration = () => {
           <div className="table-wrapper" style={{maxHeight:'250px', overflowY:'auto'}}>
             <table style={{fontSize:'13px'}}>
               <thead>
-                <tr style={{background:'#f8fafc'}}><th>Class</th><th>Exam Profile</th><th>Subject</th><th>Max Weightage Marks</th></tr>
+                <tr style={{background:'#f8fafc'}}><th>Class</th><th>Exam Profile</th><th>Subject</th><th>Max Marks</th><th>Pass Marks</th></tr>
               </thead>
               <tbody>
                 {examConfigs
-                  // ─── SAFE FILTER ADD-ON CONDITIONAL ───
                   .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
                   .map(cfg => (
                     <tr key={cfg.id}>
                       <td><strong>{cfg.class_name}</strong></td>
-                      <td><span className={`badge ${cfg.exam_type === 'Unit Test' ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
+                      <td><span className={`badge ${cfg.exam_type.startsWith('Unit') ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
                       <td>{cfg.subject_name}</td>
                       <td><code style={{fontWeight:'700'}}>{cfg.max_marks} Marks</code></td>
+                      <td><code style={{fontWeight:'700', color:'#dc2626'}}>{cfg.pass_marks || '—'} Marks</code></td>
                     </tr>
                   ))}
                 {examConfigs.filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass).length === 0 && (
-                  <tr><td colSpan="4" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped for this filtered criteria.</td></tr>
+                  <tr><td colSpan="5" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped for this filtered criteria.</td></tr>
                 )}
               </tbody>
             </table>
@@ -332,13 +347,12 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/config/roles/${id}`))}
       />
 
+      {/* REMOVED MAX MARKS AND PASS MARKS ACCORDING TO REQUIREMENTS */}
       <ConfigSection
         title="Subjects" icon="📚" items={subjects}
         fields={[
           { key: 'name', label: 'Subject Name', placeholder: 'e.g. Mathematics' },
-          { key: 'code', label: 'Subject Code', placeholder: 'e.g. MATH' },
-          { key: 'max_marks', label: 'Max Marks', type: 'number', placeholder: '100' },
-          { key: 'pass_marks', label: 'Pass Marks', type: 'number', placeholder: '35' },
+          { key: 'code', label: 'Subject Code', placeholder: 'e.g. MATH' }
         ]}
         onAdd={wrap(d => API.post('/subjects', d))}
         onEdit={wrap((id, d) => API.put(`/subjects/${id}`, d))}
