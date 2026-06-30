@@ -111,7 +111,6 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         </table>
       </div>
 
-      {/* Add Modal */}
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -130,7 +129,6 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         </div>
       )}
 
-      {/* Edit Modal */}
       {editItem && (
         <div className="modal-overlay" onClick={() => setEditItem(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -158,11 +156,9 @@ const Configuration = () => {
   const [roles, setRoles] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [classSubjects, setClassSubjects] = useState([]);
-  const [allSubjects, setAllSubjects] = useState([]);
   const [selectedConfigClass, setSelectedConfigClass] = useState('');
   const [selectedSubjectToAdd, setSelectedSubjectToAdd] = useState('');
 
-  // ─── ADD-ON STATES FOR DYNAMIC EXAMS ───
   const [examType, setExamType] = useState('Unit 1');
   const [maxMarks, setMaxMarks] = useState(20);
   const [passMarks, setPassMarks] = useState(7);
@@ -182,7 +178,6 @@ const Configuration = () => {
       setFeeTypes(feeTypesRes.data);
       setRoles(rolesRes.data);
       setSubjects(subjectsRes.data);
-      setAllSubjects(subjectsRes.data);
       setClassSubjects(classSubjectsRes.data);
       setExamConfigs(examSettingsRes.data);
     } catch (err) { toast.error('Failed to load configuration'); }
@@ -214,11 +209,37 @@ const Configuration = () => {
         pass_marks: passMarks
       });
       toast.success('Exam criteria assigned successfully!');
+      setSelectedSubjectToAdd('');
       fetchAll();
     } catch (err) { toast.error('Failed to map exam structure'); }
   };
 
+  const handleDeleteExamSetting = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this criteria?')) return;
+    try {
+      await API.delete(`/config/exam-settings/${id}`);
+      toast.success('Criteria deleted successfully!');
+      fetchAll();
+    } catch (err) { toast.error('Failed to delete configuration entry'); }
+  };
+
+  const handleEditExamSetting = (cfg) => {
+    setSelectedConfigClass(cfg.class_id);
+    setExamType(cfg.exam_type);
+    setSelectedSubjectToAdd(cfg.subject_id);
+    setMaxMarks(cfg.max_marks);
+    setPassMarks(cfg.pass_marks);
+    window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
+    toast.info('Loaded into fields for quick editing!');
+  };
+
   const wrap = (fn) => async (...args) => { await fn(...args); fetchAll(); };
+
+  // ─── CRITICAL CRASH LOCK VALIDATION ───
+  // Filter only subjects that are assigned to the currently selected class
+  const filteredAvailableSubjects = subjects.filter(sub => 
+    classSubjects.some(cs => cs.class_id == selectedConfigClass && cs.subject_id == sub.id)
+  );
 
   return (
     <AppLayout title="Configuration" subtitle="Manage system settings">
@@ -258,7 +279,7 @@ const Configuration = () => {
         </div>
       </div>
 
-      {/* ─── EXAM PATTERN ADD-ON CONFIG PANEL WITH PASS MARKS ─── */}
+      {/* ─── EXAM PATTERN CONFIG PANEL WITH EXTENDED LOCK VALIDATIONS ─── */}
       <div className="card" style={{marginBottom:'24px', border:'2px solid #3b82f6'}}>
         <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
           <h3 style={{margin:0, fontSize:'16px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
@@ -268,7 +289,7 @@ const Configuration = () => {
           <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'20px'}}>
             <div className="form-group" style={{margin:0, minWidth:'150px'}}>
               <label style={{fontSize:'12px', fontWeight:'700'}}>1. Choose Class</label>
-              <select className="form-control" value={selectedConfigClass} onChange={e => setSelectedConfigClass(e.target.value)}>
+              <select className="form-control" value={selectedConfigClass} onChange={e => { setSelectedConfigClass(e.target.value); setSelectedSubjectToAdd(''); }}>
                 <option value="">Select Class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -285,10 +306,10 @@ const Configuration = () => {
             </div>
 
             <div className="form-group" style={{margin:0, minWidth:'180px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>3. Select Subject</label>
-              <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)}>
-                <option value="">Choose Subject</option>
-                {allSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              <label style={{fontSize:'12px', fontWeight:'700'}}>3. Select Subject (Assigned Only)</label>
+              <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)} disabled={!selectedConfigClass}>
+                <option value="">{selectedConfigClass ? 'Choose Subject' : '⚠️ Choose Class First'}</option>
+                {filteredAvailableSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
@@ -305,10 +326,18 @@ const Configuration = () => {
             <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
           </div>
 
-          <div className="table-wrapper" style={{maxHeight:'250px', overflowY:'auto'}}>
-            <table style={{fontSize:'13px'}}>
+          {/* FIXED CARDS AND CONFLICTED MISMATCH TABLE SPREADSHEET */}
+          <div className="table-wrapper" style={{maxHeight:'300px', overflowY:'auto'}}>
+            <table>
               <thead>
-                <tr style={{background:'#f8fafc'}}><th>Class</th><th>Exam Profile</th><th>Subject</th><th>Max Marks</th><th>Pass Marks</th></tr>
+                <tr style={{background:'#f1f5f9', color:'#1e293b'}}>
+                  <th>Class Name</th>
+                  <th>Exam Type</th>
+                  <th>Subject</th>
+                  <th>Max Marks</th>
+                  <th>Passing Marks</th>
+                  <th>Action Controls</th>
+                </tr>
               </thead>
               <tbody>
                 {examConfigs
@@ -318,12 +347,18 @@ const Configuration = () => {
                       <td><strong>{cfg.class_name}</strong></td>
                       <td><span className={`badge ${cfg.exam_type.startsWith('Unit') ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
                       <td>{cfg.subject_name}</td>
-                      <td><code style={{fontWeight:'700'}}>{cfg.max_marks} Marks</code></td>
-                      <td><code style={{fontWeight:'700', color:'#dc2626'}}>{cfg.pass_marks || '—'} Marks</code></td>
+                      <td><strong>{cfg.max_marks} Marks</strong></td>
+                      <td><strong style={{color:'#dc2626'}}>{cfg.pass_marks} Marks</strong></td>
+                      <td>
+                        <div style={{display:'flex', gap:'6px'}}>
+                          <button className="btn btn-outline btn-sm" onClick={() => handleEditExamSetting(cfg)}>✏️</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteExamSetting(cfg.id)}>🗑️</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 {examConfigs.filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass).length === 0 && (
-                  <tr><td colSpan="5" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped for this filtered criteria.</td></tr>
+                  <tr><td colSpan="6" style={{textAlign:'center', color:'#94a3b8'}}>No criteria found for selection.</td></tr>
                 )}
               </tbody>
             </table>
@@ -347,7 +382,6 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/config/roles/${id}`))}
       />
 
-      {/* REMOVED MAX MARKS AND PASS MARKS ACCORDING TO REQUIREMENTS */}
       <ConfigSection
         title="Subjects" icon="📚" items={subjects}
         fields={[
@@ -368,18 +402,16 @@ const Configuration = () => {
           <div style={{display:'flex', gap:'10px', marginBottom:'20px', flexWrap:'wrap', alignItems:'flex-end'}}>
             <div className="form-group" style={{margin:0, minWidth:'180px'}}>
               <label style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Select Class</label>
-              <select className="form-control" value={selectedConfigClass}
-                onChange={e => setSelectedConfigClass(e.target.value)}>
+              <select className="form-control" value={selectedConfigClass} onChange={e => setSelectedConfigClass(e.target.value)}>
                 <option value="">Choose Class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="form-group" style={{margin:0, minWidth:'200px'}}>
               <label style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Select Subject</label>
-              <select className="form-control" value={selectedSubjectToAdd}
-                onChange={e => setSelectedSubjectToAdd(e.target.value)}>
+              <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)}>
                 <option value="">Choose Subject</option>
-                {allSubjects
+                {subjects
                   .filter(s => !classSubjects.some(cs => cs.class_id == selectedConfigClass && cs.subject_id == s.id))
                   .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -401,9 +433,7 @@ const Configuration = () => {
             if (!clsSubjects.length) return null;
             return (
               <div key={cls.id} style={{marginBottom:'16px', background:'#f8fafc', borderRadius:'10px', padding:'14px 16px', border:'1px solid #e2e8f0'}}>
-                <div style={{fontSize:'13px', fontWeight:'800', color:'#1e40af', marginBottom:'10px'}}>
-                  🏫 {cls.name}
-                </div>
+                <div style={{fontSize:'13px', fontWeight:'800', color:'#1e40af', marginBottom:'10px'}}>🏫 {cls.name}</div>
                 <div style={{display:'flex', flexWrap:'wrap', gap:'8px'}}>
                   {clsSubjects.map(cs => (
                     <div key={cs.id} style={{display:'flex', alignItems:'center', gap:'6px', background:'#fff', border:'1px solid #dbeafe', borderRadius:'20px', padding:'4px 12px'}}>
