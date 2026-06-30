@@ -123,7 +123,7 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
               <div className="modal-body"><div className="form-grid">{fields.map(renderField)}</div></div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '⏳' : '✅ Add'}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '...⏳' : '✅ Add'}</button>
               </div>
             </form>
           </div>
@@ -162,14 +162,20 @@ const Configuration = () => {
   const [selectedConfigClass, setSelectedConfigClass] = useState('');
   const [selectedSubjectToAdd, setSelectedSubjectToAdd] = useState('');
 
+  // ─── ADD-ON STATES FOR STANDARD WISE EXAM CONFIG ───
+  const [examType, setExamType] = useState('Unit Test');
+  const [maxMarks, setMaxMarks] = useState(20);
+  const [examConfigs, setExamConfigs] = useState([]);
+
   const fetchAll = async () => {
     try {
-      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes] = await Promise.all([
+      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes, examSettingsRes] = await Promise.all([
         API.get('/config/classes'),
         API.get('/config/fee-types'),
         API.get('/config/roles'),
         API.get('/subjects'),
         API.get('/class-subjects'),
+        API.get('/config/exam-settings'),
       ]);
       setClasses(classesRes.data);
       setFeeTypes(feeTypesRes.data);
@@ -177,10 +183,32 @@ const Configuration = () => {
       setSubjects(subjectsRes.data);
       setAllSubjects(subjectsRes.data);
       setClassSubjects(classSubjectsRes.data);
+      setExamConfigs(examSettingsRes.data);
     } catch (err) { toast.error('Failed to load configuration'); }
   };
 
   useEffect(() => { fetchAll(); }, []);
+
+  const handleExamTypeChange = (type) => {
+    setExamType(type);
+    setMaxMarks(type === 'Unit Test' ? 20 : 100);
+  };
+
+  const handleSaveExamMapping = async () => {
+    if (!selectedConfigClass || !selectedSubjectToAdd) {
+      return toast.error('Please choose Class and Subject first.');
+    }
+    try {
+      await API.post('/config/exam-settings', {
+        class_id: selectedConfigClass,
+        exam_type: examType,
+        subject_id: selectedSubjectToAdd,
+        max_marks: maxMarks
+      });
+      toast.success('Exam marks criteria assigned successfully!');
+      fetchAll();
+    } catch (err) { toast.error('Failed to map exam structure'); }
+  };
 
   const wrap = (fn) => async (...args) => { await fn(...args); fetchAll(); };
 
@@ -196,7 +224,6 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/config/classes/${id}`))}
       />
 
-      {/* ✅ Class Subject Preview — RIGHT AFTER Classes section */}
       <div className="card" style={{marginBottom:'24px'}}>
         <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0'}}>
           <h3 style={{margin:0, fontSize:'15px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
@@ -220,6 +247,69 @@ const Configuration = () => {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ─── EXAM PATTERN ADD-ON CONFIG PANEL ─── */}
+      <div className="card" style={{marginBottom:'24px', border:'2px solid #3b82f6'}}>
+        <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
+          <h3 style={{margin:0, fontSize:'16px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
+          <p style={{margin:'4px 0 0', fontSize:'13px', color:'#64748b'}}>Configure standard-wise Unit Test (20 Marks) or Semester (100 Marks) validation profiles</p>
+        </div>
+        <div style={{padding:'20px 24px'}}>
+          <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'20px'}}>
+            <div className="form-group" style={{margin:0, minWidth:'150px'}}>
+              <label style={{fontSize:'12px', fontWeight:'700'}}>1. Choose Class</label>
+              <select className="form-control" value={selectedConfigClass} onChange={e => setSelectedConfigClass(e.target.value)}>
+                <option value="">Select Class</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group" style={{margin:0, minWidth:'150px'}}>
+              <label style={{fontSize:'12px', fontWeight:'700'}}>2. Exam Type</label>
+              <select className="form-control" value={examType} onChange={e => handleExamTypeChange(e.target.value)}>
+                <option value="Unit Test">Unit Test (20 Marks)</option>
+                <option value="Semester">Semester (100 Marks)</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{margin:0, minWidth:'180px'}}>
+              <label style={{fontSize:'12px', fontWeight:'700'}}>3. Select Subject</label>
+              <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)}>
+                <option value="">Choose Subject</option>
+                {allSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group" style={{margin:0, width:'100px'}}>
+              <label style={{fontSize:'12px', fontWeight:'700'}}>Max Marks</label>
+              <input type="number" className="form-control" value={maxMarks} onChange={e => setMaxMarks(e.target.value)} />
+            </div>
+
+            <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
+          </div>
+
+          <div className="table-wrapper" style={{maxHeight:'250px', overflowY:'auto'}}>
+            <table style={{fontSize:'13px'}}>
+              <thead>
+                <tr style={{background:'#f8fafc'}}><th>Class</th><th>Exam Profile</th><th>Subject</th><th>Max Weightage Marks</th></tr>
+              </thead>
+              <tbody>
+                {examConfigs.map(cfg => (
+                  <tr key={cfg.id}>
+                    <td><strong>{cfg.class_name}</strong></td>
+                    <td><span className={`badge ${cfg.exam_type === 'Unit Test' ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></td>
+                    <td>{cfg.subject_name}</td>
+                    <td><code style={{fontWeight:'700'}}>{cfg.max_marks} Marks</code></td>
+                  </tr>
+                ))}
+                {!examConfigs.length && (
+                  <tr><td colSpan="4" style={{textAlign:'center', color:'#94a3b8'}}>No exam-specific settings mapped yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -252,7 +342,6 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/subjects/${id}`))}
       />
 
-      {/* ✅ Class-wise Subject Assignment */}
       <div className="card" style={{marginTop:'24px'}}>
         <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <h3 style={{margin:0, fontSize:'16px', fontWeight:'800'}}>📚 Class-wise Subject Assignment</h3>
@@ -319,12 +408,6 @@ const Configuration = () => {
               </div>
             );
           })}
-
-          {classSubjects.length === 0 && (
-            <div style={{textAlign:'center', color:'#94a3b8', padding:'20px'}}>
-              No subjects assigned to classes yet. Use the form above to assign.
-            </div>
-          )}
         </div>
       </div>
 
