@@ -184,7 +184,6 @@ const Marks = () => {
         .desktop-marks-view { display: block; }
         .mobile-marks-view { display: none; }
 
-        /* Breakpoint forces grid containers to collapse beautifully on portrait tablet ratios */
         @media (max-width: 1300px) {
           .desktop-marks-view { display: none !important; }
           .mobile-marks-view { 
@@ -364,9 +363,10 @@ const Marks = () => {
             {/* ========================================== */}
             <div className="desktop-marks-view">
               <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
-                <div style={{overflowX:'auto'}}>
+                {/* UP-DOWN SLIDER EMBEDDED PREVENTING OVER-FLOW LENGTH FOR MARKS ENTRY */}
+                <div className="table-wrapper" style={{overflowX:'auto', maxHeight:'400px', overflowY:'auto'}}>
                   <table style={{width:'100%', borderCollapse:'collapse', minWidth:'600px'}}>
-                    <thead>
+                    <thead style={{position:'sticky', top:0, zIndex:2}}>
                       <tr style={{background:'#1e40af'}}>
                         <th style={{padding:'12px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'40px'}}>#</th>
                         <th style={{padding:'12px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'150px'}}>STUDENT NAME</th>
@@ -383,14 +383,21 @@ const Marks = () => {
                     </thead>
                     <tbody>
                       {students.map((student, i) => {
-                        let total = 0, maxTotal = 0;
+                        let total = 0, maxTotal = 0, isStudentFailed = false;
+                        
                         subjects.forEach(s => {
                           const cellData = inputMarks[student.id]?.[s.id];
-                          if (cellData?.is_absent) return;
+                          if (cellData?.is_absent) {
+                            isStudentFailed = true;
+                            return;
+                          }
                           const v = parseFloat(cellData?.marks || 0);
                           if (!isNaN(v) && cellData?.marks !== '') {
                             total += v;
                             maxTotal += s.max_marks;
+                            if (v < s.pass_marks) isStudentFailed = true;
+                          } else {
+                            isStudentFailed = true;
                           }
                         });
                         const pct = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(1) : '—';
@@ -450,12 +457,13 @@ const Marks = () => {
                             <td style={{padding:'10px', textAlign:'center'}}>
                               <span style={{fontWeight:'800', color:'#1e40af'}}>{maxTotal > 0 ? `${total}/${maxTotal}` : '—'}</span>
                             </td>
+                            {/* ─── ADD-ON CONDITIONAL CRITICAL LOCK TO HIDE % ON FAIL/ABSENT SYSTEM STATUS ─── */}
                             <td style={{padding:'10px', textAlign:'center'}}>
-                              <span style={{
-                                background: pct === '—' ? '#f1f5f9' : parseFloat(pct) >= 35 ? '#dcfce7' : '#fee2e2',
-                                color: pct === '—' ? '#94a3b8' : parseFloat(pct) >= 35 ? '#16a34a' : '#dc2626',
-                                padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'
-                              }}>{pct === '—' ? '—' : `${pct}%`}</span>
+                              {isStudentFailed || pct === '—' ? (
+                                <span style={{background:'#fee2e2', color:'#dc2626', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>—</span>
+                              ) : (
+                                <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{pct}%</span>
+                              )}
                             </td>
                             <td style={{padding:'6px 8px'}}>
                               <input

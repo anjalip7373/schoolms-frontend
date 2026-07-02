@@ -74,9 +74,10 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         <h3>{icon} {title}</h3>
         <button className="btn btn-primary btn-sm" onClick={() => { setShowAdd(true); setForm({}); }}>➕ Add {title}</button>
       </div>
-      <div className="table-wrapper">
+      {/* Dynamic Up-Down side slider to avoid lengthy page views */}
+      <div className="table-wrapper" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
         <table>
-          <thead>
+          <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
             <tr>
               <th>Name</th>
               {fields.filter(f => f.key !== 'name').map(f => <th key={f.key}>{f.label}</th>)}
@@ -235,8 +236,6 @@ const Configuration = () => {
 
   const wrap = (fn) => async (...args) => { await fn(...args); fetchAll(); };
 
-  // ─── CRITICAL CRASH LOCK VALIDATION ───
-  // Filter only subjects that are assigned to the currently selected class
   const filteredAvailableSubjects = subjects.filter(sub => 
     classSubjects.some(cs => cs.class_id == selectedConfigClass && cs.subject_id == sub.id)
   );
@@ -253,24 +252,24 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/config/classes/${id}`))}
       />
 
-      <div className="card" style={{marginBottom:'24px'}}>
-        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0'}}>
-          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
-          <p style={{margin:'4px 0 0', fontSize:'12px', color:'#64748b'}}>Quick view of subjects assigned per class</p>
+      <div className="card" style={{marginBottom:'20px'}}>
+        <div style={{padding:'14px 20px', borderBottom:'1px solid #e2e8f0'}}>
+          <h3 style={{margin:0, fontSize:'14px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
         </div>
-        <div style={{padding:'16px 20px'}}>
+        {/* Slider added to avoid extensive scroll height */}
+        <div style={{padding:'14px 20px', maxHeight:'250px', overflowY:'auto'}}>
           {classes.map(cls => {
             const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
             return (
-              <div key={cls.id} style={{marginBottom:'12px', padding:'12px 16px', background:'#f8fafc', borderRadius:'10px', border:'1px solid #e2e8f0'}}>
-                <div style={{fontWeight:'800', color:'#1e40af', fontSize:'13px', marginBottom:'8px'}}>🏫 {cls.name}</div>
+              <div key={cls.id} style={{marginBottom:'10px', padding:'10px 14px', background:'#f8fafc', borderRadius:'8px', border:'1px solid #e2e8f0'}}>
+                <div style={{fontWeight:'800', color:'#1e40af', fontSize:'12px', marginBottom:'6px'}}>🏫 {cls.name}</div>
                 <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
                   {clsSubjects.length > 0 ? clsSubjects.map(cs => (
-                    <span key={cs.id} style={{background:'#dbeafe', color:'#1e40af', padding:'2px 10px', borderRadius:'20px', fontSize:'12px', fontWeight:'600'}}>
+                    <span key={cs.id} style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'600'}}>
                       {cs.subject_name}
                     </span>
                   )) : (
-                    <span style={{color:'#94a3b8', fontSize:'12px'}}>No subjects assigned yet</span>
+                    <span style={{color:'#94a3b8', fontSize:'11px'}}>No subjects assigned yet</span>
                   )}
                 </div>
               </div>
@@ -279,24 +278,23 @@ const Configuration = () => {
         </div>
       </div>
 
-      {/* ─── EXAM PATTERN CONFIG PANEL WITH EXTENDED LOCK VALIDATIONS ─── */}
-      <div className="card" style={{marginBottom:'24px', border:'2px solid #3b82f6'}}>
-        <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
-          <h3 style={{margin:0, fontSize:'16px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
-          <p style={{margin:'4px 0 0', fontSize:'13px', color:'#64748b'}}>Configure standard-wise Unit 1, Unit 2, Semester 1, Semester 2 validation profiles</p>
+      {/* ─── EXAM PATTERN CONFIG PANEL WITH SCROLL WRAPPER ─── */}
+      <div className="card" style={{marginBottom:'20px', border:'2px solid #3b82f6'}}>
+        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
+          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
         </div>
-        <div style={{padding:'20px 24px'}}>
-          <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'20px'}}>
-            <div className="form-group" style={{margin:0, minWidth:'150px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>1. Choose Class</label>
+        <div style={{padding:'16px 20px'}}>
+          <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
+            <div className="form-group" style={{margin:0, minWidth:'140px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>1. Choose Class</label>
               <select className="form-control" value={selectedConfigClass} onChange={e => { setSelectedConfigClass(e.target.value); setSelectedSubjectToAdd(''); }}>
                 <option value="">Select Class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
 
-            <div className="form-group" style={{margin:0, minWidth:'150px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>2. Exam Type</label>
+            <div className="form-group" style={{margin:0, minWidth:'140px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>2. Exam Type</label>
               <select className="form-control" value={examType} onChange={e => handleExamTypeChange(e.target.value)}>
                 <option value="Unit 1">Unit 1</option>
                 <option value="Unit 2">Unit 2</option>
@@ -305,32 +303,31 @@ const Configuration = () => {
               </select>
             </div>
 
-            <div className="form-group" style={{margin:0, minWidth:'180px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>3. Select Subject (Assigned Only)</label>
+            <div className="form-group" style={{margin:0, minWidth:'160px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>3. Select Subject</label>
               <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)} disabled={!selectedConfigClass}>
                 <option value="">{selectedConfigClass ? 'Choose Subject' : '⚠️ Choose Class First'}</option>
                 {filteredAvailableSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
-            <div className="form-group" style={{margin:0, width:'90px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>Max Marks</label>
+            <div className="form-group" style={{margin:0, width:'85px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>Max Marks</label>
               <input type="number" className="form-control" value={maxMarks} onChange={e => setMaxMarks(e.target.value)} />
             </div>
 
-            <div className="form-group" style={{margin:0, width:'90px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700'}}>Pass Marks</label>
+            <div className="form-group" style={{margin:0, width:'85px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>Pass Marks</label>
               <input type="number" className="form-control" value={passMarks} onChange={e => setPassMarks(e.target.value)} />
             </div>
 
             <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
           </div>
 
-          {/* FIXED CARDS AND CONFLICTED MISMATCH TABLE SPREADSHEET */}
-          <div className="table-wrapper" style={{maxHeight:'300px', overflowY:'auto'}}>
+          <div className="table-wrapper" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
             <table>
-              <thead>
-                <tr style={{background:'#f1f5f9', color:'#1e293b'}}>
+              <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
+                <tr>
                   <th>Class Name</th>
                   <th>Exam Type</th>
                   <th>Subject</th>
@@ -393,22 +390,21 @@ const Configuration = () => {
         onDelete={wrap(id => API.delete(`/subjects/${id}`))}
       />
 
-      <div className="card" style={{marginTop:'24px'}}>
-        <div style={{padding:'20px 24px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-          <h3 style={{margin:0, fontSize:'16px', fontWeight:'800'}}>📚 Class-wise Subject Assignment</h3>
-          <p style={{margin:0, fontSize:'13px', color:'#64748b'}}>Assign subjects to specific classes</p>
+      <div className="card" style={{marginTop:'20px'}}>
+        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800'}}>📚 Class-wise Subject Assignment</h3>
         </div>
-        <div style={{padding:'20px 24px'}}>
-          <div style={{display:'flex', gap:'10px', marginBottom:'20px', flexWrap:'wrap', alignItems:'flex-end'}}>
-            <div className="form-group" style={{margin:0, minWidth:'180px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Select Class</label>
+        <div style={{padding:'16px 20px'}}>
+          <div style={{display:'flex', gap:'10px', marginBottom:'16px', flexWrap:'wrap', alignItems:'flex-end'}}>
+            <div className="form-group" style={{margin:0, minWidth:'160px'}}>
+              <label style={{fontSize:'11px', color:'#64748b'}}>Select Class</label>
               <select className="form-control" value={selectedConfigClass} onChange={e => setSelectedConfigClass(e.target.value)}>
                 <option value="">Choose Class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="form-group" style={{margin:0, minWidth:'200px'}}>
-              <label style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>Select Subject</label>
+            <div className="form-group" style={{margin:0, minWidth:'180px'}}>
+              <label style={{fontSize:'11px', color:'#64748b'}}>Select Subject</label>
               <select className="form-control" value={selectedSubjectToAdd} onChange={e => setSelectedSubjectToAdd(e.target.value)}>
                 <option value="">Choose Subject</option>
                 {subjects
@@ -428,33 +424,35 @@ const Configuration = () => {
             </button>
           </div>
 
-          {classes.map(cls => {
-            const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
-            if (!clsSubjects.length) return null;
-            return (
-              <div key={cls.id} style={{marginBottom:'16px', background:'#f8fafc', borderRadius:'10px', padding:'14px 16px', border:'1px solid #e2e8f0'}}>
-                <div style={{fontSize:'13px', fontWeight:'800', color:'#1e40af', marginBottom:'10px'}}>🏫 {cls.name}</div>
-                <div style={{display:'flex', flexWrap:'wrap', gap:'8px'}}>
-                  {clsSubjects.map(cs => (
-                    <div key={cs.id} style={{display:'flex', alignItems:'center', gap:'6px', background:'#fff', border:'1px solid #dbeafe', borderRadius:'20px', padding:'4px 12px'}}>
-                      <span style={{fontSize:'12px', fontWeight:'700', color:'#1e40af'}}>{cs.subject_name}</span>
-                      {cs.code && <span style={{fontSize:'10px', color:'#94a3b8'}}>({cs.code})</span>}
-                      <button
-                        onClick={async () => {
-                          if (!window.confirm(`Remove ${cs.subject_name} from ${cls.name}?`)) return;
-                          await API.delete(`/class-subjects/${cs.id}`);
-                          fetchAll();
-                          toast.success('Subject removed from class');
-                        }}
-                        style={{background:'none', border:'none', color:'#ef4444', cursor:'pointer', fontSize:'14px', lineHeight:1, padding:'0 2px'}}>
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+          <div style={{maxHeight:'250px', overflowY:'auto'}}>
+            {classes.map(cls => {
+              const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
+              if (!clsSubjects.length) return null;
+              return (
+                <div key={cls.id} style={{marginBottom:'12px', background:'#f8fafc', borderRadius:'10px', padding:'12px 14px', border:'1px solid #e2e8f0'}}>
+                  <div style={{fontSize:'12px', fontWeight:'800', color:'#1e40af', marginBottom:'8px'}}>🏫 {cls.name}</div>
+                  <div style={{display:'flex', flexWrap:'wrap', gap:'8px'}}>
+                    {clsSubjects.map(cs => (
+                      <div key={cs.id} style={{display:'flex', alignItems:'center', gap:'6px', background:'#fff', border:'1px solid #dbeafe', borderRadius:'20px', padding:'3px 10px'}}>
+                        <span style={{fontSize:'12px', fontWeight:'700', color:'#1e40af'}}>{cs.subject_name}</span>
+                        {cs.code && <span style={{fontSize:'10px', color:'#94a3b8'}}>({cs.code})</span>}
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Remove ${cs.subject_name} from ${cls.name}?`)) return;
+                            await API.delete(`/class-subjects/${cs.id}`);
+                            fetchAll();
+                            toast.success('Subject removed from class');
+                          }}
+                          style={{background:'none', border:'none', color:'#ef4444', cursor:'pointer', fontSize:'13px', lineHeight:1, padding:'0 2px'}}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
