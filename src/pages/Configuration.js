@@ -74,7 +74,6 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         <h3>{icon} {title}</h3>
         <button className="btn btn-primary btn-sm" onClick={() => { setShowAdd(true); setForm({}); }}>➕ Add {title}</button>
       </div>
-      {/* Dynamic Up-Down side slider to avoid lengthy page views */}
       <div className="table-wrapper" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
         <table>
           <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
@@ -164,16 +163,18 @@ const Configuration = () => {
   const [maxMarks, setMaxMarks] = useState(20);
   const [passMarks, setPassMarks] = useState(7);
   const [examConfigs, setExamConfigs] = useState([]);
+  const [examTypes, setExamTypes] = useState([]);
 
   const fetchAll = async () => {
     try {
-      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes, examSettingsRes] = await Promise.all([
+      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes, examSettingsRes, examTypesRes] = await Promise.all([
         API.get('/config/classes'),
         API.get('/config/fee-types'),
         API.get('/config/roles'),
         API.get('/subjects'),
         API.get('/class-subjects'),
         API.get('/config/exam-settings'),
+        API.get('/exam-types'),
       ]);
       setClasses(classesRes.data);
       setFeeTypes(feeTypesRes.data);
@@ -181,6 +182,7 @@ const Configuration = () => {
       setSubjects(subjectsRes.data);
       setClassSubjects(classSubjectsRes.data);
       setExamConfigs(examSettingsRes.data);
+      setExamTypes(examTypesRes.data);
     } catch (err) { toast.error('Failed to load configuration'); }
   };
 
@@ -256,7 +258,6 @@ const Configuration = () => {
         <div style={{padding:'14px 20px', borderBottom:'1px solid #e2e8f0'}}>
           <h3 style={{margin:0, fontSize:'14px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
         </div>
-        {/* Slider added to avoid extensive scroll height */}
         <div style={{padding:'14px 20px', maxHeight:'250px', overflowY:'auto'}}>
           {classes.map(cls => {
             const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
@@ -296,10 +297,7 @@ const Configuration = () => {
             <div className="form-group" style={{margin:0, minWidth:'140px'}}>
               <label style={{fontSize:'11px', fontWeight:'700'}}>2. Exam Type</label>
               <select className="form-control" value={examType} onChange={e => handleExamTypeChange(e.target.value)}>
-                <option value="Unit 1">Unit 1</option>
-                <option value="Unit 2">Unit 2</option>
-                <option value="Semester 1">Semester 1</option>
-                <option value="Semester 2">Semester 2</option>
+                {examTypes.map(et => <option key={et.id} value={et.name}>{et.name}</option>)}
               </select>
             </div>
 
@@ -362,6 +360,15 @@ const Configuration = () => {
           </div>
         </div>
       </div>
+
+      {/* ─── NEW ADD-ON EXAM TYPES CONTROL MANAGER BLOCK ─── */}
+      <ConfigSection
+        title="Exam Types" icon="📝" items={examTypes}
+        fields={[{ key: 'name', label: 'Exam Type Name', placeholder: 'e.g. Unit 1, Final Exam' }]}
+        onAdd={wrap(d => API.post('/exam-types', d))}
+        onEdit={wrap((id, d) => API.put(`/exam-types/${id}`, d))}
+        onDelete={wrap(id => API.delete(`/exam-types/${id}`))}
+      />
 
       <ConfigSection
         title="Fee Types" icon="💰" items={feeTypes}
