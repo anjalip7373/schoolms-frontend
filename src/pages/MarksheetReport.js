@@ -279,9 +279,9 @@ const MarksheetReport = () => {
 
     const summaryItems = [
       ['Total Marks', `${student.total} / ${student.maxTotal}`],
-      // ─── EXCLUDE PERCENTAGE VISIBILITY ON SINGLE STUDENT EXPORTS UNDER FAILS ───
       ['Percentage', isPassed ? `${student.percentage}%` : '—'],
-      ['Grade', student.grade],
+      // ─── ADD-ON: EXCLUDE GRADE IN SINGLE STUDENT PDF IF FAILED ───
+      ['Grade', isPassed ? student.grade : '—'],
       ['Result', isPassed ? 'PASS' : 'FAIL'],
     ];
 
@@ -357,11 +357,11 @@ const MarksheetReport = () => {
         'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'
       ];
       const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
-      // EXCLUDE PERCENTAGE FOR FAILS IN EXCEL AS WELL
+      // ─── ADD-ON: EXCLUDE GRADE AND PERCENTAGE IN EXCEL ROWS IF FAILED ───
       const dataRows = clsRows.map((r, i) => [
         i + 1, r.roll_no, r.name,
         ...clsSubjects.map(s => r.marks[s.id]?.obtained ?? '—'),
-        r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+        r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.passed ? r.grade : '—', r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
       ]);
       return [title, [], headers, ...dataRows, [], []];
     };
@@ -428,11 +428,11 @@ const MarksheetReport = () => {
       } else {
         const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name} (Max:${s.max_marks})`), 'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'];
         const title = [`${className} — ${examType} — ${filters.academic_year}`];
-        // FAIL PERCENTAGE HIDE FOR SHEET DOWNLOADING LIST
+        // ─── ADD-ON: EXCLUDE DETAILS FOR FAILING PROFILES IN RAW DATA SHEET ───
         const dataRows = rows.map((r, i) => [
           i + 1, r.roll_no, r.name,
           ...subjects.map(s => r.marks[s.id]?.obtained ?? '—'),
-          r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+          r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.passed ? r.grade : '—', r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
         ]);
         const ws = XLSX.utils.aoa_to_sheet([title, [], headers, ...dataRows]);
         ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...subjects.map(() => ({ wch: 16 })), { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 30 }];
@@ -455,7 +455,7 @@ const MarksheetReport = () => {
     doc.text(`${examType} | ${className} | ${filters.academic_year} | Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
 
     const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}/${s.max_marks}`), 'Total', '%', 'Grade', 'Result', 'Remark'];
-    // FAIL PERCENTAGE CHECK INSIDE FULL MATRIX GLOBAL EXPORT PDF
+    // ─── ADD-ON: EXCLUDE DETAILS FOR FAILING PROFILES IN BULK PDF REPORT ───
     const body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
       ...subjects.map(s => {
@@ -464,7 +464,7 @@ const MarksheetReport = () => {
         if (m.is_absent) return 'AB';
         return m.obtained ?? '—';
       }),
-      `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+      `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.passed ? r.grade : '—', r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
     ]);
 
     autoTable(doc, {
@@ -477,7 +477,7 @@ const MarksheetReport = () => {
         if (data.section === 'body') {
           const val = data.cell.text[0];
           if (val === 'PASS') data.cell.styles.textColor = [22, 163, 74];
-          if (val === 'FAIL') data.cell.styles.textColor = [220, 38, 38];
+          if (val === 'FAIL' || val === 'ABSENT') data.cell.styles.textColor = [220, 38, 38];
           if (val === 'AB') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
         }
       },
@@ -494,79 +494,6 @@ const MarksheetReport = () => {
 
   return (
     <AppLayout title="Marksheet Report" subtitle="View and export student marksheets">
-      <style>{`
-        .desktop-report-view { display: block; }
-        .mobile-report-view { display: none; }
-
-        @media (max-width: 1300px) {
-          .desktop-report-view { display: none !important; }
-          .mobile-report-view { 
-            display: block !important; 
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-            padding: 4px;
-          }
-
-          .mobile-student-card {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            width: 100% !important;
-            box-sizing: border-box;
-          }
-          .mobile-card-header {
-            padding: 14px 16px;
-            background: #1e293b;
-            color: #fff;
-            cursor: pointer;
-          }
-          .mobile-header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-          }
-          .mobile-header-title { font-size: 15px; font-weight: 700; margin: 0; }
-          .mobile-header-badge { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
-          
-          .mobile-header-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            font-size: 11px;
-            opacity: 0.9;
-            padding-top: 4px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-          }
-
-          .mobile-collapsible-content {
-            padding: 16px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-          }
-          .mobile-section-title {
-            font-size: 12px;
-            font-weight: 800;
-            color: #475569;
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
-          }
-          .mobile-subject-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 13px;
-          }
-          .mobile-subj-name { font-weight: 600; color: #334155; }
-          .mobile-subj-score { font-weight: 700; }
-        }
-      `}</style>
-
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
           <div>
@@ -639,9 +566,6 @@ const MarksheetReport = () => {
               ))}
             </div>
 
-            {/* ========================================== */}
-            {/* 1. MOBILE PORTRAIT ACCORDION VIEW          */}
-            {/* ========================================== */}
             <div className="mobile-report-view">
               {rows.map((row) => {
                 const isOpen = expandedStudentId === row.id;
@@ -661,9 +585,9 @@ const MarksheetReport = () => {
                       </div>
                       <div className="mobile-header-stats">
                         <div>Total: <strong>{row.total}/{row.maxTotal}</strong></div>
-                        {/* ─── ADD-ON HIDE % FOR MOBILE ACCORDIONS TOO ─── */}
                         <div>%: <strong>{row.passed ? `${row.percentage}%` : '—'}</strong></div>
-                        <div>Grade: <strong>{row.grade}</strong></div>
+                        {/* ─── MOBILE ACCORDION HEADER HIDE GRADE ON FAIL ─── */}
+                        <div>Grade: <strong>{row.passed ? row.grade : '—'}</strong></div>
                       </div>
                     </div>
 
@@ -711,13 +635,8 @@ const MarksheetReport = () => {
               })}
             </div>
 
-            {/* ========================================== */}
-            {/* 2. ORIGINAL DESKTOP OVERVIEW SPREADSHEET   */}
-            {/* ─── SLIDER SIDES INTEGRATED PERFECTLY ───  */}
-            {/* ========================================== */}
             <div className="desktop-report-view">
               <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
-                {/* UP-DOWN SLIDER EMBEDDED PREVENTING OVER-FLOW LENGTH */}
                 <div className="table-wrapper" style={{overflowX:'auto', maxHeight:'400px', overflowY:'auto'}}>
                   <table style={{width:'100%', borderCollapse:'collapse', minWidth:'700px'}}>
                     <thead style={{position:'sticky', top:0, zIndex:2}}>
@@ -766,7 +685,6 @@ const MarksheetReport = () => {
                             );
                           })}
                           <td style={{padding:'10px', textAlign:'center', fontWeight:'800', color:'#1e40af'}}>{row.total}/{row.maxTotal}</td>
-                          {/* ─── ADD-ON CRITICAL CONDITIONAL LOCK INCENTIVE TO HIDE % VALUES ON FAILS ─── */}
                           <td style={{padding:'10px', textAlign:'center'}}>
                             {row.passed ? (
                               <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{row.percentage}%</span>
@@ -774,8 +692,13 @@ const MarksheetReport = () => {
                               <span style={{background:'#fee2e2', color:'#dc2626', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>—</span>
                             )}
                           </td>
+                          {/* ─── DESKTOP TABLE EDIT: HIDE GRADE ON FAIL ─── */}
                           <td style={{padding:'10px', textAlign:'center'}}>
-                            <span style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'800'}}>{row.grade}</span>
+                            {row.passed ? (
+                              <span style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'800'}}>{row.grade}</span>
+                            ) : (
+                              <span style={{background:'#f1f5f9', color:'#94a3b8', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>—</span>
+                            )}
                           </td>
                           <td style={{padding:'10px', textAlign:'center'}}>
                             <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
