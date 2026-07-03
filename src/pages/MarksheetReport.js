@@ -83,7 +83,10 @@ const MarksheetReport = () => {
     const subjects = Object.values(subjectMap);
     const studentMap = {};
 
-    const isFinalCumulative = examType.toLowerCase().includes('final');
+    // ✅ FIXED CRITICAL VARIABLE ACCESS SCOPE INITIALIZATION conflict
+    const activeSelectedExamObj = examTypes.find(e => e.id == filters.exam_type_id);
+    const activeExamStringName = activeSelectedExamObj ? String(activeSelectedExamObj.name).toLowerCase() : '';
+    const isFinalCumulative = activeExamStringName.includes('final') || activeExamStringName.includes('annual');
 
     dataSource.forEach(m => {
       if (!studentMap[m.student_id]) {
