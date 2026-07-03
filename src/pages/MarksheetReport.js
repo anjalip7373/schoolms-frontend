@@ -73,17 +73,19 @@ const MarksheetReport = () => {
   const buildData = (dataSource) => {
     if (!dataSource.length) return { rows: [], subjects: [] };
     
+    // ✅ ADD-ON FIX: Build subject tracking maps filtered strictly by matching the student's own class context
     const subjectMap = {};
     dataSource.forEach(m => {
-      subjectMap[m.subject_id] = {
-        id: m.subject_id, name: m.subject_name,
-        code: m.code, pass_marks: m.pass_marks, max_marks: m.max_marks
-      };
+      if (!filters.class_id || m.class_id == filters.class_id) {
+        subjectMap[m.subject_id] = {
+          id: m.subject_id, name: m.subject_name,
+          code: m.code, pass_marks: m.pass_marks, max_marks: m.max_marks
+        };
+      }
     });
     const subjects = Object.values(subjectMap);
     const studentMap = {};
 
-    // ✅ SURAKSHIT DYNAMIC NAME LOOKUP FROM ARRAY
     const activeSelectedExamObj = examTypes.find(e => e.id == filters.exam_type_id);
     const activeExamStringName = activeSelectedExamObj ? String(activeSelectedExamObj.name).toLowerCase() : '';
     const isFinalCumulative = activeExamStringName.includes('final') || activeExamStringName.includes('annual');
@@ -97,22 +99,28 @@ const MarksheetReport = () => {
         };
       }
 
-      if (isFinalCumulative) {
-        if (!studentMap[m.student_id].marks[m.subject_id]) {
-          studentMap[m.student_id].marks[m.subject_id] = { obtained: 0, max: 0, pass: 0, is_absent: false };
+      // Filter data parsing checks strictly against current class parameters
+      if (!filters.class_id || m.class_id == filters.class_id) {
+        if (isFinalCumulative) {
+          if (!studentMap[m.student_id].marks[m.subject_id]) {
+            studentMap[m.student_id].marks[m.subject_id] = { obtained: 0, max: 0, pass: 0, is_absent: false, count: 0 };
+          }
+          const currentScore = studentMap[m.student_id].marks[m.subject_id];
+          if (m.marks_obtained !== null && m.marks_obtained !== undefined) {
+            currentScore.obtained += parseFloat(m.marks_obtained);
+            currentScore.max += parseInt(m.max_marks || 100);
+            currentScore.pass = parseInt(m.pass_marks || 35);
+            currentScore.count += 1;
+          }
+          if (m.is_absent === 1 || m.is_absent === true) currentScore.is_absent = true;
+        } else {
+          studentMap[m.student_id].marks[m.subject_id] = {
+            obtained: m.marks_obtained,
+            max: m.max_marks,
+            pass: m.pass_marks,
+            is_absent: m.is_absent === 1 || m.is_absent === true,
+          };
         }
-        const currentScore = studentMap[m.student_id].marks[m.subject_id];
-        currentScore.obtained += m.marks_obtained ? parseFloat(m.marks_obtained) : 0;
-        currentScore.max += parseInt(m.max_marks || 0);
-        currentScore.pass += parseInt(m.pass_marks || 0);
-        if (m.is_absent === 1 || m.is_absent === true) currentScore.is_absent = true;
-      } else {
-        studentMap[m.student_id].marks[m.subject_id] = {
-          obtained: m.marks_obtained,
-          max: m.max_marks,
-          pass: m.pass_marks,
-          is_absent: m.is_absent === 1 || m.is_absent === true,
-        };
       }
      
       if (m.overall_remark) {
@@ -126,18 +134,26 @@ const MarksheetReport = () => {
         const m = s.marks[sub.id];
         if (m) {
           if (m.is_absent) {
-            maxTotal += parseInt(m.max);
+            maxTotal += isFinalCumulative ? (m.max || sub.max_marks) : parseInt(m.max || sub.max_marks);
             passed = false;
           } else {
             total += parseFloat(m.obtained || 0);
-            maxTotal += parseInt(m.max);
-            if (parseFloat(m.obtained) < m.pass) passed = false;
+            maxTotal += isFinalCumulative ? (m.max || sub.max_marks) : parseInt(m.max || sub.max_marks);
+            
+            // Validation criteria verification metrics mapped accurately
+            const individualObtained = parseFloat(m.obtained || 0);
+            const individualPassTarget = isFinalCumulative ? (m.pass || sub.pass_marks) * (m.count || 1) : (m.pass || sub.pass_marks);
+            if (individualObtained < individualPassTarget) passed = false;
           }
         } else {
           maxTotal += sub.max_marks;
           passed = false;
         }
       });
+
+      // Avoid unexpected multiplication by locking evaluation out of zero values
+      if (maxTotal === 0) maxTotal = subjects.reduce((acc, sub) => acc + sub.max_marks, 0);
+
       const percentage = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(1) : 0;
       
       const grade = !passed ? '—' : (percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' :
@@ -232,7 +248,7 @@ const MarksheetReport = () => {
       const isAbsent = m?.is_absent;
       const obtained = isAbsent ? 'AB' : (m?.obtained ?? '—');
       const status = isAbsent ? 'ABSENT' : m
-        ? (parseFloat(m.obtained) >= m.pass ? 'PASS' : 'FAIL')
+        ? (parseFloat(m.obtained) >= (m.pass || s.pass_marks) ? 'PASS' : 'FAIL')
         : '—';
       return [
         String(i + 1),
@@ -461,7 +477,7 @@ const MarksheetReport = () => {
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
     doc.text(`${examType} | ${className} | ${filters.academic_year} | Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
 
-    const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}/${s.max_marks}`), 'Total', '%', 'Grade', 'Result', 'Remark'];
+    const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}`), 'Total', '%', 'Grade', 'Result', 'Remark'];
     const body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
       ...subjects.map(s => {
@@ -677,7 +693,7 @@ const MarksheetReport = () => {
                             const m = row.marks[s.id];
                             const isAbsent = m?.is_absent;
                             const obtained = m?.obtained;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < m.pass;
+                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
 
                             return (
                               <div key={s.id} className="mobile-subject-row">
@@ -685,7 +701,7 @@ const MarksheetReport = () => {
                                 <span className="mobile-subj-score" style={{
                                   color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
                                 }}>
-                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${m.max}` : '—'}
+                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${m.max || s.max_marks}` : '—'}
                                 </span>
                               </div>
                             );
@@ -749,7 +765,7 @@ const MarksheetReport = () => {
                             const m = row.marks[s.id];
                             const obtained = m?.obtained;
                             const isAbsent = m?.is_absent;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < m.pass;
+                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
                             return (
                               <td key={s.id} style={{padding:'8px 6px', textAlign:'center'}}>
                                 {isAbsent ? (
