@@ -167,7 +167,7 @@ const MarksheetReport = () => {
     return { rows, subjects, examTypesFound, isFinalCumulative };
   };
 
-  const { rows: allRows, subjects } = buildData(marksheetData);
+  const { rows: allRows, subjects, examTypesFound, isFinalCumulative } = buildData(marksheetData);
 
   const rows = allRows.filter(r => {
     if (!search.trim()) return true;
