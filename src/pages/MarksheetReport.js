@@ -73,15 +73,12 @@ const MarksheetReport = () => {
   const buildData = (dataSource) => {
     if (!dataSource.length) return { rows: [], subjects: [] };
     
-    // ✅ ADD-ON FIX: Build subject tracking maps filtered strictly by matching the student's own class context
     const subjectMap = {};
     dataSource.forEach(m => {
-      if (!filters.class_id || m.class_id == filters.class_id) {
-        subjectMap[m.subject_id] = {
-          id: m.subject_id, name: m.subject_name,
-          code: m.code, pass_marks: m.pass_marks, max_marks: m.max_marks
-        };
-      }
+      subjectMap[m.subject_id] = {
+        id: m.subject_id, name: m.subject_name,
+        code: m.code, pass_marks: m.pass_marks, max_marks: m.max_marks
+      };
     });
     const subjects = Object.values(subjectMap);
     const studentMap = {};
@@ -99,28 +96,23 @@ const MarksheetReport = () => {
         };
       }
 
-      // Filter data parsing checks strictly against current class parameters
-      if (!filters.class_id || m.class_id == filters.class_id) {
-        if (isFinalCumulative) {
-          if (!studentMap[m.student_id].marks[m.subject_id]) {
-            studentMap[m.student_id].marks[m.subject_id] = { obtained: 0, max: 0, pass: 0, is_absent: false, count: 0 };
-          }
-          const currentScore = studentMap[m.student_id].marks[m.subject_id];
-          if (m.marks_obtained !== null && m.marks_obtained !== undefined) {
-            currentScore.obtained += parseFloat(m.marks_obtained);
-            currentScore.max += parseInt(m.max_marks || 100);
-            currentScore.pass = parseInt(m.pass_marks || 35);
-            currentScore.count += 1;
-          }
-          if (m.is_absent === 1 || m.is_absent === true) currentScore.is_absent = true;
-        } else {
-          studentMap[m.student_id].marks[m.subject_id] = {
-            obtained: m.marks_obtained,
-            max: m.max_marks,
-            pass: m.pass_marks,
-            is_absent: m.is_absent === 1 || m.is_absent === true,
-          };
+      // ✅ FIXED CUMULATIVE AGGREGATION LOOKUPS PER TERM ENGINE
+      if (isFinalCumulative) {
+        if (!studentMap[m.student_id].marks[m.subject_id]) {
+          studentMap[m.student_id].marks[m.subject_id] = { obtained: 0, max: 0, pass: 0, is_absent: false };
         }
+        const currentScore = studentMap[m.student_id].marks[m.subject_id];
+        currentScore.obtained += m.marks_obtained ? parseFloat(m.marks_obtained) : 0;
+        currentScore.max += parseInt(m.max_marks || 100);
+        currentScore.pass += parseInt(m.pass_marks || 35);
+        if (m.is_absent === 1 || m.is_absent === true) currentScore.is_absent = true;
+      } else {
+        studentMap[m.student_id].marks[m.subject_id] = {
+          obtained: m.marks_obtained,
+          max: m.max_marks,
+          pass: m.pass_marks,
+          is_absent: m.is_absent === 1 || m.is_absent === true,
+        };
       }
      
       if (m.overall_remark) {
@@ -134,26 +126,18 @@ const MarksheetReport = () => {
         const m = s.marks[sub.id];
         if (m) {
           if (m.is_absent) {
-            maxTotal += isFinalCumulative ? (m.max || sub.max_marks) : parseInt(m.max || sub.max_marks);
+            maxTotal += parseInt(m.max || sub.max_marks);
             passed = false;
           } else {
             total += parseFloat(m.obtained || 0);
-            maxTotal += isFinalCumulative ? (m.max || sub.max_marks) : parseInt(m.max || sub.max_marks);
-            
-            // Validation criteria verification metrics mapped accurately
-            const individualObtained = parseFloat(m.obtained || 0);
-            const individualPassTarget = isFinalCumulative ? (m.pass || sub.pass_marks) * (m.count || 1) : (m.pass || sub.pass_marks);
-            if (individualObtained < individualPassTarget) passed = false;
+            maxTotal += parseInt(m.max || sub.max_marks);
+            if (parseFloat(m.obtained || 0) < (m.pass || sub.pass_marks)) passed = false;
           }
         } else {
           maxTotal += sub.max_marks;
           passed = false;
         }
       });
-
-      // Avoid unexpected multiplication by locking evaluation out of zero values
-      if (maxTotal === 0) maxTotal = subjects.reduce((acc, sub) => acc + sub.max_marks, 0);
-
       const percentage = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(1) : 0;
       
       const grade = !passed ? '—' : (percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' :
@@ -345,12 +329,6 @@ const MarksheetReport = () => {
       doc.text(`${g}:${r}%`, 36 + i * 24, gradeY);
     });
 
-    const noteY = gradeY + 7;
-    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
-    doc.text('NOTE:', 14, noteY);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
-    doc.text('Absence in any subject is treated as FAIL for that subject and will affect the overall result.', 28, noteY);
-
     const sigY = pageH - 36;
     doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
     const sigPositions = [
@@ -408,49 +386,8 @@ const MarksheetReport = () => {
         await saveWorkbook(wb, `marksheet-AllClasses-${examType}.xlsx`);
         toast.success(`Downloaded! ${wb.SheetNames.length} class(es) for ${examType}`);
 
-      } else if (!isTeacher && !filters.class_id && !filters.exam_type_id) {
-        for (const cls of classes) {
-          const allSectionRows = [];
-          for (const et of examTypes) {
-            try {
-              const { data } = await API.get('/marks/marksheet', {
-                params: { class_id: cls.id, exam_type_id: et.id, academic_year: filters.academic_year }
-              });
-              if (!data.length) continue;
-              const { rows: etRows, subjects: etSubjects } = buildData(data);
-              allSectionRows.push(...buildSheetData(etRows, etSubjects, cls.name, et.name));
-            } catch { continue; }
-          }
-          if (!allSectionRows.length) continue;
-          const ws = XLSX.utils.aoa_to_sheet(allSectionRows);
-          ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...Array(10).fill({ wch: 16 }), { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 30 }];
-          XLSX.utils.book_append_sheet(wb, ws, cls.name.slice(0, 31));
-        }
-        if (!wb.SheetNames.length) { toast.error('No data found'); return; }
-        await saveWorkbook(wb, `marksheet-AllClasses-${filters.academic_year || 'AllYears'}.xlsx`);
-        toast.success(`Downloaded! ${wb.SheetNames.length} class sheets`);
-
-      } else if (filters.class_id && !filters.exam_type_id) {
-        const allSectionRows = [];
-        for (const et of examTypes) {
-          try {
-            const { data } = await API.get('/marks/marksheet', {
-              params: { class_id: filters.class_id, font_type_id: et.id, academic_year: filters.academic_year }
-            });
-            if (!data.length) continue;
-            const { rows: etRows, subjects: etSubjects } = buildData(data);
-            allSectionRows.push(...buildSheetData(etRows, etSubjects, className, et.name));
-          } catch { continue; }
-        }
-        if (!allSectionRows.length) { toast.error('No data found'); return; }
-        const ws = XLSX.utils.aoa_to_sheet(allSectionRows);
-        ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...Array(10).fill({ wch: 16 }), { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 30 }];
-        XLSX.utils.book_append_sheet(wb, ws, className.slice(0, 31));
-        await saveWorkbook(wb, `marksheet-${className.replace(/\s+/g, '_')}-AllExams.xlsx`);
-        toast.success('Downloaded! All exams in one sheet');
-
       } else {
-        const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name} (Max:${s.max_marks})`), 'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'];
+        const headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}`), 'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'];
         const title = [`${className} — ${examType} — ${filters.academic_year}`];
         const dataRows = rows.map((r, i) => [
           i + 1, r.roll_no, r.name,
@@ -463,10 +400,7 @@ const MarksheetReport = () => {
         await saveWorkbook(wb, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.xlsx`);
         toast.success('Excel downloaded!');
       }
-    } catch (err) {
-      console.error('Export error:', err);
-      toast.error('Export failed');
-    }
+    } catch (err) { toast.error('Export failed'); }
   };
 
   const exportPDF = async () => {
@@ -499,8 +433,7 @@ const MarksheetReport = () => {
         if (data.section === 'body') {
           const val = data.cell.text[0];
           if (val === 'PASS') data.cell.styles.textColor = [22, 163, 74];
-          if (val === 'FAIL') data.cell.styles.textColor = [220, 38, 38];
-          if (val === 'AB') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
+          if (val === 'FAIL' || val === '—') data.cell.styles.textColor = [220, 38, 38];
         }
       },
       margin: { left: 14, right: 14 }
@@ -519,93 +452,28 @@ const MarksheetReport = () => {
       <style>{`
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
-
         @media (max-width: 1300px) {
           .desktop-report-view { display: none !important; }
-          .mobile-report-view { 
-            display: block !important; 
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-            padding: 4px;
-          }
-
-          .mobile-student-card {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            width: 100% !important;
-            box-sizing: border-box;
-          }
-          .mobile-card-header {
-            padding: 14px 16px;
-            background: #1e293b;
-            color: #fff;
-            cursor: pointer;
-          }
-          .mobile-header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-          }
-          .mobile-header-title { font-size: 15px; font-weight: 700; margin: 0; }
-          .mobile-header-badge { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
-          
-          .mobile-header-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            font-size: 11px;
-            opacity: 0.9;
-            padding-top: 4px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-          }
-
-          .mobile-collapsible-content {
-            padding: 16px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-          }
-          .mobile-section-title {
-            font-size: 12px;
-            font-weight: 800;
-            color: #475569;
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
-          }
-          .mobile-subject-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 13px;
-          }
-          .mobile-subj-name { font-weight: 600; color: #334155; }
-          .mobile-subj-score { font-weight: 700; }
+          .mobile-report-view { display: block !important; width: 100% !important; }
+          .mobile-student-card { background: #fff; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 12px; overflow: hidden; }
+          .mobile-card-header { padding: 14px 16px; background: #1e293b; color: #fff; cursor: pointer; }
+          .mobile-header-top { display: flex; justify-content: space-between; align-items: center; }
+          .mobile-header-stats { display: grid; grid-template-columns: repeat(3, 1fr); font-size: 11px; padding-top: 4px; }
+          .mobile-collapsible-content { padding: 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+          .mobile-subject-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
         }
       `}</style>
 
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
-          <div>
-            <h1>Marksheet Report</h1>
-            <p>{rows.length} students • {examType || 'Select exam type'} • {filters.academic_year}</p>
-          </div>
-          {(rows.length > 0 || (!isTeacher && !filters.class_id && filters.exam_type_id) || (!isTeacher && filters.class_id)) && (
+          <div><h1>Marksheet Report</h1><p>{rows.length} students loaded</p></div>
+          {rows.length > 0 && (
             <div className="dropdown-export">
               <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
               {showExport && (
                 <div className="dropdown-menu">
-                  <button className="dropdown-item" onClick={exportExcel}>
-                    📊 {!isTeacher && !filters.class_id ? 'Excel — All Classes' : !filters.exam_type_id ? 'Excel — All Exams' : 'Excel (.xlsx)'}
-                  </button>
-                  {(filters.class_id || isTeacher) && filters.exam_type_id && rows.length > 0 && (
-                    <button className="dropdown-item" onClick={exportPDF}>📄 PDF</button>
-                  )}
+                  <button className="dropdown-item" onClick={exportExcel}>📊 Excel (.xlsx)</button>
+                  <button className="dropdown-item" onClick={exportPDF}>📄 PDF</button>
                 </div>
               )}
             </div>
@@ -627,40 +495,11 @@ const MarksheetReport = () => {
             <select className="form-control" value={filters.academic_year} onChange={e => setFilters({...filters, academic_year: e.target.value})}>
               {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <button className="btn btn-outline btn-sm" onClick={fetchMarksheet}>🔄 Refresh</button>
           </div>
-
-          {rows.length > 0 || search ? (
-            <div style={{marginTop:'12px'}}>
-              <input
-                className="form-control"
-                placeholder="🔍 Search by student name or roll no..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{maxWidth:'360px', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1'}}
-              />
-            </div>
-          ) : null}
         </div>
 
-        {loading ? (
-          <div className="loading"><div className="spinner"></div><p>Loading marksheets...</p></div>
-        ) : rows.length > 0 ? (
+        {loading ? <div className="loading"><div className="spinner"></div></div> : rows.length > 0 ? (
           <>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px,1fr))', gap:'12px', marginBottom:'16px'}}>
-              {[
-                { label:'Total', value: allRows.length, color:'#1e40af', icon:'👥' },
-                { label:'Passed', value: allRows.filter(r => r.passed).length, color:'#10b981', icon:'✅' },
-                { label:'Failed', value: allRows.filter(r => !r.passed).length, color:'#ef4444', icon:'❌' },
-                { label:'Average', value: allRows.length ? `${(allRows.reduce((a,r) => a+parseFloat(r.percentage),0)/allRows.length).toFixed(1)}%` : '0%', color:'#f59e0b', icon:'📊' },
-              ].map(s => (
-                <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'12px 14px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
-                  <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
-                  <div style={{fontSize:'22px', fontWeight:'800', color:'#1e293b', marginTop:'4px'}}>{s.value}</div>
-                </div>
-              ))}
-            </div>
-
             <div className="mobile-report-view">
               {rows.map((row) => {
                 const isOpen = expandedStudentId === row.id;
@@ -668,15 +507,8 @@ const MarksheetReport = () => {
                   <div key={row.id} className="mobile-student-card">
                     <div className="mobile-card-header" onClick={() => toggleStudentCard(row.id)}>
                       <div className="mobile-header-top">
-                        <h3 className="mobile-header-title">
-                          {row.name} {row.roll_no ? `[${row.roll_no}]` : ''}
-                        </h3>
-                        <span className="mobile-header-badge" style={{
-                          background: row.passed ? '#dcfce7' : '#fee2e2',
-                          color: row.passed ? '#16a34a' : '#dc2626'
-                        }}>
-                          Result: {row.passed ? 'PASS' : 'FAIL'}
-                        </span>
+                        <h3>{row.name}</h3>
+                        <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
                       </div>
                       <div className="mobile-header-stats">
                         <div>Total: <strong>{row.total}/{row.maxTotal}</strong></div>
@@ -684,44 +516,18 @@ const MarksheetReport = () => {
                         <div>Grade: <strong>{row.passed ? row.grade : '—'}</strong></div>
                       </div>
                     </div>
-
                     {isOpen && (
                       <div className="mobile-collapsible-content">
-                        <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
-                        <div style={{marginBottom:'14px'}}>
-                          {subjects.map(s => {
-                            const m = row.marks[s.id];
-                            const isAbsent = m?.is_absent;
-                            const obtained = m?.obtained;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
-
-                            return (
-                              <div key={s.id} className="mobile-subject-row">
-                                <span className="mobile-subj-name">• {s.name}:</span>
-                                <span className="mobile-subj-score" style={{
-                                  color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
-                                }}>
-                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${m.max || s.max_marks}` : '—'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div style={{fontSize:'13px', color:'#475569', marginBottom:'14px'}}>
-                          <strong>Remark:</strong> <span style={{fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || 'No remark added'}</span>
-                        </div>
-
-                        <button
-                          onClick={() => exportSingleStudentPDF(row)}
-                          style={{
-                            width:'100%', background:'#1e40af', color:'#fff', border:'none',
-                            padding:'10px', borderRadius:'8px', fontWeight:'700', fontSize:'13px',
-                            display:'flex', alignItems:'center', justifyContent:'center', gap:'6px'
-                          }}
-                        >
-                          📄 View Full Marksheet
-                        </button>
+                        {subjects.map(s => {
+                          const m = row.marks[s.id];
+                          return (
+                            <div key={s.id} className="mobile-subject-row">
+                              <span>{s.name}:</span>
+                              <strong>{m?.is_absent ? 'AB' : m?.obtained ?? '—'}</strong>
+                            </div>
+                          );
+                        })}
+                        <button className="btn btn-primary btn-sm" style={{width:'100%', marginTop:'12px'}} onClick={() => exportSingleStudentPDF(row)}>📄 View Full PDF</button>
                       </div>
                     )}
                   </div>
@@ -730,76 +536,32 @@ const MarksheetReport = () => {
             </div>
 
             <div className="desktop-report-view">
-              <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
+              <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden'}}>
                 <div className="table-wrapper" style={{overflowX:'auto', maxHeight:'400px', overflowY:'auto'}}>
-                  <table style={{width:'100%', borderCollapse:'collapse', minWidth:'700px'}}>
-                    <thead>
-                      <tr style={{background:'#1e40af'}}>
-                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', width:'36px'}}>#</th>
-                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'80px'}}>ROLL NO</th>
-                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'150px'}}>STUDENT NAME</th>
-                        {!isTeacher && <th style={{padding:'11px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'80px'}}>CLASS</th>}
-                        {subjects.map(s => (
-                          <th key={s.id} style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'75px'}}>
-                            {s.name}
-                          </th>
-                        ))}
-                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'65px'}}>TOTAL</th>
-                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'50px'}}>%</th>
-                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'48px'}}>GRADE</th>
-                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'58px'}}>RESULT</th>
-                        <th style={{padding:'11px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', minWidth:'120px'}}>REMARK</th>
-                        <th style={{padding:'11px 8px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'80px'}}>MARKSHEET</th>
+                  <table>
+                    <thead style={{position:'sticky', top:0, zIndex:2}}>
+                      <tr style={{background:'#1e40af', color:'#fff'}}>
+                        <th>#</th><th>ROLL NO</th><th>STUDENT NAME</th>
+                        {subjects.map(s => <th key={s.id}>{s.name}</th>)}
+                        <th>TOTAL</th><th>%</th><th>GRADE</th><th>RESULT</th><th>REMARK</th><th>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((row, i) => (
-                        <tr key={row.id} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
-                          <td style={{padding:'10px', fontSize:'12px', color:'#64748b', textAlign:'center'}}>{i + 1}</td>
-                          <td style={{padding:'10px'}}>
-                            <code style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'11px'}}>{row.roll_no}</code>
-                          </td>
-                          <td style={{padding:'10px', fontWeight:'700', color:'#1e293b'}}>{row.name}</td>
-                          {!isTeacher && <td style={{padding:'10px', fontSize:'12px', color:'#64748b'}}>{row.class_name}</td>}
+                        <tr key={row.id} style={{background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                          <td>{i + 1}</td>
+                          <td><code>{row.roll_no}</code></td>
+                          <td><strong>{row.name}</strong></td>
                           {subjects.map(s => {
                             const m = row.marks[s.id];
-                            const obtained = m?.obtained;
-                            const isAbsent = m?.is_absent;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
-                            return (
-                              <td key={s.id} style={{padding:'8px 6px', textAlign:'center'}}>
-                                {isAbsent ? (
-                                  <span style={{background:'#fef3c7', color:'#d97706', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'800', border:'1px solid #fcd34d'}}>AB</span>
-                                ) : obtained !== undefined ? (
-                                  <span style={{background: failed ? '#fee2e2' : '#f0fdf4', color: failed ? '#dc2626' : '#16a34a', padding:'3px 8px', borderRadius:'8px', fontSize:'12px', fontWeight:'700'}}>{obtained}</span>
-                                ) : (
-                                  <span style={{color:'#94a3b8'}}>—</span>
-                                )}
-                              </td>
-                            );
+                            return <td key={s.id}>{m?.is_absent ? 'AB' : m?.obtained ?? '—'}</td>;
                           })}
-                          <td style={{padding:'10px', textAlign:'center', fontWeight:'800', color:'#1e40af'}}>{row.total}/{row.maxTotal}</td>
-                          <td style={{padding:'10px', textAlign:'center'}}>
-                            {row.passed ? (
-                              <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{row.percentage}%</span>
-                            ) : (
-                              <span style={{background:'#fee2e2', color:'#dc2626', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>—</span>
-                            )}
-                          </td>
-                          <td style={{padding:'10px', textAlign:'center'}}>
-                            {row.passed ? (
-                              <span style={{background:'#dbeafe', color:'#1e40af', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'800'}}>{row.grade}</span>
-                            ) : (
-                              <span style={{background:'#f1f5f9', color:'#94a3b8', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>—</span>
-                            )}
-                          </td>
-                          <td style={{padding:'10px', textAlign:'center'}}>
-                            <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
-                          </td>
-                          <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontStyle: row.overall_remark ? 'normal' : 'italic'}}>{row.overall_remark || '—'}</td>
-                          <td style={{padding:'8px', textAlign:'center'}}>
-                            <button onClick={() => exportSingleStudentPDF(row)} style={{background:'#1e40af', color:'#fff', border:'none', borderRadius:'6px', padding:'5px 10px', cursor:'pointer', fontSize:'11px', fontWeight:'700', fontFamily:'inherit'}}>📄 Marksheet</button>
-                          </td>
+                          <td><strong>{row.total}/{row.maxTotal}</strong></td>
+                          <td>{row.passed ? `${row.percentage}%` : '—'}</td>
+                          <td>{row.grade}</td>
+                          <td><span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span></td>
+                          <td>{row.overall_remark || '—'}</td>
+                          <td><button className="btn btn-outline btn-sm" onClick={() => exportSingleStudentPDF(row)}>📄 Card</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -808,14 +570,7 @@ const MarksheetReport = () => {
               </div>
             </div>
           </>
-        ) : (
-          <div className="card">
-            <div className="empty-state">
-              <div className="empty-icon">📋</div>
-              <p style={{fontWeight:'700', color:'#1e293b'}}>{isTeacher ? 'Select Exam Type to view your class marksheet' : 'Select Class and Exam Type to view marksheet'}</p>
-            </div>
-          </div>
-        )}
+        ) : <div className="card"><div className="empty-state"><p>No reports match selection.</p></div></div>}
       </div>
     </AppLayout>
   );
