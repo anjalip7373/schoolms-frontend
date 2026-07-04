@@ -118,6 +118,14 @@ const MarksheetReport = () => {
           pass: m.pass_marks,
           is_absent: m.is_absent === 1 || m.is_absent === true
         };
+
+        // Save max marks at the subject level for easy header lookups
+        if (subjectMap[m.subject_id]) {
+          if (!subjectMap[m.subject_id].examMaxes) {
+            subjectMap[m.subject_id].examMaxes = {};
+          }
+          subjectMap[m.subject_id].examMaxes[m.exam_type_name] = m.max_marks;
+        }
       }
      
       if (m.overall_remark) {
@@ -749,7 +757,7 @@ const exportSingleStudentPDF = async (row) => {
                         ) : (
                           subjects.map(s => (
                             <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>
-                              {s.name}
+                              {s.name}<br/><span style={{ opacity: 0.7, fontSize: '9px' }}>/{s.max_marks}</span>
                             </th>
                           ))
                         )}
@@ -765,11 +773,16 @@ const exportSingleStudentPDF = async (row) => {
                       {isFinalCumulative && (
                         <tr style={{ background: '#1e293b', color: '#ffffff' }}>
                           {examTypesFound.map(etName => 
-                            subjects.map(s => (
-                              <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '700', color: '#ffffff', background: '#334155' }}>
-                                {s.name}
-                              </th>
-                            ))
+                            subjects.map(s => {
+                              // Get the max marks for this specific subject in this specific exam type
+                              const maxForThisExam = s.examMaxes && s.examMaxes[etName] ? s.examMaxes[etName] : (s.max_marks || 100);
+                              return (
+                                <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '700', color: '#ffffff', background: '#334155' }}>
+                                  {s.name}<br/>
+                                  <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: '500' }}>/{maxForThisExam}</span>
+                                </th>
+                              );
+                            })
                           )}
                         </tr>
                       )}
