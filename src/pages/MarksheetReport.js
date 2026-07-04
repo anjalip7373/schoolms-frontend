@@ -70,33 +70,49 @@ const MarksheetReport = () => {
     }
   }, [filters]);
 
-  const buildData = (dataSource) => {
+const buildData = (dataSource) => {
     if (!dataSource.length) return { rows: [], subjects: [], examTypesFound: [] };
     
-    // 1. Identify distinct subjects present in the records
+    // 1. Identify active selected exam type text
+    const activeSelectedExamObj = examTypes.find(e => e.id == filters.exam_type_id);
+    const activeExamStringName = activeSelectedExamObj ? String(activeSelectedExamObj.name) : '';
+    const isFinalCumulative = activeExamStringName.toLowerCase().includes('final') || activeExamStringName.toLowerCase().includes('annual');
+
+    // 2. Build subject tracking map safely containing dynamic max rules
     const subjectMap = {};
     dataSource.forEach(m => {
       if (!filters.class_id || m.class_id == filters.class_id) {
-        subjectMap[m.subject_id] = {
-          id: m.subject_id, name: m.subject_name,
-          code: m.code, pass_marks: m.pass_marks, max_marks: m.max_marks
-        };
+        // Fallback name verification safety checks
+        const currentExamName = m.exam_type_name || activeExamStringName || 'Default';
+        
+        if (!subjectMap[m.subject_id]) {
+          subjectMap[m.subject_id] = {
+            id: m.subject_id, 
+            name: m.subject_name,
+            code: m.code, 
+            pass_marks: m.pass_marks, 
+            max_marks: m.max_marks,
+            examMaxes: {},
+            examPasses: {}
+          };
+        }
+        // Save the precise exam-specific config details
+        subjectMap[m.subject_id].examMaxes[currentExamName] = m.max_marks;
+        subjectMap[m.subject_id].examPasses[currentExamName] = m.pass_marks;
       }
     });
     const subjects = Object.values(subjectMap);
 
-    // 2. Identify distinct exam types present across rows (e.g., Unit 1, Semester 1, etc.)
+    // 3. Track all unique exam cycles found in this dataset
     const distinctExamsMap = {};
     dataSource.forEach(m => {
-      distinctExamsMap[m.exam_type_name] = true;
+      const nameKey = m.exam_type_name || activeExamStringName || 'Default';
+      distinctExamsMap[nameKey] = true;
     });
     const examTypesFound = Object.keys(distinctExamsMap);
 
+    // 4. Group student marks metrics map cleanly
     const studentMap = {};
-    const activeSelectedExamObj = examTypes.find(e => e.id == filters.exam_type_id);
-    const activeExamStringName = activeSelectedExamObj ? String(activeSelectedExamObj.name).toLowerCase() : '';
-    const isFinalCumulative = activeExamStringName.includes('final') || activeExamStringName.includes('annual');
-
     dataSource.forEach(m => {
       if (!studentMap[m.student_id]) {
         studentMap[m.student_id] = {
@@ -107,8 +123,7 @@ const MarksheetReport = () => {
         };
       }
 
-      // Resolve a reliable string key for the exam type name mapping context
-      const currentExamName = m.exam_type_name || examType || 'Default';
+      const currentExamName = m.exam_type_name || activeExamStringName || 'Default';
 
       if (!filters.class_id || m.class_id == filters.class_id) {
         if (!studentMap[m.student_id].marks[m.subject_id]) {
@@ -119,19 +134,8 @@ const MarksheetReport = () => {
           obtained: m.marks_obtained,
           max: m.max_marks,
           pass: m.pass_marks,
-          is_absent: m.is_active === 1 || m.is_absent === true
+          is_absent: m.is_absent === 1 || m.is_absent === true
         };
-
-        // Deep-link the max marks directly to the subject mapping lookup template
-        if (subjectMap[m.subject_id]) {
-          if (!subjectMap[m.subject_id].examMaxes) {
-            subjectMap[m.subject_id].examMaxes = {};
-          }
-          subjectMap[m.subject_id].examMaxes[currentExamName] = m.max_marks;
-          
-          // Fallback safeguard for single-view indicators
-          subjectMap[m.subject_id].lastCalculatedMax = m.max_marks;
-        }
       }
      
       if (m.overall_remark) {
@@ -139,25 +143,36 @@ const MarksheetReport = () => {
       }
     });
 
+    // 5. Generate final row totals using explicit dynamic limits
     const rows = Object.values(studentMap).map(s => {
       let totalObtainedYear = 0;
       let totalMaxYear = 0;
       let passedYear = true;
 
       subjects.forEach(sub => {
-        examTypesFound.forEach(etName => {
+        // Cycle through all visible/loaded exam configurations
+        const examsToProcess = isFinalCumulative ? examTypesFound : [activeExamStringName || 'Default'];
+
+        examsToProcess.forEach(etName => {
           const m = s.marks[sub.id]?.[etName];
+          const configuredMax = sub.examMaxes[etName] || sub.max_marks || 100;
+          const configuredPass = sub.examPasses[etName] || sub.pass_marks || 35;
+
           if (m) {
             if (m.is_absent) {
               passedYear = false;
-              totalMaxYear += parseInt(m.max || sub.max_marks);
-            } else if (m.obtained !== null && m.obtained !== undefined) {
+              totalMaxYear += parseInt(configuredMax);
+            } else if (m.obtained !== null && m.obtained !== undefined && m.obtained !== '') {
               totalObtainedYear += parseFloat(m.obtained);
-              totalMaxYear += parseInt(m.max || sub.max_marks);
-              if (parseFloat(m.obtained) < parseInt(m.pass || sub.pass_marks)) {
+              totalMaxYear += parseInt(configuredMax);
+              if (parseFloat(m.obtained) < parseInt(configuredPass)) {
                 passedYear = false;
               }
             }
+          } else {
+            // Missing score entries automatically add max value boundaries for safety totals
+            totalMaxYear += parseInt(configuredMax);
+            passedYear = false;
           }
         });
       });
