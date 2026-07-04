@@ -178,35 +178,40 @@ const MarksheetReport = () => {
   const className = classes.find(c => c.id == filters.class_id)?.name || 'All Classes';
   const examType = examTypes.find(e => e.id == filters.exam_type_id)?.name || '';
 
-  const exportSingleStudentPDF = async (student) => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+const exportSingleStudentPDF = async (row) => {
+    // Switched to landscape format so multi-exam metrics have ample space to render cleanly
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.width;
     const pageH = doc.internal.pageSize.height;
 
+    // Outer double borders
     doc.setDrawColor(30, 64, 175);
     doc.setLineWidth(1.5);
     doc.rect(8, 8, pageW - 16, pageH - 16);
     doc.setLineWidth(0.5);
     doc.rect(10, 10, pageW - 20, pageH - 20);
 
+    // Header Branding Bar
     doc.setFillColor(30, 64, 175);
-    doc.rect(10, 10, pageW - 20, 28, 'F');
+    doc.rect(10, 10, pageW - 20, 24, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-    doc.text('SchoolMS', pageW / 2, 22, { align: 'center' });
+    doc.text('SchoolMS', pageW / 2, 20, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text('School Management System', pageW / 2, 30, { align: 'center' });
+    doc.text('School Management System', pageW / 2, 27, { align: 'center' });
 
+    // Sub-title Accent Strip
     doc.setFillColor(241, 245, 249);
-    doc.rect(10, 38, pageW - 20, 12, 'F');
+    doc.rect(10, 34, pageW - 20, 10, 'F');
     doc.setTextColor(30, 64, 175);
-    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-    doc.text(`MARK SHEET — ${examType.toUpperCase()}`, pageW / 2, 46, { align: 'center' });
+    doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+    doc.text(`MARK SHEET — ${examType.toUpperCase()}`, pageW / 2, 41, { align: 'center' });
 
-    const infoY = 58;
+    // Student Info Card Grid Boundaries
+    const infoY = 52;
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.rect(12, infoY - 4, pageW - 24, 30, 'FD');
+    doc.rect(12, infoY - 4, pageW - 24, 24, 'FD');
 
     const leftX = 16;
     const leftValX = 50;
@@ -214,9 +219,9 @@ const MarksheetReport = () => {
     const rightValX = pageW / 2 + 38;
 
     const infoLeft = [
-      ['Student Name', student.name],
-      ['Roll No', student.roll_no],
-      ['Class', student.class_name],
+      ['Student Name', row.name],
+      ['Roll No', row.roll_no],
+      ['Class', row.class_name || className],
     ];
     const infoRight = [
       ['Academic Year', filters.academic_year],
@@ -224,39 +229,55 @@ const MarksheetReport = () => {
       ['Date', new Date().toLocaleDateString('en-IN')],
     ];
 
-    const lineH = 9;
-    infoLeft.forEach(([label, value], i) => {
+    const lineH = 7;
+    infoLeft.forEach(([label, value], idx) => {
       doc.setFontSize(9); doc.setFont('helvetica', 'bold');
       doc.setTextColor(100, 116, 139);
-      doc.text(`${label}:`, leftX, infoY + i * lineH);
+      doc.text(`${label}:`, leftX, infoY + idx * lineH);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 41, 59);
-      doc.text(String(value || '—'), leftValX, infoY + i * lineH);
+      doc.text(String(value || '—'), leftValX, infoY + idx * lineH);
     });
-    infoRight.forEach(([label, value], i) => {
+    infoRight.forEach(([label, value], idx) => {
       doc.setFontSize(9); doc.setFont('helvetica', 'bold');
       doc.setTextColor(100, 116, 139);
-      doc.text(`${label}:`, rightX, infoY + i * lineH);
+      doc.text(`${label}:`, rightX, infoY + idx * lineH);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 41, 59);
-      doc.text(String(value || '—'), rightValX, infoY + i * lineH);
+      doc.text(String(value || '—'), rightValX, infoY + idx * lineH);
     });
 
-    const tableY = infoY + 32;
+    const tableY = infoY + 26;
     const tableHeaders = [['#', 'Subject', 'Code', 'Max Marks', 'Pass Marks', 'Marks Obtained', 'Status']];
+    
     const tableBody = subjects.map((s, i) => {
-      const m = student.marks[s.id];
+      let m = null;
+      if (row.marks && row.marks[s.id]) {
+        if (isFinalCumulative) {
+          m = row.marks[s.id][examType] || Object.values(row.marks[s.id])[0];
+        } else {
+          m = row.marks[s.id][examType];
+        }
+      }
+
       const isAbsent = m?.is_absent;
-      const obtained = isAbsent ? 'AB' : (m?.obtained ?? '—');
-      const status = isAbsent ? 'ABSENT' : m
-        ? (parseFloat(m.obtained) >= (m.pass || s.pass_marks) ? 'PASS' : 'FAIL')
-        : '—';
+      const maxMarksValue = m?.max !== undefined ? m.max : (s.max_marks || 100);
+      const passMarksValue = m?.pass !== undefined ? m.pass : (s.pass_marks || 35);
+      const obtained = isAbsent ? 'AB' : (m?.obtained !== null && m?.obtained !== undefined ? m.obtained : '—');
+      
+      let status = '—';
+      if (isAbsent) {
+        status = 'ABSENT';
+      } else if (m?.obtained !== null && m?.obtained !== undefined) {
+        status = parseFloat(m.obtained) >= passMarksValue ? 'PASS' : 'FAIL';
+      }
+
       return [
         String(i + 1),
         s.name,
         s.code || '—',
-        String(m ? m.max : s.max_marks),
-        String(m ? m.pass : s.pass_marks),
+        String(maxMarksValue),
+        String(passMarksValue),
         String(obtained),
         status
       ];
@@ -269,107 +290,86 @@ const MarksheetReport = () => {
       styles: { fontSize: 9, cellPadding: 3, halign: 'center', font: 'helvetica' },
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { halign: 'left', cellWidth: 50 },
-        2: { cellWidth: 18, halign: 'center' },
-        3: { cellWidth: 24, halign: 'center' },
-        4: { cellWidth: 24, halign: 'center' },
-        5: { cellWidth: 28, halign: 'center' },
-        6: { cellWidth: 22, halign: 'center' },
+        0: { cellWidth: 15, halign: 'center' },
+        1: { halign: 'left', cellWidth: 70 },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 35, halign: 'center' },
+        4: { cellWidth: 35, halign: 'center' },
+        5: { cellWidth: 45, halign: 'center' },
+        6: { cellWidth: 40, halign: 'center' },
       },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       didParseCell: (data) => {
-        if (data.section === 'body') {
-          if (data.column.index === 6) {
-            const val = data.cell.text[0];
-            if (val === 'PASS') {
-              data.cell.styles.textColor = [22, 163, 74];
-              data.cell.styles.fontStyle = 'bold';
-            }
-            if (val === 'FAIL' || val === 'ABSENT') {
-              data.cell.styles.textColor = [220, 38, 38];
-              data.cell.styles.fontStyle = 'bold';
-            }
+        if (data.section === 'body' && data.column.index === 6) {
+          const val = data.cell.text[0];
+          if (val === 'PASS') {
+            data.cell.styles.textColor = [22, 163, 74];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (val === 'FAIL' || val === 'ABSENT') {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = 'bold';
           }
         }
       },
       margin: { left: 12, right: 12 }
     });
-    const summaryY = doc.lastAutoTable.finalY + 8;
-    const isPassed = student.passed;
-    const summaryH = 30;
+
+    const summaryY = doc.lastAutoTable.finalY + 6;
+    const isPassed = row.passed;
+    const summaryH = 20;
 
     doc.setFillColor(isPassed ? 240 : 254, isPassed ? 253 : 242, isPassed ? 244 : 242);
     doc.setDrawColor(isPassed ? 22 : 220, isPassed ? 163 : 38, isPassed ? 74 : 38);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(12, summaryY, pageW - 24, summaryH, 3, 3, 'FD');
+    doc.setLineWidth(0.6);
+    doc.roundedRect(12, summaryY, pageW - 24, summaryH, 2, 2, 'FD');
 
     const summaryItems = [
-      ['Total Marks', `${student.total} / ${student.maxTotal}`],
-      ['Percentage', isPassed ? `${student.percentage}%` : '—'],
-      ['Grade', student.grade],
+      ['Total Marks', `${row.total} / ${row.maxTotal}`],
+      ['Percentage', isPassed ? `${row.percentage}%` : '—'],
+      ['Grade', row.grade],
       ['Result', isPassed ? 'PASS' : 'FAIL'],
     ];
 
     const colW = (pageW - 24) / 4;
-    summaryItems.forEach(([label, value], i) => {
-      const x = 12 + i * colW + colW / 2;
+    summaryItems.forEach(([label, value], idx) => {
+      const x = 12 + idx * colW + colW / 2;
       doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-      doc.text(label, x, summaryY + 10, { align: 'center' });
-      doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      if (i === 3) {
+      doc.text(label, x, summaryY + 6, { align: 'center' });
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+      if (idx === 3) {
         doc.setTextColor(isPassed ? 22 : 220, isPassed ? 163 : 38, isPassed ? 74 : 38);
       } else {
         doc.setTextColor(30, 64, 175);
       }
-      doc.text(String(value), x, summaryY + 22, { align: 'center' });
+      doc.text(String(value), x, summaryY + 14, { align: 'center' });
     });
 
-    const remarkY = summaryY + summaryH + 6;
+    const remarkY = summaryY + summaryH + 4;
     doc.setFillColor(254, 243, 199); doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.5);
-    doc.roundedRect(12, remarkY, pageW - 24, 14, 2, 2, 'FD');
+    doc.roundedRect(12, remarkY, pageW - 24, 10, 1.5, 1.5, 'FD');
     doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14);
-    doc.text("Teacher's Remark:", 16, remarkY + 9);
+    doc.text("Teacher's Remark:", 16, remarkY + 6.5);
     doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 53, 15);
-    const remarkText = student.overall_remark || 'No remarks';
-    doc.text(remarkText, 52, remarkY + 9, { maxWidth: pageW - 68 });
+    doc.text(row.overall_remark || 'No remarks added', 52, remarkY + 6.5, { maxWidth: pageW - 68 });
 
-    const gradeY = remarkY + 20;
-    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 116, 139);
-    doc.text('GRADE SCALE:', 14, gradeY);
-    const gradeScale = [
-      ['A+', '90-100'], ['A', '80-89'], ['B+', '70-79'],
-      ['B', '60-69'], ['C', '50-59'], ['D', '35-49'], ['F', '<35']
-    ];
-    gradeScale.forEach(([g, r], i) => {
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${g}:${r}%`, 36 + i * 24, gradeY);
-    });
-
-    const noteY = gradeY + 7;
-    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
-    doc.text('NOTE:', 14, noteY);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
-    doc.text('Absence in any subject is treated as FAIL for that subject and will affect the overall result.', 28, noteY);
-
-    const sigY = pageH - 36;
+    const sigY = pageH - 22;
     doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
     const sigPositions = [
-      { x: 18, label: 'Class Teacher' },
-      { x: pageW / 2 - 22, label: 'Principal' },
-      { x: pageW - 65, label: 'Parent / Guardian' }
+      { x: 20, label: 'Class Teacher' },
+      { x: pageW / 2 - 25, label: 'Principal' },
+      { x: pageW - 75, label: 'Parent / Guardian' }
     ];
     sigPositions.forEach(({ x, label }) => {
-      doc.line(x, sigY, x + 48, sigY);
+      doc.line(x, sigY, x + 50, sigY);
       doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-      doc.text(label, x + 24, sigY + 6, { align: 'center' });
+      doc.text(label, x + 24, sigY + 5, { align: 'center' });
     });
 
     doc.setFontSize(7); doc.setTextColor(148, 163, 184);
-    doc.text('This is a computer generated marksheet. — SchoolMS', pageW / 2, pageH - 14, { align: 'center' });
+    doc.text('This is a computer generated marksheet. — SchoolMS', pageW / 2, pageH - 8, { align: 'center' });
 
-    await saveDocument(doc, `marksheet-${student.name.replace(/\s+/g, '_')}-${examType}.pdf`);
-    toast.success(`Marksheet for ${student.name} downloaded!`);
+    await saveDocument(doc, `marksheet-${row.name.replace(/\s+/g, '_')}-${examType}.pdf`);
+    toast.success(`Marksheet for ${row.name} downloaded!`);
   };
 
   const exportExcel = async () => {
@@ -735,39 +735,39 @@ const MarksheetReport = () => {
                 <div className="table-wrapper" style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
                     <thead>
-                      <tr style={{ background: '#1e40af', color: '#fff' }}>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>#</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1' }}>ROLL NO</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '150px' }}>STUDENT NAME</th>
+                      <tr style={{ background: '#1e40af', color: '#ffffff' }}>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>#</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', color: '#ffffff' }}>ROLL NO</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '150px', color: '#ffffff' }}>STUDENT NAME</th>
                         
                         {isFinalCumulative ? (
                           examTypesFound.map(etName => (
-                            <th key={etName} colSpan={subjects.length} style={{ padding: '6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', background: '#1e3a8a' }}>
+                            <th key={etName} colSpan={subjects.length} style={{ padding: '8px 6px', fontSize: '12px', fontWeight: '800', textAlign: 'center', border: '1px solid #cbd5e1', background: '#111827', color: '#ffffff', letterSpacing: '0.5px' }}>
                               {etName.toUpperCase()}
                             </th>
                           ))
                         ) : (
                           subjects.map(s => (
-                            <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>
+                            <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>
                               {s.name}
                             </th>
                           ))
                         )}
 
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>TOTAL</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>%</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>GRADE</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>RESULT</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '120px' }}>REMARK</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1' }}>MARKSHEET</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>TOTAL</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>%</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>GRADE</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>RESULT</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '120px', color: '#ffffff' }}>REMARK</th>
+                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>MARKSHEET</th>
                       </tr>
                       
                       {isFinalCumulative && (
-                        <tr style={{ background: '#2563eb', color: '#fff' }}>
+                        <tr style={{ background: '#1e293b', color: '#ffffff' }}>
                           {examTypesFound.map(etName => 
                             subjects.map(s => (
-                              <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '500' }}>
-                                {s.name.substring(0, 7)}
+                              <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '700', color: '#ffffff', background: '#334155' }}>
+                                {s.name}
                               </th>
                             ))
                           )}
