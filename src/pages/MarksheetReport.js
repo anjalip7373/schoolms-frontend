@@ -107,24 +107,30 @@ const MarksheetReport = () => {
         };
       }
 
+      // Resolve a reliable string key for the exam type name mapping context
+      const currentExamName = m.exam_type_name || examType || 'Default';
+
       if (!filters.class_id || m.class_id == filters.class_id) {
         if (!studentMap[m.student_id].marks[m.subject_id]) {
           studentMap[m.student_id].marks[m.subject_id] = {};
         }
         
-        studentMap[m.student_id].marks[m.subject_id][m.exam_type_name] = {
+        studentMap[m.student_id].marks[m.subject_id][currentExamName] = {
           obtained: m.marks_obtained,
           max: m.max_marks,
           pass: m.pass_marks,
-          is_absent: m.is_absent === 1 || m.is_absent === true
+          is_absent: m.is_active === 1 || m.is_absent === true
         };
 
-        // Save max marks at the subject level for easy header lookups
+        // Deep-link the max marks directly to the subject mapping lookup template
         if (subjectMap[m.subject_id]) {
           if (!subjectMap[m.subject_id].examMaxes) {
             subjectMap[m.subject_id].examMaxes = {};
           }
-          subjectMap[m.subject_id].examMaxes[m.exam_type_name] = m.max_marks;
+          subjectMap[m.subject_id].examMaxes[currentExamName] = m.max_marks;
+          
+          // Fallback safeguard for single-view indicators
+          subjectMap[m.subject_id].lastCalculatedMax = m.max_marks;
         }
       }
      
@@ -755,11 +761,20 @@ const exportSingleStudentPDF = async (row) => {
                             </th>
                           ))
                         ) : (
-                          subjects.map(s => (
-                            <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>
-                              {s.name}<br/><span style={{ opacity: 0.7, fontSize: '9px' }}>/{s.max_marks}</span>
-                            </th>
-                          ))
+                          subjects.map(s => {
+                            // Extract configuration details for the currently active exam context
+                            const activeExamLabel = examType || 'Default';
+                            const maxMarksValue = s.examMaxes && s.examMaxes[activeExamLabel] 
+                              ? s.examMaxes[activeExamLabel] 
+                              : (s.lastCalculatedMax || s.max_marks || 100);
+
+                            return (
+                              <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>
+                                {s.name}<br/>
+                                <span style={{ opacity: 0.8, fontSize: '10px', color: '#d1d5db', fontWeight: '500' }}>/{maxMarksValue}</span>
+                              </th>
+                            );
+                          })
                         )}
 
                         <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>TOTAL</th>
@@ -774,7 +789,6 @@ const exportSingleStudentPDF = async (row) => {
                         <tr style={{ background: '#1e293b', color: '#ffffff' }}>
                           {examTypesFound.map(etName => 
                             subjects.map(s => {
-                              // Get the max marks for this specific subject in this specific exam type
                               const maxForThisExam = s.examMaxes && s.examMaxes[etName] ? s.examMaxes[etName] : (s.max_marks || 100);
                               return (
                                 <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '700', color: '#ffffff', background: '#334155' }}>
