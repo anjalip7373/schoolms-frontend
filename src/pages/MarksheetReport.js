@@ -126,7 +126,25 @@ const buildData = (dataSource) => {
       const nameKey = m.exam_type_name || activeExamStringName || 'Default';
       distinctExamsMap[nameKey] = true;
     });
-    const examTypesFound = Object.keys(distinctExamsMap);
+    const examTypesFound = Object.keys(distinctExamsMap).sort(
+  (a, b) => getExamSortIndex(a) - getExamSortIndex(b)
+);
+
+    const EXAM_ORDER = [
+  'unit test 1', 'ut1', 'ut 1',
+  'semester 1', 'sem 1', 'sem1', 'half yearly',
+  'unit test 2', 'ut2', 'ut 2',
+  'semester 2', 'sem 2', 'sem2',
+  'annual', 'annual exam', 'final', 'final exam', 'yearly'
+];
+ 
+const getExamSortIndex = (name) => {
+  const lower = String(name).toLowerCase().trim();
+  for (let i = 0; i < EXAM_ORDER.length; i++) {
+    if (lower.includes(EXAM_ORDER[i])) return i;
+  }
+  return 99; // unknown exam types go to end
+};
 
     // 4. Group student marks metrics map cleanly
     const studentMap = {};
@@ -377,22 +395,20 @@ const exportSingleStudentPDF = async (row) => {
     margin: { left: 12, right: 12 }
   });
 
-  const summaryY = doc.lastAutoTable.finalY + 6;
+    const summaryY = doc.lastAutoTable.finalY + 6;
   const isPassed = row.resultStatus === 'PASS';
   const isPromoted = row.resultStatus === 'PROMOTED';
-  // Box color: green for PASS, amber for RTE PROMOTED, red for FAIL
   const boxColor = isPassed ? [240, 253, 244] : isPromoted ? [255, 251, 235] : [254, 242, 242];
   const lineColor = isPassed ? [22, 163, 74] : isPromoted ? [217, 119, 6] : [220, 38, 38];
-
+ 
   // Summary box
   doc.setFillColor(...boxColor);
   doc.setDrawColor(...lineColor);
   doc.setLineWidth(0.6);
   doc.roundedRect(12, summaryY, pageW - 24, 20, 2, 2, 'FD');
-
   const summaryItems = [
     ['Total Marks', `${row.total} / ${row.maxTotal}`],
-    ['Percentage', row.showMetrics ? `${row.percentage}%` : '—'],
+    ['Percentage', row.showMetrics ? `${row.percentage}%` : '--'],
     ['Grade', row.grade],
     ['Result', resultLabel(row.resultStatus)],
   ];
@@ -405,45 +421,55 @@ const exportSingleStudentPDF = async (row) => {
     doc.setTextColor(idx === 3 ? lineColor[0] : 30, idx === 3 ? lineColor[1] : 64, idx === 3 ? lineColor[2] : 175);
     doc.text(String(value), x, summaryY + 14, { align: 'center' });
   });
-
-  const remarkY = summaryY + 26;
-
-  // Grade legend box
-  const gradeY = remarkY;
+ 
+  // Grade legend — always 14mm tall
+  const gradeY = summaryY + 26;
   doc.setFillColor(239, 246, 255); doc.setDrawColor(147, 197, 253); doc.setLineWidth(0.4);
   doc.roundedRect(12, gradeY, pageW - 24, 14, 1.5, 1.5, 'FD');
   doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
   doc.text('Grade Scale:', 16, gradeY + 5);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
   doc.text(
-    `A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   Note: ${row.isRTE ? 'As per RTE policy, students up to Class 8 are promoted even if they fail/are absent in a subject' : 'Absent in any subject = FAIL'}`,
-    42, gradeY + 5
+    'A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)',
+    48, gradeY + 5
+  );
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
+  doc.text(
+    row.isRTE
+      ? 'Note: As per RTE policy, students up to Class 8 are promoted even if they fail/absent in a subject'
+      : 'Note: Absent in any subject = FAIL',
+    16, gradeY + 10
   );
 
-  // Remark box
+  // Remark box — always 10mm tall
   const remarkBoxY = gradeY + 18;
   doc.setFillColor(254, 243, 199); doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.5);
   doc.roundedRect(12, remarkBoxY, pageW - 24, 10, 1.5, 1.5, 'FD');
   doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14);
   doc.text("Teacher's Remark:", 16, remarkBoxY + 6.5);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 53, 15);
-  doc.text(row.overall_remark || 'No remarks added', 52, remarkBoxY + 6.5, { maxWidth: pageW - 68 });
-
-  // Signatures
-  const sigY = pageH - 22;
+  doc.text(row.overall_remark || 'No remarks added', 55, remarkBoxY + 6.5, { maxWidth: pageW - 70 });
+ 
+  // Signatures — placed relative to remark box, not fixed to page bottom
+  // This prevents overlap when table is long
+  const sigY = Math.min(remarkBoxY + 18, pageH - 22);
   doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
-  [{ x: 20, label: 'Class Teacher' }, { x: pageW / 2 - 25, label: 'Principal' }, { x: pageW - 75, label: 'Parent / Guardian' }].forEach(({ x, label }) => {
+  [
+    { x: 20, label: 'Class Teacher' },
+    { x: pageW / 2 - 25, label: 'Principal' },
+    { x: pageW - 75, label: 'Parent / Guardian' }
+  ].forEach(({ x, label }) => {
     doc.line(x, sigY, x + 50, sigY);
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
     doc.text(label, x + 24, sigY + 5, { align: 'center' });
   });
-
+ 
   doc.setFontSize(7); doc.setTextColor(148, 163, 184);
-  doc.text('This is a computer generated marksheet. — SchoolMS', pageW / 2, pageH - 8, { align: 'center' });
-
+  doc.text('This is a computer generated marksheet. -- SchoolMS', pageW / 2, sigY + 12, { align: 'center' });
+ 
   await saveDocument(doc, `marksheet-${row.name.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success(`Marksheet for ${row.name} downloaded!`);
-};
+  };
 
 // ── EXCEL EXPORT ─────────────────────────────────────────────────────────────
 const exportExcel = async () => {
@@ -588,41 +614,53 @@ const exportPDF = async () => {
 
   let headers, body;
 
-  if (isFinalCumulative) {
+    if (isFinalCumulative) {
+    const maxTotalHeader = rows.length > 0 ? `Total\n(Max:${rows[0].maxTotal})` : 'Total';
     const headRow1 = [
-      { content: '#', rowSpan: 2 }, { content: 'Roll No', rowSpan: 2 }, { content: 'Student Name', rowSpan: 2 },
+      { content: '#', rowSpan: 2 }, 
+      { content: 'Roll No', rowSpan: 2 }, 
+      { content: 'Student Name', rowSpan: 2 },
       ...examTypesFound.map(et => ({ content: et.toUpperCase(), colSpan: subjects.length })),
-      { content: 'Total', rowSpan: 2 }, { content: '%', rowSpan: 2 }, { content: 'Grade', rowSpan: 2 }, { content: 'Result', rowSpan: 2 }, { content: 'Remark', rowSpan: 2 }
+      { content: maxTotalHeader, rowSpan: 2 }, 
+      { content: '%', rowSpan: 2 }, 
+      { content: 'Grade', rowSpan: 2 }, 
+      { content: 'Result', rowSpan: 2 }, 
+      { content: 'Remark', rowSpan: 2 }
     ];
     const headRow2 = examTypesFound.flatMap(et =>
       subjects.map(s => `${s.name}\n/${s.examMaxes?.[et] || s.max_marks || 100}`)
     );
     headers = [headRow1, headRow2];
-
+ 
     body = rows.map((r, i) => {
-      const row = [i + 1, r.roll_no, r.name];
+      const bodyRow = [i + 1, r.roll_no, r.name];
       examTypesFound.forEach(et => {
         subjects.forEach(s => {
           const m = r.marks[s.id]?.[et];
-          if (!m) row.push('—');
-          else row.push(m.is_absent ? 'AB' : (m.obtained ?? '—'));
+          if (!m) bodyRow.push('--');
+          else bodyRow.push(m.is_absent ? 'AB' : (m.obtained ?? '--'));
         });
       });
-      row.push(`${r.total}/${r.maxTotal}`, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—');
-      return row;
+      // Only obtained total in the row (max is in header)
+      bodyRow.push(r.total, r.showMetrics ? `${r.percentage}%` : '--', r.grade, resultLabel(r.resultStatus), r.overall_remark || '--');
+      return bodyRow;
     });
+ 
   } else {
-    headers = [['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), 'Total', '%', 'Grade', 'Result', 'Remark']];
+    const maxTotalHeader = rows.length > 0 ? `Total\n(Max:${rows[0].maxTotal})` : 'Total';
+    headers = [['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), maxTotalHeader, '%', 'Grade', 'Result', 'Remark']];
     body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
       ...subjects.map(s => {
         const m = getMarksForExport(r.marks, s.id, examType, false);
         if (m.is_absent) return 'AB';
-        return m.obtained ?? '—';
+        return m.obtained ?? '--';
       }),
-      `${r.total}/${r.maxTotal}`, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
+      // Only obtained total (max is in header)
+      r.total, r.showMetrics ? `${r.percentage}%` : '--', r.grade, resultLabel(r.resultStatus), r.overall_remark || '--'
     ]);
   }
+ 
   const lastColIndex = (body[0]?.length || 1) - 1;
 
   autoTable(doc, {
