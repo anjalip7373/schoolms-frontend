@@ -207,16 +207,11 @@ const buildData = (dataSource) => {
   const className = classes.find(c => c.id == filters.class_id)?.name || 'All Classes';
   const examType = examTypes.find(e => e.id == filters.exam_type_id)?.name || '';
   
-  // Helper: safely get obtained marks from row.marks regardless of exam structure
-// For normal exams: row.marks[subjectId][examName].obtained
-// For annual/cumulative, sum across all exam types for that subject
 const getMarksForExport = (rowMarks, subjectId, examTypeName, isFinalCumulative) => {
   if (!rowMarks || !rowMarks[subjectId]) return { obtained: null, max: 0, pass: 0, is_absent: false };
   const subjectMarks = rowMarks[subjectId];
- 
   if (isFinalCumulative) {
-    // Sum across all exam types for this subject
-    let total = 0; let maxTotal = 0; let passTotal = 0; let anyAbsent = false; let hasData = false;
+    let total = 0, maxTotal = 0, passTotal = 0, anyAbsent = false, hasData = false;
     Object.values(subjectMarks).forEach(m => {
       if (m.is_absent) { anyAbsent = true; maxTotal += parseInt(m.max || 0); }
       else if (m.obtained !== null && m.obtained !== undefined && m.obtained !== '') {
@@ -225,7 +220,6 @@ const getMarksForExport = (rowMarks, subjectId, examTypeName, isFinalCumulative)
     });
     return { obtained: hasData ? total : null, max: maxTotal, pass: passTotal, is_absent: anyAbsent && !hasData };
   } else {
-    // Normal exam - look up by exam type name
     const m = subjectMarks[examTypeName];
     if (!m) return { obtained: null, max: 0, pass: 0, is_absent: false };
     return m;
@@ -238,10 +232,12 @@ const exportSingleStudentPDF = async (row) => {
   const pageW = doc.internal.pageSize.width;
   const pageH = doc.internal.pageSize.height;
 
+  // Border
   doc.setDrawColor(30, 64, 175); doc.setLineWidth(1.5);
   doc.rect(8, 8, pageW - 16, pageH - 16);
   doc.setLineWidth(0.5); doc.rect(10, 10, pageW - 20, pageH - 20);
 
+  // Header
   doc.setFillColor(30, 64, 175); doc.rect(10, 10, pageW - 20, 24, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20); doc.setFont('helvetica', 'bold');
@@ -249,14 +245,15 @@ const exportSingleStudentPDF = async (row) => {
   doc.setFontSize(10); doc.setFont('helvetica', 'normal');
   doc.text('School Management System', pageW / 2, 27, { align: 'center' });
 
+  // Sub-title
   doc.setFillColor(241, 245, 249); doc.rect(10, 34, pageW - 20, 10, 'F');
   doc.setTextColor(30, 64, 175); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
   doc.text(`MARK SHEET — ${examType.toUpperCase()}`, pageW / 2, 41, { align: 'center' });
 
+  // Student info
   const infoY = 52;
   doc.setFillColor(248, 250, 252); doc.setDrawColor(226, 232, 240);
   doc.rect(12, infoY - 4, pageW - 24, 24, 'FD');
-
   const infoLeft = [['Student Name', row.name], ['Roll No', row.roll_no], ['Class', row.class_name || className]];
   const infoRight = [['Academic Year', filters.academic_year], ['Exam Type', examType], ['Date', new Date().toLocaleDateString('en-IN')]];
   const lineH = 7;
@@ -273,29 +270,50 @@ const exportSingleStudentPDF = async (row) => {
     doc.text(String(value || '—'), pageW / 2 + 38, infoY + idx * lineH);
   });
 
-  const tableY = infoY + 26;
-
+  const tableY = infoY + 28;
   let tableHeaders, tableBody;
 
   if (isFinalCumulative) {
-    // Annual: columns = Subject | ExamType1 | ExamType2 | ... | Total | Status
+    // Annual: rows = subjects, columns = exam types + Total + Max + Status
+    // Header row 1: # | Subject | ExamType1 (/max) | ExamType2 (/max) | ... | Total | Max | Status
     const examCols = examTypesFound;
-    tableHeaders = [['#', 'Subject', ...examCols.map(e => `${e}`), 'Total', 'Max', 'Status']];
+
+    // Calculate per-exam max for each subject
+    const examSubjectMax = {};
+    examCols.forEach(etName => {
+      examSubjectMax[etName] = {};
+      subjects.forEach(s => {
+        const m = row.marks[s.id]?.[etName];
+        examSubjectMax[etName][s.id] = m ? (m.max || 0) : 0;
+      });
+    });
+
+    // Build header with max marks per exam type (use first subject's max as representative)
+    const headerRow = [
+      '#', 'Subject',
+      ...examCols.map(etName => {
+        const repMax = subjects.length > 0 ? (examSubjectMax[etName][subjects[0].id] || 0) : 0;
+        return repMax > 0 ? `${etName}\n(Max:${repMax})` : etName;
+      }),
+      'Total', 'Max', 'Status'
+    ];
+    tableHeaders = [headerRow];
+
     tableBody = subjects.map((s, i) => {
-      let subTotal = 0; let subMax = 0; let subPass = 0; let anyFail = false; let anyAbsent = false;
+      let subTotal = 0, subMax = 0, subPass = 0, anyFail = false, anyAbsent = false;
       const examCells = examCols.map(etName => {
         const m = row.marks[s.id]?.[etName];
         if (!m) return '—';
         if (m.is_absent) { anyAbsent = true; subMax += parseInt(m.max || 0); return 'AB'; }
-        subTotal += parseFloat(m.obtained || 0);
-        subMax += parseInt(m.max || 0);
-        subPass += parseInt(m.pass || 0);
-        if (parseFloat(m.obtained) < parseInt(m.pass)) anyFail = true;
+        const obt = parseFloat(m.obtained || 0);
+        subTotal += obt; subMax += parseInt(m.max || 0); subPass += parseInt(m.pass || 0);
+        if (obt < parseInt(m.pass)) anyFail = true;
         return String(m.obtained);
       });
-      const status = anyAbsent ? 'ABSENT' : anyFail ? 'FAIL' : (subTotal >= subPass ? 'PASS' : 'FAIL');
+      const status = anyAbsent ? 'ABSENT' : anyFail ? 'FAIL' : 'PASS';
       return [String(i + 1), s.name, ...examCells, String(subTotal), String(subMax), status];
     });
+
   } else {
     tableHeaders = [['#', 'Subject', 'Code', 'Max Marks', 'Pass Marks', 'Marks Obtained', 'Status']];
     tableBody = subjects.map((s, i) => {
@@ -315,13 +333,15 @@ const exportSingleStudentPDF = async (row) => {
     head: tableHeaders, body: tableBody, startY: tableY,
     styles: { fontSize: 9, cellPadding: 3, halign: 'center', font: 'helvetica' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-    columnStyles: { 1: { halign: 'left', cellWidth: isFinalCumulative ? 40 : 70 } },
+    columnStyles: { 1: { halign: 'left', cellWidth: isFinalCumulative ? 35 : 65 } },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     didParseCell: (data) => {
       if (data.section === 'body') {
         const val = data.cell.text[0];
         if (val === 'PASS') { data.cell.styles.textColor = [22, 163, 74]; data.cell.styles.fontStyle = 'bold'; }
-        else if (val === 'FAIL' || val === 'ABSENT') { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
+        else if (val === 'FAIL') { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
+        else if (val === 'ABSENT') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
+        else if (val === 'AB') { data.cell.styles.fillColor = [254, 243, 199]; data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
       }
     },
     margin: { left: 12, right: 12 }
@@ -329,12 +349,19 @@ const exportSingleStudentPDF = async (row) => {
 
   const summaryY = doc.lastAutoTable.finalY + 6;
   const isPassed = row.passed;
+
+  // Summary box
   doc.setFillColor(isPassed ? 240 : 254, isPassed ? 253 : 242, isPassed ? 244 : 242);
   doc.setDrawColor(isPassed ? 22 : 220, isPassed ? 163 : 38, isPassed ? 74 : 38);
   doc.setLineWidth(0.6);
   doc.roundedRect(12, summaryY, pageW - 24, 20, 2, 2, 'FD');
 
-  const summaryItems = [['Total Marks', `${row.total} / ${row.maxTotal}`], ['Percentage', isPassed ? `${row.percentage}%` : '—'], ['Grade', row.grade], ['Result', isPassed ? 'PASS' : 'FAIL']];
+  const summaryItems = [
+    ['Total Marks', `${row.total} / ${row.maxTotal}`],
+    ['Percentage', isPassed ? `${row.percentage}%` : '—'],
+    ['Grade', row.grade],
+    ['Result', isPassed ? 'PASS' : 'FAIL'],
+  ];
   const colW = (pageW - 24) / 4;
   summaryItems.forEach(([label, value], idx) => {
     const x = 12 + idx * colW + colW / 2;
@@ -346,13 +373,26 @@ const exportSingleStudentPDF = async (row) => {
   });
 
   const remarkY = summaryY + 26;
-  doc.setFillColor(254, 243, 199); doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.5);
-  doc.roundedRect(12, remarkY, pageW - 24, 10, 1.5, 1.5, 'FD');
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14);
-  doc.text("Teacher's Remark:", 16, remarkY + 6.5);
-  doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 53, 15);
-  doc.text(row.overall_remark || 'No remarks added', 52, remarkY + 6.5, { maxWidth: pageW - 68 });
 
+  // Grade legend box
+  const gradeY = remarkY;
+  doc.setFillColor(239, 246, 255); doc.setDrawColor(147, 197, 253); doc.setLineWidth(0.4);
+  doc.roundedRect(12, gradeY, pageW - 24, 14, 1.5, 1.5, 'FD');
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
+  doc.text('Grade Scale:', 16, gradeY + 5);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+  doc.text('A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   Note: Absent in any subject = FAIL', 42, gradeY + 5);
+
+  // Remark box
+  const remarkBoxY = gradeY + 18;
+  doc.setFillColor(254, 243, 199); doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.5);
+  doc.roundedRect(12, remarkBoxY, pageW - 24, 10, 1.5, 1.5, 'FD');
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14);
+  doc.text("Teacher's Remark:", 16, remarkBoxY + 6.5);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 53, 15);
+  doc.text(row.overall_remark || 'No remarks added', 52, remarkBoxY + 6.5, { maxWidth: pageW - 68 });
+
+  // Signatures
   const sigY = pageH - 22;
   doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
   [{ x: 20, label: 'Class Teacher' }, { x: pageW / 2 - 25, label: 'Principal' }, { x: pageW - 75, label: 'Parent / Guardian' }].forEach(({ x, label }) => {
@@ -373,28 +413,65 @@ const exportExcel = async () => {
   setShowExport(false);
   const wb = XLSX.utils.book_new();
 
-  // Build sheet data for a given set of rows + subjects + examTypesFound
   const buildSheetData = (clsRows, clsSubjects, clsName, etName, clsExamTypesFound, clsIsCumulative) => {
-    let headers, dataRows;
+    let headers, subHeaders, dataRows;
 
     if (clsIsCumulative) {
-      // Annual: each exam type gets its own column group per subject
-      headers = ['#', 'Roll No', 'Student Name',
-        ...clsExamTypesFound.flatMap(et => clsSubjects.map(s => `${s.name} (${et})`)),
-        'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'
-      ];
-      dataRows = clsRows.map((r, i) => [
-        i + 1, r.roll_no, r.name,
-        ...clsExamTypesFound.flatMap(et =>
+      // Row 1: merged group headers — exam type names
+      // Row 2: subject names under each exam type + Total/Max/% etc.
+      // We'll use two header rows in aoa format
+      const groupRow = ['', '', ''];
+      const subRow = ['#', 'Roll No', 'Student Name'];
+      clsExamTypesFound.forEach(et => {
+        clsSubjects.forEach((s, si) => {
+          groupRow.push(si === 0 ? et : ''); // only label first subject column of each exam group
+          subRow.push(`${s.name}\n(Max:${clsRows[0]?.marks[s.id]?.[et]?.max || s.max_marks || '?'})`);
+        });
+      });
+      // Subject total columns
+      clsSubjects.forEach(s => {
+        groupRow.push('Subject Total');
+        subRow.push(s.name);
+      });
+      ['Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'].forEach(h => {
+        groupRow.push(''); subRow.push(h);
+      });
+
+      dataRows = clsRows.map((r, i) => {
+        const examCells = clsExamTypesFound.flatMap(et =>
           clsSubjects.map(s => {
             const m = r.marks[s.id]?.[et];
             if (!m) return '—';
             if (m.is_absent) return 'AB';
             return m.obtained ?? '—';
           })
-        ),
-        r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
-      ]);
+        );
+
+        // Subject totals across all exams
+        const subjectTotals = clsSubjects.map(s => {
+          let total = 0, hasData = false;
+          clsExamTypesFound.forEach(et => {
+            const m = r.marks[s.id]?.[et];
+            if (m && !m.is_absent && m.obtained !== null && m.obtained !== undefined) {
+              total += parseFloat(m.obtained); hasData = true;
+            }
+          });
+          return hasData ? total : '—';
+        });
+
+        return [
+          i + 1, r.roll_no, r.name,
+          ...examCells,
+          ...subjectTotals,
+          r.total, r.maxTotal,
+          r.passed ? `${r.percentage}%` : '—',
+          r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+        ];
+      });
+
+      const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
+      return [title, [], groupRow, subRow, ...dataRows, [], []];
+
     } else {
       headers = ['#', 'Roll No', 'Student Name',
         ...clsSubjects.map(s => `${s.name} (Max:${s.max_marks})`),
@@ -409,10 +486,9 @@ const exportExcel = async () => {
         }),
         r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
       ]);
+      const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
+      return [title, [], headers, ...dataRows, [], []];
     }
-
-    const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
-    return [title, [], headers, ...dataRows, [], []];
   };
 
   try {
@@ -466,40 +542,10 @@ const exportExcel = async () => {
       toast.success('Downloaded! All exams in one sheet');
 
     } else {
-      // Single class + single exam (including Annual)
-      let headers, dataRows;
-      if (isFinalCumulative) {
-        headers = ['#', 'Roll No', 'Student Name',
-          ...examTypesFound.flatMap(et => subjects.map(s => `${s.name} (${et})`)),
-          'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'
-        ];
-        dataRows = rows.map((r, i) => [
-          i + 1, r.roll_no, r.name,
-          ...examTypesFound.flatMap(et =>
-            subjects.map(s => {
-              const m = r.marks[s.id]?.[et];
-              if (!m) return '—';
-              if (m.is_absent) return 'AB';
-              return m.obtained ?? '—';
-            })
-          ),
-          r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
-        ]);
-      } else {
-        headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name} (Max:${s.max_marks})`), 'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'];
-        dataRows = rows.map((r, i) => [
-          i + 1, r.roll_no, r.name,
-          ...subjects.map(s => {
-            const m = getMarksForExport(r.marks, s.id, examType, false);
-            if (m.is_absent) return 'AB';
-            return m.obtained ?? '—';
-          }),
-          r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
-        ]);
-      }
-      const title = [`${className} — ${examType} — ${filters.academic_year}`];
-      const ws = XLSX.utils.aoa_to_sheet([title, [], headers, ...dataRows]);
-      ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...headers.slice(3).map(() => ({ wch: 18 }))];
+      // Single class + single exam
+      const sheetData = buildSheetData(rows, subjects, className, examType, examTypesFound, isFinalCumulative);
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...Array(sheetData[2]?.length - 3 || 10).fill({ wch: 18 })];
       XLSX.utils.book_append_sheet(wb, ws, examType.slice(0, 31));
       await saveWorkbook(wb, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.xlsx`);
       toast.success('Excel downloaded!');
@@ -510,20 +556,24 @@ const exportExcel = async () => {
   }
 };
 
-// ── PDF EXPORT (CLASS REPORT) ─────────────────────────────────────────────────
+// ── PDF CLASS REPORT ─────────────────────────────────────────────────────────
 const exportPDF = async () => {
   const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
-  doc.setFillColor(30, 64, 175); doc.rect(0, 0, doc.internal.pageSize.width, 36, 'F');
+  const pageW = doc.internal.pageSize.width;
+
+  doc.setFillColor(30, 64, 175); doc.rect(0, 0, pageW, 36, 'F');
   doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
   doc.text('SchoolMS — Marksheet Report', 14, 16);
   doc.setFontSize(10); doc.setFont('helvetica', 'normal');
   doc.text(`${examType} | ${className} | ${filters.academic_year} | Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
 
   let headers, body;
+
   if (isFinalCumulative) {
     headers = ['#', 'Roll No', 'Student Name',
       ...examTypesFound.flatMap(et => subjects.map(s => `${s.name}\n(${et})`)),
-      'Total', '%', 'Grade', 'Result', 'Remark'
+      ...subjects.map(s => `${s.name}\nTotal`),
+      'Grand\nTotal', '%', 'Grade', 'Result', 'Remark'
     ];
     body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
@@ -535,10 +585,21 @@ const exportPDF = async () => {
           return m.obtained ?? '—';
         })
       ),
+      // Subject totals
+      ...subjects.map(s => {
+        let total = 0, hasData = false;
+        examTypesFound.forEach(et => {
+          const m = r.marks[s.id]?.[et];
+          if (m && !m.is_absent && m.obtained !== null && m.obtained !== undefined) {
+            total += parseFloat(m.obtained); hasData = true;
+          }
+        });
+        return hasData ? total : '—';
+      }),
       `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
     ]);
   } else {
-    headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => s.name), 'Total', '%', 'Grade', 'Result', 'Remark'];
+    headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), 'Total', '%', 'Grade', 'Result', 'Remark'];
     body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
       ...subjects.map(s => {
@@ -552,7 +613,7 @@ const exportPDF = async () => {
 
   autoTable(doc, {
     head: [headers], body, startY: 42,
-    styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
+    styles: { fontSize: 7, cellPadding: 2, halign: 'center', overflow: 'linebreak' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
     columnStyles: { 2: { halign: 'left', cellWidth: 28 }, [headers.length - 1]: { halign: 'left', cellWidth: 35 } },
     alternateRowStyles: { fillColor: [241, 245, 249] },
@@ -562,10 +623,20 @@ const exportPDF = async () => {
         if (val === 'PASS') data.cell.styles.textColor = [22, 163, 74];
         if (val === 'FAIL') data.cell.styles.textColor = [220, 38, 38];
         if (val === 'AB') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
+        if (val === 'ABSENT') { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
       }
     },
     margin: { left: 14, right: 14 }
   });
+
+  // Grade legend at the bottom
+  const legendY = doc.lastAutoTable.finalY + 6;
+  doc.setFillColor(239, 246, 255); doc.setDrawColor(147, 197, 253); doc.setLineWidth(0.4);
+  doc.roundedRect(14, legendY, pageW - 28, 10, 1.5, 1.5, 'FD');
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
+  doc.text('Grade Scale:', 18, legendY + 6);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+  doc.text('A+ ≥90%   A ≥80%   B+ ≥70%   B ≥60%   C ≥50%   D ≥35%   F <35%   |   Note: Absent in any subject counts as FAIL', 50, legendY + 6);
 
   await saveDocument(doc, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success('PDF downloaded!');
