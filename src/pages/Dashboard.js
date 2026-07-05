@@ -5,20 +5,21 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
-  const [data, setData] = useState({ fees: { total: 0, paid: 0, not_paid: 0 }, salary: { total: 0, generated: 0, not_generated: 0 }, classes: [] });
+  const [data, setData] = useState({
+    fees: { total: 0, paid: 0, not_paid: 0, paid_students: [], not_paid_students: [], all_students: [] },
+    salary: { total: 0, generated: 0, not_generated: 0, generated_list: [], not_generated_list: [], all_employees: [] },
+    classes: []
+  });
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [showExport, setShowExport] = useState(false);
-  // const handleExportExcel = () => { toast.info('Export Excel coming soon'); };
-  // const handleExportPDF = () => { toast.info('Export PDF coming soon'); };
-  const [feeModal, setFeeModal] = useState(null);
-  const [salaryModal, setSalaryModal] = useState(null);
-  const [feeDetails, setFeeDetails] = useState([]);
-  const [salaryDetails, setSalaryDetails] = useState([]);
+
+  // Modal state: null = closed, string = which list to show
+  const [modal, setModal] = useState(null);
+  // modal values: 'fee_paid' | 'fee_not_paid' | 'fee_all' | 'salary_generated' | 'salary_not_generated' | 'salary_all'
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -33,160 +34,220 @@ const Dashboard = () => {
 
   useEffect(() => { fetchDashboard(); }, [month, year, selectedClass]);
 
-  const showFeeDetails = async (type) => {
-    try {
-      const params = { month, year };
-      if (selectedClass) params.class_id = selectedClass;
-      const { data: res } = await API.get('/fees/dashboard-stats', { params });
-      const filtered = type === 'paid' ? res.details.filter(d => d.payment_count > 0) : res.details.filter(d => d.payment_count === 0);
-      setFeeDetails(filtered);
-      setFeeModal(type);
-    } catch (err) { toast.error('Failed to load fee details'); }
-  };
-
-  const showSalaryDetails = async (type) => {
-    try {
-      const params = { month, year };
-      const { data: res } = await API.get('/salary/dashboard-stats', { params });
-      const filtered = type === 'generated' ? res.details.filter(d => d.slip_id) : res.details.filter(d => !d.slip_id);
-      setSalaryDetails(filtered);
-      setSalaryModal(type);
-    } catch (err) { toast.error('Failed to load salary details'); }
-  };
-
   const years = [];
   for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+  // Get modal config based on type
+  const getModalConfig = () => {
+    switch (modal) {
+      case 'fee_paid':
+        return { title: '✅ Fee Paid Students', rows: data?.fees?.paid_students || [], type: 'student' };
+      case 'fee_not_paid':
+        return { title: '❌ Fee Not Paid Students', rows: data?.fees?.not_paid_students || [], type: 'student' };
+      case 'fee_all':
+        return { title: '👥 All Students', rows: data?.fees?.all_students || [], type: 'student' };
+      case 'salary_generated':
+        return { title: '📄 Salary Generated', rows: data?.salary?.generated_list || [], type: 'employee' };
+      case 'salary_not_generated':
+        return { title: '⏳ Salary Not Generated', rows: data?.salary?.not_generated_list || [], type: 'employee' };
+      case 'salary_all':
+        return { title: '👨‍💼 All Employees', rows: data?.salary?.all_employees || [], type: 'employee' };
+      default:
+        return { title: '', rows: [], type: 'student' };
+    }
+  };
+
+  const modalConfig = getModalConfig();
+
+  const cardStyle = {
+    background: '#fff',
+    borderRadius: '16px',
+    padding: '24px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    position: 'relative',
+    overflow: 'hidden',
+  };
+
+  const clickableCardStyle = {
+    ...cardStyle,
+    cursor: 'pointer',
+    transition: 'transform 0.15s, box-shadow 0.15s',
+  };
+
   return (
     <AppLayout title="Dashboard" subtitle="School overview and statistics">
-      {/* Filters */}
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0', flexWrap:'wrap', gap:'12px'}}>
-        <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
-          <select className="form-control" value={month} onChange={e => setMonth(e.target.value)}>
-            {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-          </select>
-          <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-            <option value="">All Classes</option>
-            {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        {/* <div className="dropdown-export">
-          <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button> */}
-          {/* {showExport && (
-            <div className="dropdown-menu">
-              <button className="dropdown-item" onClick={handleExportExcel}>📊 Excel (.xlsx)</button>
-              <button className="dropdown-item" onClick={handleExportPDF}>📄 PDF</button>
-            </div>
-          )} */}
-        </div>
-      {/* </div> */}
 
-   
+      {/* Filters */}
+      <div style={{display:'flex', alignItems:'center', background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0', flexWrap:'wrap', gap:'12px'}}>
+        <select className="form-control" value={month} onChange={e => setMonth(e.target.value)}>
+          {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+        </select>
+        <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+          <option value="">All Classes</option>
+          {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
 
       {loading ? (
         <div className="loading"><div className="spinner"></div><p>Loading dashboard...</p></div>
-      ) : data ? (
+      ) : (
         <>
-          {/* Fee Stats */}
-          <div style={{marginBottom:'12px'}}><h3 style={{fontWeight:700, fontSize:'14px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px'}}>💰 Fee Summary</h3></div>
+          {/* ── FEE SUMMARY ─────────────────────────────────────────────── */}
+          <div style={{marginBottom:'12px'}}>
+            <h3 style={{fontWeight:700, fontSize:'14px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px'}}>💰 Fee Summary</h3>
+          </div>
           <div className="stats-grid" style={{marginBottom:'28px'}}>
-            <div className="stat-card blue">
-              <span className="stat-icon">👥</span>
-              <span className="stat-label">Total Students</span>
-              <span className="stat-value">{data?.fees?.total ?? 0}</span>
+
+            {/* Total Students — clickable */}
+            <div
+              style={{...clickableCardStyle, borderLeft:'4px solid #3b82f6'}}
+              onClick={() => setModal('fee_all')}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+            >
+              <span style={{fontSize:'28px'}}>👥</span>
+              <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Total Students</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#1e293b'}}>{data?.fees?.total ?? 0}</span>
+              <span style={{fontSize:'12px', color:'#3b82f6', fontWeight:500}}>Click to view details →</span>
             </div>
-            <div className="stat-card green" onClick={() => showFeeDetails('paid')} title="Click to view">
-              <span className="stat-icon">✅</span>
-              <span className="stat-label">Fee Paid</span>
-              <span className="stat-value">{data?.fees?.paid ?? 0}</span>
-              <span className="stat-sub">Click to view details →</span>
+
+            {/* Fee Paid — clickable */}
+            <div
+              style={{...clickableCardStyle, borderLeft:'4px solid #22c55e'}}
+              onClick={() => setModal('fee_paid')}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+            >
+              <span style={{fontSize:'28px'}}>✅</span>
+              <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Fee Paid</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#16a34a'}}>{data?.fees?.paid ?? 0}</span>
+              <span style={{fontSize:'12px', color:'#22c55e', fontWeight:500}}>Click to view details →</span>
             </div>
-            <div className="stat-card red" onClick={() => showFeeDetails('unpaid')} title="Click to view">
-              <span className="stat-icon">❌</span>
-              <span className="stat-label">Fee Not Paid</span>
-              <span className="stat-value">{data?.fees?.not_paid ?? 0}</span>
-              <span className="stat-sub">Click to view details →</span>
+
+            {/* Fee Not Paid — clickable */}
+            <div
+              style={{...clickableCardStyle, borderLeft:'4px solid #ef4444'}}
+              onClick={() => setModal('fee_not_paid')}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+            >
+              <span style={{fontSize:'28px'}}>❌</span>
+              <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Fee Not Paid</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#dc2626'}}>{data?.fees?.not_paid ?? 0}</span>
+              <span style={{fontSize:'12px', color:'#ef4444', fontWeight:500}}>Click to view details →</span>
             </div>
           </div>
-          {/* Salary Stats */}
+
+          {/* ── SALARY SUMMARY ───────────────────────────────────────────── */}
           {!isTeacher && (
             <>
-              <div style={{marginBottom:'12px'}}><h3 style={{fontWeight:700, fontSize:'14px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px'}}>💵 Salary Summary</h3></div>
+              <div style={{marginBottom:'12px'}}>
+                <h3 style={{fontWeight:700, fontSize:'14px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px'}}>💵 Salary Summary</h3>
+              </div>
               <div className="stats-grid">
-                <div className="stat-card blue">
-                  <span className="stat-icon">👨‍💼</span>
-                  <span className="stat-label">Total Employees</span>
-                  <span className="stat-value">{data?.salary?.total ?? 0}</span>
+
+                {/* Total Employees — clickable */}
+                <div
+                  style={{...clickableCardStyle, borderLeft:'4px solid #3b82f6'}}
+                  onClick={() => setModal('salary_all')}
+                  onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+                >
+                  <span style={{fontSize:'28px'}}>👨‍💼</span>
+                  <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Total Employees</span>
+                  <span style={{fontSize:'32px', fontWeight:800, color:'#1e293b'}}>{data?.salary?.total ?? 0}</span>
+                  <span style={{fontSize:'12px', color:'#3b82f6', fontWeight:500}}>Click to view details →</span>
                 </div>
-                <div className="stat-card green" onClick={() => showSalaryDetails('generated')}>
-                  <span className="stat-icon">📄</span>
-                  <span className="stat-label">Salary Generated</span>
-                  <span className="stat-value">{data?.salary?.generated ?? 0}</span>
-                  <span className="stat-sub">Click to view details →</span>
+
+                {/* Salary Generated — clickable */}
+                <div
+                  style={{...clickableCardStyle, borderLeft:'4px solid #22c55e'}}
+                  onClick={() => setModal('salary_generated')}
+                  onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+                >
+                  <span style={{fontSize:'28px'}}>📄</span>
+                  <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Salary Generated</span>
+                  <span style={{fontSize:'32px', fontWeight:800, color:'#16a34a'}}>{data?.salary?.generated ?? 0}</span>
+                  <span style={{fontSize:'12px', color:'#22c55e', fontWeight:500}}>Click to view details →</span>
                 </div>
-                <div className="stat-card red" onClick={() => showSalaryDetails('not_generated')}>
-                  <span className="stat-icon">⏳</span>
-                  <span className="stat-label">Not Generated</span>
-                  <span className="stat-value">{data?.salary?.not_generated ?? 0}</span>
-                  <span className="stat-sub">Click to view details →</span>
+
+                {/* Not Generated — clickable */}
+                <div
+                  style={{...clickableCardStyle, borderLeft:'4px solid #ef4444'}}
+                  onClick={() => setModal('salary_not_generated')}
+                  onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; }}
+                >
+                  <span style={{fontSize:'28px'}}>⏳</span>
+                  <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Not Generated</span>
+                  <span style={{fontSize:'32px', fontWeight:800, color:'#dc2626'}}>{data?.salary?.not_generated ?? 0}</span>
+                  <span style={{fontSize:'12px', color:'#ef4444', fontWeight:500}}>Click to view details →</span>
                 </div>
               </div>
             </>
           )}
         </>
-      ) : null}
-
-      {/* Fee Modal */}
-      {feeModal && (
-        <div className="modal-overlay" onClick={() => setFeeModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{feeModal === 'paid' ? '✅ Fee Paid Students' : '❌ Fee Not Paid Students'}</h2>
-              <button className="modal-close" onClick={() => setFeeModal(null)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>Roll No</th><th>Name</th><th>Class</th></tr></thead>
-                  <tbody>
-                    {feeDetails.map(s => (
-                      <tr key={s.id}><td>{s.roll_no}</td><td>{s.full_name}</td><td>{s.class_name}</td></tr>
-                    ))}
-                    {!feeDetails.length && <tr><td colSpan="3"><div className="empty-state"><p>No records found</p></div></td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
-      {/* Salary Modal */}
-      {salaryModal && (
-        <div className="modal-overlay" onClick={() => setSalaryModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+      {/* ── UNIFIED MODAL ──────────────────────────────────────────────────── */}
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'600px'}}>
             <div className="modal-header">
-              <h2>{salaryModal === 'generated' ? '📄 Salary Generated' : '⏳ Salary Not Generated'}</h2>
-              <button className="modal-close" onClick={() => setSalaryModal(null)}>✕</button>
+              <h2>{modalConfig.title}</h2>
+              <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>Emp ID</th><th>Name</th><th>Role</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {salaryDetails.map(e => (
-                      <tr key={e.id}>
-                        <td>{e.emp_id}</td><td>{e.full_name}</td><td>{e.role_name}</td>
-                        <td><span className={"badge " + (e.slip_id ? 'badge-success' : 'badge-danger')}>{e.slip_id ? 'Generated' : 'Pending'}</span></td>
-                      </tr>
-                    ))}
-                    {!salaryDetails.length && <tr><td colSpan="4"><div className="empty-state"><p>No records found</p></div></td></tr>}
-                  </tbody>
-                </table>
+                {modalConfig.type === 'student' ? (
+                  <table>
+                    <thead>
+                      <tr><th>Roll No</th><th>Name</th><th>Class</th></tr>
+                    </thead>
+                    <tbody>
+                      {modalConfig.rows.map(s => (
+                        <tr key={s.id}>
+                          <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
+                          <td><strong>{s.full_name}</strong></td>
+                          <td>{s.class_name}</td>
+                        </tr>
+                      ))}
+                      {!modalConfig.rows.length && (
+                        <tr><td colSpan="3"><div className="empty-state"><p>No records found</p></div></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr><th>Emp ID</th><th>Name</th><th>Role</th></tr>
+                    </thead>
+                    <tbody>
+                      {modalConfig.rows.map(e => (
+                        <tr key={e.id}>
+                          <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{e.emp_id}</code></td>
+                          <td><strong>{e.full_name}</strong></td>
+                          <td>{e.role_name}</td>
+                        </tr>
+                      ))}
+                      {!modalConfig.rows.length && (
+                        <tr><td colSpan="3"><div className="empty-state"><p>No records found</p></div></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div style={{padding:'12px 0 0', color:'#64748b', fontSize:'13px', textAlign:'right'}}>
+                Total: <strong>{modalConfig.rows.length}</strong>
               </div>
             </div>
           </div>
