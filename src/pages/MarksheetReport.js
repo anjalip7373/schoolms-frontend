@@ -428,11 +428,6 @@ const exportExcel = async () => {
           subRow.push(`${s.name}\n(Max:${clsRows[0]?.marks[s.id]?.[et]?.max || s.max_marks || '?'})`);
         });
       });
-      // Subject total columns
-      clsSubjects.forEach(s => {
-        groupRow.push('Subject Total');
-        subRow.push(s.name);
-      });
       ['Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'].forEach(h => {
         groupRow.push(''); subRow.push(h);
       });
@@ -447,22 +442,9 @@ const exportExcel = async () => {
           })
         );
 
-        // Subject totals across all exams
-        const subjectTotals = clsSubjects.map(s => {
-          let total = 0, hasData = false;
-          clsExamTypesFound.forEach(et => {
-            const m = r.marks[s.id]?.[et];
-            if (m && !m.is_absent && m.obtained !== null && m.obtained !== undefined) {
-              total += parseFloat(m.obtained); hasData = true;
-            }
-          });
-          return hasData ? total : '—';
-        });
-
         return [
           i + 1, r.roll_no, r.name,
           ...examCells,
-          ...subjectTotals,
           r.total, r.maxTotal,
           r.passed ? `${r.percentage}%` : '—',
           r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
@@ -570,36 +552,30 @@ const exportPDF = async () => {
   let headers, body;
 
   if (isFinalCumulative) {
-    headers = ['#', 'Roll No', 'Student Name',
-      ...examTypesFound.flatMap(et => subjects.map(s => `${s.name}\n(${et})`)),
-      ...subjects.map(s => `${s.name}\nTotal`),
-      'Grand\nTotal', '%', 'Grade', 'Result', 'Remark'
+    const headRow1 = [
+      { content: '#', rowSpan: 2 }, { content: 'Roll No', rowSpan: 2 }, { content: 'Student Name', rowSpan: 2 },
+      ...examTypesFound.map(et => ({ content: et.toUpperCase(), colSpan: subjects.length })),
+      { content: 'Total', rowSpan: 2 }, { content: '%', rowSpan: 2 }, { content: 'Grade', rowSpan: 2 }, { content: 'Result', rowSpan: 2 }, { content: 'Remark', rowSpan: 2 }
     ];
-    body = rows.map((r, i) => [
-      i + 1, r.roll_no, r.name,
-      ...examTypesFound.flatMap(et =>
-        subjects.map(s => {
+    const headRow2 = examTypesFound.flatMap(et =>
+      subjects.map(s => `${s.name}\n/${s.examMaxes?.[et] || s.max_marks || 100}`)
+    );
+    headers = [headRow1, headRow2];
+
+    body = rows.map((r, i) => {
+      const row = [i + 1, r.roll_no, r.name];
+      examTypesFound.forEach(et => {
+        subjects.forEach(s => {
           const m = r.marks[s.id]?.[et];
-          if (!m) return '—';
-          if (m.is_absent) return 'AB';
-          return m.obtained ?? '—';
-        })
-      ),
-      // Subject totals
-      ...subjects.map(s => {
-        let total = 0, hasData = false;
-        examTypesFound.forEach(et => {
-          const m = r.marks[s.id]?.[et];
-          if (m && !m.is_absent && m.obtained !== null && m.obtained !== undefined) {
-            total += parseFloat(m.obtained); hasData = true;
-          }
+          if (!m) row.push('—');
+          else row.push(m.is_absent ? 'AB' : (m.obtained ?? '—'));
         });
-        return hasData ? total : '—';
-      }),
-      `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
-    ]);
+      });
+      row.push(`${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—');
+      return row;
+    });
   } else {
-    headers = ['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), 'Total', '%', 'Grade', 'Result', 'Remark'];
+    headers = [['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), 'Total', '%', 'Grade', 'Result', 'Remark']];
     body = rows.map((r, i) => [
       i + 1, r.roll_no, r.name,
       ...subjects.map(s => {
@@ -610,12 +586,13 @@ const exportPDF = async () => {
       `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
     ]);
   }
+  const lastColIndex = (body[0]?.length || 1) - 1;
 
   autoTable(doc, {
-    head: [headers], body, startY: 42,
+    head: headers, body, startY: 42,
     styles: { fontSize: 7, cellPadding: 2, halign: 'center', overflow: 'linebreak' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
-    columnStyles: { 2: { halign: 'left', cellWidth: 28 }, [headers.length - 1]: { halign: 'left', cellWidth: 35 } },
+    columnStyles: { 2: { halign: 'left', cellWidth: 28 }, [lastColIndex]: { halign: 'left', cellWidth: 35 } },
     alternateRowStyles: { fillColor: [241, 245, 249] },
     didParseCell: (data) => {
       if (data.section === 'body') {
@@ -636,7 +613,7 @@ const exportPDF = async () => {
   doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
   doc.text('Grade Scale:', 18, legendY + 6);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-  doc.text('A+ ≥90%   A ≥80%   B+ ≥70%   B ≥60%   C ≥50%   D ≥35%   F <35%   |   Note: Absent in any subject counts as FAIL', 50, legendY + 6);
+  doc.text('A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   |   Note: Absent in any subject counts as FAIL', 50, legendY + 6);
 
   await saveDocument(doc, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success('PDF downloaded!');
@@ -1001,4 +978,4 @@ const exportPDF = async () => {
   );
 };
 
-export default MarksheetReport; 
+export default MarksheetReport;
