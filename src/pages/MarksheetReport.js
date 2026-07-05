@@ -8,6 +8,23 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveWorkbook, saveDocument } from '../utils/exportUtils';
 
+// RTE (Right to Education Act) no-detention policy applies from Nursery/KG through Class 8.
+// From Class 9 onward, a fail/absent in any subject is a straightforward FAIL.
+const isRTEProtectedClass = (className) => {
+  if (!className) return false;
+  const n = String(className).toLowerCase();
+  if (/nursery|jr\.?\s*kg|junior\s*kg|sr\.?\s*kg|senior\s*kg|pre[- ]?primary|play\s*group|kindergarten/.test(n)) {
+    return true;
+  }
+  const match = n.match(/(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10) <= 8;
+  }
+  return false;
+};
+
+const resultLabel = (status) => status === 'PROMOTED' ? 'PROMOTED (RTE)' : status;
+
 const MarksheetReport = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
@@ -178,18 +195,31 @@ const buildData = (dataSource) => {
       });
 
       const percentage = totalMaxYear > 0 ? ((totalObtainedYear / totalMaxYear) * 100).toFixed(1) : 0;
-      
-      const grade = !passedYear ? '—' : (percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' :
+
+      const isRTE = isRTEProtectedClass(s.class_name);
+      // showMetrics: percentage/grade are visible whenever all subjects were passed, OR the
+      // class falls under the RTE no-detention policy (Nursery/KG - Class 8), where a fail/absent
+      // in a subject still surfaces the percentage & grade instead of hiding them.
+      const showMetrics = passedYear || isRTE;
+
+      const grade = !showMetrics ? '—' : (percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' :
         percentage >= 70 ? 'B+' : percentage >= 60 ? 'B' :
         percentage >= 50 ? 'C' : percentage >= 35 ? 'D' : 'F');
-        
+
+      // resultStatus: PASS (all subjects cleared), PROMOTED (RTE no-detention class, fail/absent
+      // in a subject but still moved up per policy), or FAIL (Class 9+ fail/absent in any subject).
+      const resultStatus = passedYear ? 'PASS' : (isRTE ? 'PROMOTED' : 'FAIL');
+
       return { 
         ...s, 
         total: totalObtainedYear, 
         maxTotal: totalMaxYear, 
         percentage, 
         grade, 
-        passed: passedYear 
+        passed: passedYear,
+        isRTE,
+        showMetrics,
+        resultStatus
       };
     });
 
@@ -348,19 +378,23 @@ const exportSingleStudentPDF = async (row) => {
   });
 
   const summaryY = doc.lastAutoTable.finalY + 6;
-  const isPassed = row.passed;
+  const isPassed = row.resultStatus === 'PASS';
+  const isPromoted = row.resultStatus === 'PROMOTED';
+  // Box color: green for PASS, amber for RTE PROMOTED, red for FAIL
+  const boxColor = isPassed ? [240, 253, 244] : isPromoted ? [255, 251, 235] : [254, 242, 242];
+  const lineColor = isPassed ? [22, 163, 74] : isPromoted ? [217, 119, 6] : [220, 38, 38];
 
   // Summary box
-  doc.setFillColor(isPassed ? 240 : 254, isPassed ? 253 : 242, isPassed ? 244 : 242);
-  doc.setDrawColor(isPassed ? 22 : 220, isPassed ? 163 : 38, isPassed ? 74 : 38);
+  doc.setFillColor(...boxColor);
+  doc.setDrawColor(...lineColor);
   doc.setLineWidth(0.6);
   doc.roundedRect(12, summaryY, pageW - 24, 20, 2, 2, 'FD');
 
   const summaryItems = [
     ['Total Marks', `${row.total} / ${row.maxTotal}`],
-    ['Percentage', isPassed ? `${row.percentage}%` : '—'],
+    ['Percentage', row.showMetrics ? `${row.percentage}%` : '—'],
     ['Grade', row.grade],
-    ['Result', isPassed ? 'PASS' : 'FAIL'],
+    ['Result', resultLabel(row.resultStatus)],
   ];
   const colW = (pageW - 24) / 4;
   summaryItems.forEach(([label, value], idx) => {
@@ -368,7 +402,7 @@ const exportSingleStudentPDF = async (row) => {
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
     doc.text(label, x, summaryY + 6, { align: 'center' });
     doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-    doc.setTextColor(idx === 3 ? (isPassed ? 22 : 220) : 30, idx === 3 ? (isPassed ? 163 : 38) : 64, idx === 3 ? (isPassed ? 74 : 38) : 175);
+    doc.setTextColor(idx === 3 ? lineColor[0] : 30, idx === 3 ? lineColor[1] : 64, idx === 3 ? lineColor[2] : 175);
     doc.text(String(value), x, summaryY + 14, { align: 'center' });
   });
 
@@ -381,7 +415,10 @@ const exportSingleStudentPDF = async (row) => {
   doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
   doc.text('Grade Scale:', 16, gradeY + 5);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-  doc.text('A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   Note: Absent in any subject = FAIL', 42, gradeY + 5);
+  doc.text(
+    `A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   Note: ${row.isRTE ? 'As per RTE policy, students up to Class 8 are promoted even if they fail/are absent in a subject' : 'Absent in any subject = FAIL'}`,
+    42, gradeY + 5
+  );
 
   // Remark box
   const remarkBoxY = gradeY + 18;
@@ -446,8 +483,8 @@ const exportExcel = async () => {
           i + 1, r.roll_no, r.name,
           ...examCells,
           r.total, r.maxTotal,
-          r.passed ? `${r.percentage}%` : '—',
-          r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+          r.showMetrics ? `${r.percentage}%` : '—',
+          r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
         ];
       });
 
@@ -466,7 +503,7 @@ const exportExcel = async () => {
           if (m.is_absent) return 'AB';
           return m.obtained ?? '—';
         }),
-        r.total, r.maxTotal, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+        r.total, r.maxTotal, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
       ]);
       const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
       return [title, [], headers, ...dataRows, [], []];
@@ -571,7 +608,7 @@ const exportPDF = async () => {
           else row.push(m.is_absent ? 'AB' : (m.obtained ?? '—'));
         });
       });
-      row.push(`${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—');
+      row.push(`${r.total}/${r.maxTotal}`, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—');
       return row;
     });
   } else {
@@ -583,7 +620,7 @@ const exportPDF = async () => {
         if (m.is_absent) return 'AB';
         return m.obtained ?? '—';
       }),
-      `${r.total}/${r.maxTotal}`, r.passed ? `${r.percentage}%` : '—', r.grade, r.passed ? 'PASS' : 'FAIL', r.overall_remark || '—'
+      `${r.total}/${r.maxTotal}`, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
     ]);
   }
   const lastColIndex = (body[0]?.length || 1) - 1;
@@ -599,6 +636,7 @@ const exportPDF = async () => {
         const val = data.cell.text[0];
         if (val === 'PASS') data.cell.styles.textColor = [22, 163, 74];
         if (val === 'FAIL') data.cell.styles.textColor = [220, 38, 38];
+        if (val === 'PROMOTED (RTE)') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
         if (val === 'AB') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
         if (val === 'ABSENT') { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
       }
@@ -613,7 +651,11 @@ const exportPDF = async () => {
   doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
   doc.text('Grade Scale:', 18, legendY + 6);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-  doc.text('A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   |   Note: Absent in any subject counts as FAIL', 50, legendY + 6);
+  const classIsRTE = isRTEProtectedClass(className);
+  doc.text(
+    `A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)   |   Note: ${classIsRTE ? 'As per RTE policy, students are promoted even if they fail/are absent in a subject' : 'Absent in any subject counts as FAIL'}`,
+    50, legendY + 6
+  );
 
   await saveDocument(doc, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success('PDF downloaded!');
@@ -760,9 +802,10 @@ const exportPDF = async () => {
             <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px,1fr))', gap:'12px', marginBottom:'16px'}}>
               {[
                 { label:'Total', value: allRows.length, color:'#1e40af', icon:'👥' },
-                { label:'Passed', value: allRows.filter(r => r.passed).length, color:'#10b981', icon:'✅' },
-                { label:'Failed', value: allRows.filter(r => !r.passed).length, color:'#ef4444', icon:'❌' },
-                { label:'Average', value: allRows.length ? `${(allRows.reduce((a,r) => a+parseFloat(r.percentage),0)/allRows.length).toFixed(1)}%` : '0%', color:'#f59e0b', icon:'📊' },
+                { label:'Passed', value: allRows.filter(r => r.resultStatus === 'PASS').length, color:'#10b981', icon:'✅' },
+                { label:'Promoted (RTE)', value: allRows.filter(r => r.resultStatus === 'PROMOTED').length, color:'#f59e0b', icon:'⬆️' },
+                { label:'Failed', value: allRows.filter(r => r.resultStatus === 'FAIL').length, color:'#ef4444', icon:'❌' },
+                { label:'Average', value: allRows.length ? `${(allRows.reduce((a,r) => a+parseFloat(r.percentage),0)/allRows.length).toFixed(1)}%` : '0%', color:'#6366f1', icon:'📊' },
               ].map(s => (
                 <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'12px 14px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
                   <div style={{fontSize:'11px', color:'#64748b', fontWeight:'700'}}>{s.icon} {s.label}</div>
@@ -782,16 +825,16 @@ const exportPDF = async () => {
                           {row.name} {row.roll_no ? `[${row.roll_no}]` : ''}
                         </h3>
                         <span className="mobile-header-badge" style={{
-                          background: row.passed ? '#dcfce7' : '#fee2e2',
-                          color: row.passed ? '#16a34a' : '#dc2626'
+                          background: row.resultStatus === 'PASS' ? '#dcfce7' : row.resultStatus === 'PROMOTED' ? '#fef3c7' : '#fee2e2',
+                          color: row.resultStatus === 'PASS' ? '#16a34a' : row.resultStatus === 'PROMOTED' ? '#b45309' : '#dc2626'
                         }}>
-                          Result: {row.passed ? 'PASS' : 'FAIL'}
+                          Result: {resultLabel(row.resultStatus)}
                         </span>
                       </div>
                       <div className="mobile-header-stats">
                         <div>Total: <strong>{row.total}/{row.maxTotal}</strong></div>
-                        <div>%: <strong>{row.passed ? `${row.percentage}%` : '—'}</strong></div>
-                        <div>Grade: <strong>{row.passed ? row.grade : '—'}</strong></div>
+                        <div>%: <strong>{row.showMetrics ? `${row.percentage}%` : '—'}</strong></div>
+                        <div>Grade: <strong>{row.showMetrics ? row.grade : '—'}</strong></div>
                       </div>
                     </div>
 
@@ -936,21 +979,21 @@ const exportPDF = async () => {
 
                           <td style={{ padding: '10px', textAlign: 'center', fontWeight: '800', color: '#1e40af', border: '1px solid #e2e8f0' }}>{row.total}/{row.maxTotal}</td>
                           <td style={{ padding: '10px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                            {row.passed ? (
+                            {row.showMetrics ? (
                               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}>{row.percentage}%</span>
                             ) : (
                               <span style={{ background: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}>—</span>
                             )}
                           </td>
                           <td style={{ padding: '10px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                            {row.passed ? (
+                            {row.showMetrics ? (
                               <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>{row.grade}</span>
                             ) : (
                               <span style={{ background: '#f1f5f9', color: '#94a3b8', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}>—</span>
                             )}
                           </td>
                           <td style={{ padding: '10px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                            <span className={`badge ${row.passed ? 'badge-success' : 'badge-danger'}`}>{row.passed ? 'PASS' : 'FAIL'}</span>
+                            <span className={`badge ${row.resultStatus === 'PASS' ? 'badge-success' : row.resultStatus === 'PROMOTED' ? 'badge-warning' : 'badge-danger'}`} style={row.resultStatus === 'PROMOTED' ? { background: '#fef3c7', color: '#b45309' } : undefined}>{resultLabel(row.resultStatus)}</span>
                           </td>
                           <td style={{ padding: '10px', fontSize: '12px', color: '#64748b', border: '1px solid #e2e8f0', fontStyle: row.overall_remark ? 'normal' : 'italic' }}>{row.overall_remark || '—'}</td>
                           <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
