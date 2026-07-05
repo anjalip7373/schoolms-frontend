@@ -87,6 +87,22 @@ const MarksheetReport = () => {
     }
   }, [filters]);
 
+  const EXAM_ORDER = [
+  'unit test 1', 'ut1', 'ut 1',
+  'semester 1', 'sem 1', 'sem1', 'half yearly',
+  'unit test 2', 'ut2', 'ut 2',
+  'semester 2', 'sem 2', 'sem2',
+  'annual', 'annual exam', 'final', 'final exam', 'yearly'
+];
+
+const getExamSortIndex = (name) => {
+  const lower = String(name).toLowerCase().trim();
+  for (let i = 0; i < EXAM_ORDER.length; i++) {
+    if (lower.includes(EXAM_ORDER[i])) return i;
+  }
+  return 99;
+};
+
 const buildData = (dataSource) => {
     if (!dataSource.length) return { rows: [], subjects: [], examTypesFound: [] };
     
@@ -129,22 +145,6 @@ const buildData = (dataSource) => {
     const examTypesFound = Object.keys(distinctExamsMap).sort(
   (a, b) => getExamSortIndex(a) - getExamSortIndex(b)
 );
-
-    const EXAM_ORDER = [
-  'unit test 1', 'ut1', 'ut 1',
-  'semester 1', 'sem 1', 'sem1', 'half yearly',
-  'unit test 2', 'ut2', 'ut 2',
-  'semester 2', 'sem 2', 'sem2',
-  'annual', 'annual exam', 'final', 'final exam', 'yearly'
-];
- 
-const getExamSortIndex = (name) => {
-  const lower = String(name).toLowerCase().trim();
-  for (let i = 0; i < EXAM_ORDER.length; i++) {
-    if (lower.includes(EXAM_ORDER[i])) return i;
-  }
-  return 99; // unknown exam types go to end
-};
 
     // 4. Group student marks metrics map cleanly
     const studentMap = {};
