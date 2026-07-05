@@ -452,7 +452,12 @@ const exportSingleStudentPDF = async (row) => {
  
   // Signatures — placed relative to remark box, not fixed to page bottom
   // This prevents overlap when table is long
-  const sigY = Math.min(remarkBoxY + 18, pageH - 22);
+  // If content is too close to page bottom, add a new page for signatures
+let sigY = remarkBoxY + 20;
+if (sigY + 20 > pageH - 10) {
+  doc.addPage();
+  sigY = 30;
+}
   doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
   [
     { x: 20, label: 'Class Teacher' },
@@ -465,7 +470,7 @@ const exportSingleStudentPDF = async (row) => {
   });
  
   doc.setFontSize(7); doc.setTextColor(148, 163, 184);
-  doc.text('This is a computer generated marksheet. -- SchoolMS', pageW / 2, sigY + 12, { align: 'center' });
+  doc.text('This is a computer generated marksheet. -- SchoolMS', pageW / 2, sigY + 14, { align: 'center' });
  
   await saveDocument(doc, `marksheet-${row.name.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success(`Marksheet for ${row.name} downloaded!`);
