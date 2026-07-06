@@ -275,7 +275,7 @@ const Reports = () => {
       <div className="card">
         <div className="table-wrapper">
           {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
+            <table className="reports-table">
               <thead>
                 <tr>{activeCols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
               </thead>
@@ -283,7 +283,7 @@ const Reports = () => {
                 {filteredData.map((row, i) => (
                   <tr key={i}>
                     {activeCols.map(c => (
-                      <td key={c.key}>{renderCell(row, c)}</td>
+                      <td key={c.key} data-label={c.label}>{renderCell(row, c)}</td>
                     ))}
                   </tr>
                 ))}

@@ -411,6 +411,24 @@ tbody tr:last-child td { border-bottom: none; }
   .employees-table td:nth-of-type(8)::before { content: "Salary"; float: left; font-weight: 700; color: var(--text-muted); }
   .employees-table td:nth-of-type(9)::before { content: "Status"; float: left; font-weight: 700; color: var(--text-muted); }
   .employees-table td:nth-of-type(10)::before { content: "Actions"; float: left; font-weight: 700; color: var(--text-muted); }
+
+  /* Generic label support: works for ANY table whose <td> carries a data-label attribute
+     (e.g. Reports.js, whose columns change per tab so fixed nth-of-type rules can't work). */
+  .table-wrapper td[data-label]::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  /* Reports table's last column is real data (Address/Status/etc.), not action buttons —
+     don't force-center it the way the generic :last-child rule does for action cells. */
+  .reports-table td:last-child {
+    justify-content: space-between !important;
+    text-align: right !important;
+    padding-top: 8px !important;
+    gap: 0 !important;
+  }
   
   /* Reports page components */
   .filter-bar {
