@@ -190,7 +190,7 @@ const Profile = () => {
 
       {/* PERSONAL DETAILS TAB */}
       {activeTab === 'profile' && (
-        <div style={{display:'grid', gridTemplateColumns:'1fr 2fr', gap:'24px', alignItems:'start'}}>
+        <div className="profile-grid" style={{display:'grid', gridTemplateColumns:'1fr 2fr', gap:'24px', alignItems:'start'}}>
           {/* Avatar Card */}
           <div className="card" style={{textAlign:'center', padding:'32px 24px'}}>
             <div style={{
@@ -201,7 +201,7 @@ const Profile = () => {
             }}>
               {profile?.full_name?.charAt(0).toUpperCase()}
             </div>
-            <h2 style={{fontSize:'18px', fontWeight:'800', margin:'0 0 4px'}}>{profile?.full_name}</h2>
+            <h2 style={{fontSize:'18px', fontWeight:'800', margin:'0 0 4px', wordBreak:'break-word'}}>{profile?.full_name}</h2>
             <p style={{color:'#64748b', fontSize:'13px', margin:'0 0 8px'}}>{profile?.role_name}</p>
             <span className="badge badge-success">{profile?.emp_id}</span>
             <div style={{marginTop:'20px', borderTop:'1px solid #e2e8f0', paddingTop:'16px'}}>
@@ -238,9 +238,9 @@ const Profile = () => {
                   ].map(item => (
                     <div key={item.label} style={{display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px', background:'#f8fafc', borderRadius:'10px'}}>
                       <span style={{fontSize:'20px', flexShrink:0}}>{item.icon}</span>
-                      <div>
+                      <div style={{minWidth:0, flex:1}}>
                         <div style={{fontSize:'11px', color:'#94a3b8', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.5px'}}>{item.label}</div>
-                        <div style={{fontSize:'14px', fontWeight:'600', color:'#1e293b', marginTop:'2px'}}>{item.value}</div>
+                        <div style={{fontSize:'14px', fontWeight:'600', color:'#1e293b', marginTop:'2px', wordBreak:'break-word'}}>{item.value}</div>
                       </div>
                     </div>
                   ))}
