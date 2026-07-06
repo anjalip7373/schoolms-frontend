@@ -391,18 +391,25 @@ tbody tr:last-child td { border-bottom: none; }
   }
 
   /* 5. Pure content par CSS labels lagana taaki user ko pata chale kaunsa data kya hai */
-  /* Students page mobile alignment */
-  .table-wrapper td:nth-of-type(1)::before { content: "Roll No"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(2)::before { content: "Name"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(3)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(4)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
-  
-  /* Employees page mobile alignment */
-  .table-wrapper td:nth-of-type(1)::before { content: "Emp ID"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(5)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(6)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(7)::before { content: "Subject"; float: left; font-weight: 700; color: var(--text-muted); }
-  .table-wrapper td:nth-of-type(8)::before { content: "Salary"; float: left; font-weight: 700; color: var(--text-muted); }
+    /* Students page labels */
+  .students-table td:nth-of-type(1)::before { content: "Roll No"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(2)::before { content: "Name"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(3)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(4)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(5)::before { content: "WhatsApp"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(6)::before { content: "Fee Status"; float: left; font-weight: 700; color: var(--text-muted); }
+  .students-table td:nth-of-type(7)::before { content: "Actions"; float: left; font-weight: 700; color: var(--text-muted); }
+
+  /* Employees page labels */
+  .employees-table td:nth-of-type(1)::before { content: "Emp ID"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(2)::before { content: "Name"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(3)::before { content: "Role"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(4)::before { content: "Phone"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(5)::before { content: "Class"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(6)::before { content: "Subject"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(7)::before { content: "Salary"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(8)::before { content: "Status"; float: left; font-weight: 700; color: var(--text-muted); }
+  .employees-table td:nth-of-type(9)::before { content: "Actions"; float: left; font-weight: 700; color: var(--text-muted); }
   
   /* Reports page components */
   .filter-bar {

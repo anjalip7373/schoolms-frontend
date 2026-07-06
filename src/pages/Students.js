@@ -155,7 +155,7 @@ setStudents(sorted);
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
+        <div className="table-wrapper students-table">
           {loading ? <div className="loading"><div className="spinner"></div></div> : (
             <table>
               <thead>
