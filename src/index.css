@@ -292,6 +292,24 @@ tbody tr:last-child td { border-bottom: none; }
   .form-grid { grid-template-columns: 1fr; }
   .modal-overlay { padding: 0; align-items: flex-end; }
   .modal { border-radius: 16px 16px 0 0; max-height: 92vh; max-width: 100%; }
+
+  /* Personal Details tab (Profile.js): stack avatar card + details card instead of
+     squeezing them side-by-side, which was truncating name/email/address text. */
+  .profile-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ─── ADD-ON: TOPBAR OVERFLOW FIX FOR NARROW / MOBILE SCREENS ───
+   On phones, the full user name/role plus the "Logout" label don't fit
+   next to the page title + hamburger. Collapse to avatar + icon-only
+   logout so nothing gets pushed past the screen edge, regardless of
+   how long the user's name is. */
+@media (max-width: 480px) {
+  .topbar { padding: 0 10px; gap: 8px; }
+  .topbar-right { gap: 6px; }
+  .user-badge { padding: 4px 6px 4px 4px; gap: 6px; }
+  .user-info { display: none; }
+  .btn-logout .logout-text { display: none; }
+  .btn-logout { padding: 8px 10px; }
 }
 
 /* ─── ADD-ON: TABLET PORTRAIT OVERFLOW CONTROL FOR STUDENTS, EMPLOYEES & REPORTS ─── */
