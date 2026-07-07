@@ -931,59 +931,20 @@ const exportPDF = async () => {
             <div className="desktop-report-view">
               <div style={{background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', overflow:'hidden', marginBottom:'16px'}}>
                 <div className="table-wrapper" style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
                     <thead>
                       <tr style={{ background: '#1e40af', color: '#ffffff' }}>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>#</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', color: '#ffffff' }}>ROLL NO</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '150px', color: '#ffffff' }}>STUDENT NAME</th>
-                        
-                        {isFinalCumulative ? (
-                          examTypesFound.map(etName => (
-                            <th key={etName} colSpan={subjects.length} style={{ padding: '8px 6px', fontSize: '12px', fontWeight: '800', textAlign: 'center', border: '1px solid #cbd5e1', background: '#111827', color: '#ffffff', letterSpacing: '0.5px' }}>
-                              {etName.toUpperCase()}
-                            </th>
-                          ))
-                        ) : (
-                          subjects.map(s => {
-                            // Extract configuration details for the currently active exam context
-                            const activeExamLabel = examType || 'Default';
-                            const maxMarksValue = s.examMaxes && s.examMaxes[activeExamLabel] 
-                              ? s.examMaxes[activeExamLabel] 
-                              : (s.lastCalculatedMax || s.max_marks || 100);
-
-                            return (
-                              <th key={s.id} rowSpan={2} style={{ padding: '8px 6px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>
-                                {s.name}<br/>
-                                <span style={{ opacity: 0.8, fontSize: '10px', color: '#d1d5db', fontWeight: '500' }}>/{maxMarksValue}</span>
-                              </th>
-                            );
-                          })
-                        )}
-
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>TOTAL</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>%</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>GRADE</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>RESULT</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '120px', color: '#ffffff' }}>REMARK</th>
-                        <th rowSpan={2} style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>MARKSHEET</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>#</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', color: '#ffffff' }}>ROLL NO</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '150px', color: '#ffffff' }}>STUDENT NAME</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '260px', color: '#ffffff' }}>SUBJECTS{isFinalCumulative ? ` (${examTypesFound.join(' + ')})` : ''}</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>TOTAL</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>%</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>GRADE</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>RESULT</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'left', border: '1px solid #cbd5e1', minWidth: '120px', color: '#ffffff' }}>REMARK</th>
+                        <th style={{ padding: '10px', fontSize: '11px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#ffffff' }}>MARKSHEET</th>
                       </tr>
-                      
-                      {isFinalCumulative && (
-                        <tr style={{ background: '#1e293b', color: '#ffffff' }}>
-                          {examTypesFound.map(etName => 
-                            subjects.map(s => {
-                              const maxForThisExam = s.examMaxes && s.examMaxes[etName] ? s.examMaxes[etName] : (s.max_marks || 100);
-                              return (
-                                <th key={`${etName}-${s.id}`} style={{ padding: '6px 4px', fontSize: '10px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: '700', color: '#ffffff', background: '#334155' }}>
-                                  {s.name}<br/>
-                                  <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: '500' }}>/{maxForThisExam}</span>
-                                </th>
-                              );
-                            })
-                          )}
-                        </tr>
-                      )}
                     </thead>
                     <tbody>
                       {rows.map((row, i) => (
@@ -994,34 +955,29 @@ const exportPDF = async () => {
                           </td>
                           <td style={{ padding: '10px', fontWeight: '700', color: '#1e293b', border: '1px solid #e2e8f0' }}>{row.name}</td>
                           
-                          {isFinalCumulative ? (
-                            examTypesFound.map(etName => 
-                              subjects.map(s => {
-                                const m = row.marks[s.id]?.[etName];
-                                if (!m) return <td key={`${etName}-${s.id}`} style={{ textAlign: 'center', color: '#cbd5e1', border: '1px solid #e2e8f0' }}>—</td>;
-                                if (m.is_absent) return <td key={`${etName}-${s.id}`} style={{ textAlign: 'center', background: '#fef3c7', color: '#d97706', fontWeight: 'bold', border: '1px solid #e2e8f0', fontSize: '11px' }}>AB</td>;
-                                const isFailedCell = parseFloat(m.obtained) < m.pass;
+                          <td style={{ padding: '10px', border: '1px solid #e2e8f0', minWidth: '260px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {subjects.map(s => {
+                                const m = getMarksForExport(row.marks, s.id, examType, isFinalCumulative);
+                                const isAbsent = m.is_absent;
+                                const hasObtained = m.obtained !== null && m.obtained !== undefined && m.obtained !== '';
+                                const failed = !isAbsent && hasObtained && parseFloat(m.obtained) < (m.pass || s.pass_marks);
                                 return (
-                                  <td key={`${etName}-${s.id}`} style={{ textAlign: 'center', background: isFailedCell ? '#fee2e2' : '#f0fdf4', color: isFailedCell ? '#dc2626' : '#16a34a', fontWeight: '600', border: '1px solid #e2e8f0', fontSize: '12px' }}>
-                                    {m.obtained}
-                                  </td>
+                                  <span key={s.id} style={{
+                                    display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                                    minWidth: '58px', padding: '4px 8px', borderRadius: '6px',
+                                    border: '1px solid #e2e8f0',
+                                    background: isAbsent ? '#fef3c7' : failed ? '#fee2e2' : hasObtained ? '#f0fdf4' : '#f8fafc'
+                                  }}>
+                                    <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.2px' }}>{s.name}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', color: isAbsent ? '#d97706' : failed ? '#dc2626' : hasObtained ? '#16a34a' : '#94a3b8' }}>
+                                      {isAbsent ? 'AB' : hasObtained ? `${m.obtained}/${m.max || s.max_marks}` : '—'}
+                                    </span>
+                                  </span>
                                 );
-                              })
-                            )
-                          ) : (
-                            subjects.map(s => {
-                              const singleExamName = examTypes.find(e => e.id == filters.exam_type_id)?.name || '';
-                              const m = row.marks[s.id]?.[singleExamName];
-                              if (!m) return <td key={s.id} style={{ textAlign: 'center', color: '#94a3b8', border: '1px solid #e2e8f0' }}>—</td>;
-                              if (m.is_absent) return <td key={s.id} style={{ textAlign: 'center', background: '#fef3c7', color: '#d97706', fontWeight: 'bold', border: '1px solid #e2e8f0' }}>AB</td>;
-                              const isFailedCell = parseFloat(m.obtained) < m.pass;
-                              return (
-                                <td key={s.id} style={{ textAlign: 'center', background: isFailedCell ? '#fee2e2' : '#f0fdf4', color: isFailedCell ? '#dc2626' : '#16a34a', fontWeight: '700', border: '1px solid #e2e8f0' }}>
-                                  {m.obtained}
-                                </td>
-                              );
-                            })
-                          )}
+                              })}
+                            </div>
+                          </td>
 
                           <td style={{ padding: '10px', textAlign: 'center', fontWeight: '800', color: '#1e40af', border: '1px solid #e2e8f0' }}>{row.total}/{row.maxTotal}</td>
                           <td style={{ padding: '10px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
