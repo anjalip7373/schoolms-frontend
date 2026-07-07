@@ -134,10 +134,10 @@ const Attendance = () => {
 
       {/* Summary Cards */}
       <div className="stats-grid" style={{marginBottom:'20px'}}>
-        <div className="stat-card green"><span className="stat-icon">✅</span><span className="stat-label">Present</span><span className="stat-value">{counts.present || 0}</span></div>
-        <div className="stat-card red"><span className="stat-icon">❌</span><span className="stat-label">Absent</span><span className="stat-value">{counts.absent || 0}</span></div>
-        <div className="stat-card yellow"><span className="stat-icon">⏰</span><span className="stat-label">Late</span><span className="stat-value">{counts.late || 0}</span></div>
-        <div className="stat-card blue"><span className="stat-icon">🌓</span><span className="stat-label">Half Day</span><span className="stat-value">{counts.halfday || 0}</span></div>
+        <div className="stat-card green static"><span className="stat-icon">✅</span><span className="stat-label">Present</span><span className="stat-value">{counts.present || 0}</span></div>
+        <div className="stat-card red static"><span className="stat-icon">❌</span><span className="stat-label">Absent</span><span className="stat-value">{counts.absent || 0}</span></div>
+        <div className="stat-card yellow static"><span className="stat-icon">⏰</span><span className="stat-label">Late</span><span className="stat-value">{counts.late || 0}</span></div>
+        <div className="stat-card blue static"><span className="stat-icon">🌓</span><span className="stat-label">Half Day</span><span className="stat-value">{counts.halfday || 0}</span></div>
       </div>
 
       {/* Filters Row */}
@@ -176,110 +176,57 @@ const Attendance = () => {
       </div>
 
       <div className="card">
-        {loading ? <div className="loading"><div className="spinner"></div></div> : (
-          <>
-            {/* Desktop: table view */}
-            <div className="desktop-table-view">
-             <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>{personType === 'student' ? 'Roll No' : 'Emp ID'}</th>
-                    <th>Name</th>
-                    {personType === 'student' && <th>Class</th>}
-                    <th>Mark Attendance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentRecords.map((r, i) => (
-                    <tr key={r.id + '-' + r.person_type}>
-                      <td>{i + 1}</td>
-                      <td>
-                        <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
-                          {r.identifier}
-                        </code>
-                      </td>
-                      <td><strong>{r.full_name}</strong></td>
-                      {personType === 'student' && <td>{r.class_name}</td>}
-                      <td>
-                        <div className="attendance-status-btns">
-                          {['present','absent','late','halfday'].map(s => (
-                            <button
-                              key={s}
-                              className={"att-btn " + s + (r.status === s ? ' active' : '')}
-                              onClick={() => setStatus(r.id, s)}>
-                              {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!currentRecords.length && (
-                    <tr>
-                      <td colSpan="6">
-                        <div className="empty-state">
-                          <div className="empty-icon">📋</div>
-                          <p>No records found</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-             </div>
-            </div>
-
-            {/* Mobile: card view */}
-            <div className="mobile-card-list" style={{padding: currentRecords.length ? '16px' : '0'}}>
-              {currentRecords.map((r, i) => (
-                <div className="data-card" key={r.id + '-' + r.person_type}>
-                  <div className="data-card-row">
-                    <span className="dc-label">#</span>
-                    <span className="dc-value">{i + 1}</span>
-                  </div>
-                  <div className="data-card-row">
-                    <span className="dc-label">{personType === 'student' ? 'Roll No' : 'Emp ID'}</span>
-                    <span className="dc-value">
+        <div className="table-wrapper">
+          {loading ? <div className="loading"><div className="spinner"></div></div> : (
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>{personType === 'student' ? 'Roll No' : 'Emp ID'}</th>
+                  <th>Name</th>
+                  {personType === 'student' && <th>Class</th>}
+                  <th>Mark Attendance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentRecords.map((r, i) => (
+                  <tr key={r.id + '-' + r.person_type}>
+                    <td>{i + 1}</td>
+                    <td>
                       <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
                         {r.identifier}
                       </code>
-                    </span>
-                  </div>
-                  <div className="data-card-row">
-                    <span className="dc-label">Name</span>
-                    <span className="dc-value"><strong>{r.full_name}</strong></span>
-                  </div>
-                  {personType === 'student' && (
-                    <div className="data-card-row">
-                      <span className="dc-label">Class</span>
-                      <span className="dc-value">{r.class_name}</span>
-                    </div>
-                  )}
-                  <div className="data-card-actions">
-                    <div className="attendance-status-btns">
-                      {['present','absent','late','halfday'].map(s => (
-                        <button
-                          key={s}
-                          className={"att-btn " + s + (r.status === s ? ' active' : '')}
-                          onClick={() => setStatus(r.id, s)}>
-                          {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {!currentRecords.length && (
-                <div className="empty-state">
-                  <div className="empty-icon">📋</div>
-                  <p>No records found</p>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                    </td>
+                    <td><strong>{r.full_name}</strong></td>
+                    {personType === 'student' && <td>{r.class_name}</td>}
+                    <td>
+                      <div className="attendance-status-btns">
+                        {['present','absent','late','halfday'].map(s => (
+                          <button
+                            key={s}
+                            className={"att-btn " + s + (r.status === s ? ' active' : '')}
+                            onClick={() => setStatus(r.id, s)}>
+                            {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!currentRecords.length && !loading && (
+                  <tr>
+                    <td colSpan="6">
+                      <div className="empty-state">
+                        <div className="empty-icon">📋</div>
+                        <p>No records found</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

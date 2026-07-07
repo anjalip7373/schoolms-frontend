@@ -151,6 +151,10 @@ body {
 .stat-card.blue { border-left: 4px solid var(--primary-light); }
 .stat-card.yellow { border-left: 4px solid var(--warning); }
 
+/* Non-interactive stat cards (e.g. Attendance summary) — same look, no clickable/link feel */
+.stat-card.static { cursor: default; }
+.stat-card.static:hover { transform: none; box-shadow: var(--shadow); border-color: var(--border); }
+
 /* Table Layout (Desktop default) */
 .table-wrapper { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
