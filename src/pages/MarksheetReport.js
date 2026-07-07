@@ -771,16 +771,19 @@ const exportPDF = async () => {
             margin: 0 0 10px 0;
             text-transform: uppercase;
           }
-          .mobile-subject-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 13px;
+          .mobile-subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 8px;
           }
-          .mobile-subj-name { font-weight: 600; color: #334155; }
-          .mobile-subj-score { font-weight: 700; }
+          .mobile-subject-chip {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+          }
+          .mobile-subj-name { display: block; font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 3px; }
+          .mobile-subj-score { display: block; font-size: 14px; font-weight: 800; }
         }
       `}</style>
 
@@ -884,20 +887,20 @@ const exportPDF = async () => {
                     {isOpen && (
                       <div className="mobile-collapsible-content">
                         <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
-                        <div style={{marginBottom:'14px'}}>
+                        <div className="mobile-subjects-grid" style={{marginBottom:'14px'}}>
                           {subjects.map(s => {
-                            const m = row.marks[s.id];
-                            const isAbsent = m?.is_absent;
-                            const obtained = m?.obtained;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
+                            const m = getMarksForExport(row.marks, s.id, examType, isFinalCumulative);
+                            const isAbsent = m.is_absent;
+                            const hasObtained = m.obtained !== null && m.obtained !== undefined && m.obtained !== '';
+                            const failed = !isAbsent && hasObtained && parseFloat(m.obtained) < (m.pass || s.pass_marks);
 
                             return (
-                              <div key={s.id} className="mobile-subject-row">
-                                <span className="mobile-subj-name">• {s.name}:</span>
+                              <div key={s.id} className="mobile-subject-chip">
+                                <span className="mobile-subj-name">{s.name}</span>
                                 <span className="mobile-subj-score" style={{
-                                  color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
+                                  color: isAbsent ? '#d97706' : failed ? '#dc2626' : hasObtained ? '#16a34a' : '#94a3b8'
                                 }}>
-                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${m.max || s.max_marks}` : '—'}
+                                  {isAbsent ? 'AB' : hasObtained ? `${m.obtained} / ${m.max || s.max_marks}` : '—'}
                                 </span>
                               </div>
                             );
