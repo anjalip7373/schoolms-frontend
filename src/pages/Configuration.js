@@ -74,7 +74,8 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         <h3>{icon} {title}</h3>
         <button className="btn btn-primary btn-sm" onClick={() => { setShowAdd(true); setForm({}); }}>➕ Add {title}</button>
       </div>
-      <div className="table-wrapper config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>  
+      <div className="desktop-table-view">
+       <div className="table-wrapper config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>  
         <table>
           <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
             <tr>
@@ -109,6 +110,40 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
             )}
           </tbody>
         </table>
+       </div>
+      </div>
+
+      {/* Mobile: card view */}
+      <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
+        {items.map(item => (
+          <div className="data-card" key={item.id}>
+            <div className="data-card-row">
+              <span className="dc-label">Name</span>
+              <span className="dc-value"><strong>{item.name}</strong></span>
+            </div>
+            {fields.filter(f => f.key !== 'name').map(f => (
+              <div className="data-card-row" key={f.key}>
+                <span className="dc-label">{f.label}</span>
+                <span className="dc-value">
+                  {f.type === 'access'
+                    ? (Array.isArray(item.access) && item.access.length > 0
+                        ? <span className="badge badge-success">{item.access.length} pages</span>
+                        : <span className="badge badge-danger">0 pages</span>)
+                    : (item[f.key] || '—')}
+                </span>
+              </div>
+            ))}
+            <div className="data-card-actions">
+              <div style={{display:'flex', gap:'6px'}}>
+                <button className="btn btn-outline btn-sm" onClick={() => openEdit(item)}>✏️ Edit</button>
+                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item)}>🗑️ Delete</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {!items.length && (
+          <div className="empty-state"><p>No {title.toLowerCase()} added yet</p></div>
+        )}
       </div>
 
       {showAdd && (
@@ -321,7 +356,8 @@ const Configuration = () => {
 
             <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
           </div>
-          <div className="table-wrapper exam-config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
+          <div className="desktop-table-view">
+           <div className="table-wrapper exam-config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
             <table>
               <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
                 <tr>
@@ -356,6 +392,46 @@ const Configuration = () => {
                 )}
               </tbody>
             </table>
+           </div>
+          </div>
+
+          {/* Mobile: card view */}
+          <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
+            {examConfigs
+              .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
+              .map(cfg => (
+                <div className="data-card" key={cfg.id}>
+                  <div className="data-card-row">
+                    <span className="dc-label">Class</span>
+                    <span className="dc-value"><strong>{cfg.class_name}</strong></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Exam Type</span>
+                    <span className="dc-value"><span className={`badge ${cfg.exam_type.startsWith('Unit') ? 'badge-info' : 'badge-success'}`}>{cfg.exam_type}</span></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Subject</span>
+                    <span className="dc-value">{cfg.subject_name}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Max Marks</span>
+                    <span className="dc-value"><strong>{cfg.max_marks} Marks</strong></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Pass Marks</span>
+                    <span className="dc-value"><strong style={{color:'#dc2626'}}>{cfg.pass_marks} Marks</strong></span>
+                  </div>
+                  <div className="data-card-actions">
+                    <div style={{display:'flex', gap:'6px'}}>
+                      <button className="btn btn-outline btn-sm" onClick={() => handleEditExamSetting(cfg)}>✏️ Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDeleteExamSetting(cfg.id)}>🗑️ Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            {examConfigs.filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass).length === 0 && (
+              <div className="empty-state"><p>No criteria found for selection.</p></div>
+            )}
           </div>
         </div>
       </div>
