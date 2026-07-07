@@ -246,6 +246,31 @@ tbody tr:last-child td { border-bottom: none; }
 .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
 
+/* ─── Data Card View (mobile) — used by Attendance & Dashboard modal ─── */
+.desktop-table-view { display: block; }
+.mobile-card-list { display: none; flex-direction: column; gap: 12px; }
+
+.data-card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px;
+}
+.data-card-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0; border-bottom: 1px dashed #f1f5f9; font-size: 13px; gap: 12px;
+}
+.data-card-row:last-child { border-bottom: none; }
+.data-card-row .dc-label { font-weight: 700; color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+.data-card-row .dc-value { text-align: right; }
+.data-card-actions {
+  display: flex; justify-content: center; padding-top: 10px; margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 1024px) {
+  .desktop-table-view { display: none !important; }
+  .mobile-card-list { display: flex !important; }
+}
+
 /* Dashboard class tags */
 .class-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .class-tag {

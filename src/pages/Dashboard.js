@@ -207,7 +207,8 @@ const Dashboard = () => {
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="table-wrapper dashboard-modal-table">
+              {/* Desktop: table view */}
+              <div className="table-wrapper dashboard-modal-table desktop-table-view">
                 {modalConfig.type === 'student' ? (
                   <table>
                     <thead>
@@ -246,6 +247,49 @@ const Dashboard = () => {
                   </table>
                 )}
               </div>
+
+              {/* Mobile: card view */}
+              <div className="mobile-card-list">
+                {modalConfig.type === 'student' ? (
+                  modalConfig.rows.map(s => (
+                    <div className="data-card" key={s.id}>
+                      <div className="data-card-row">
+                        <span className="dc-label">Roll No</span>
+                        <span className="dc-value"><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></span>
+                      </div>
+                      <div className="data-card-row">
+                        <span className="dc-label">Name</span>
+                        <span className="dc-value"><strong>{s.full_name}</strong></span>
+                      </div>
+                      <div className="data-card-row">
+                        <span className="dc-label">Class</span>
+                        <span className="dc-value">{s.class_name}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  modalConfig.rows.map(e => (
+                    <div className="data-card" key={e.id}>
+                      <div className="data-card-row">
+                        <span className="dc-label">Emp ID</span>
+                        <span className="dc-value"><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{e.emp_id}</code></span>
+                      </div>
+                      <div className="data-card-row">
+                        <span className="dc-label">Name</span>
+                        <span className="dc-value"><strong>{e.full_name}</strong></span>
+                      </div>
+                      <div className="data-card-row">
+                        <span className="dc-label">Role</span>
+                        <span className="dc-value">{e.role_name}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {!modalConfig.rows.length && (
+                  <div className="empty-state"><p>No records found</p></div>
+                )}
+              </div>
+
               <div style={{padding:'12px 0 0', color:'#64748b', fontSize:'13px', textAlign:'right'}}>
                 Total: <strong>{modalConfig.rows.length}</strong>
               </div>
