@@ -208,7 +208,8 @@ const Dashboard = () => {
             </div>
             <div className="modal-body">
               {/* Desktop: table view */}
-              <div className="table-wrapper dashboard-modal-table desktop-table-view">
+              <div className="desktop-table-view">
+               <div className="table-wrapper dashboard-modal-table">
                 {modalConfig.type === 'student' ? (
                   <table>
                     <thead>
@@ -246,6 +247,7 @@ const Dashboard = () => {
                     </tbody>
                   </table>
                 )}
+               </div>
               </div>
 
               {/* Mobile: card view */}

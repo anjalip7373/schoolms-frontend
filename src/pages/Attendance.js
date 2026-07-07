@@ -179,7 +179,8 @@ const Attendance = () => {
         {loading ? <div className="loading"><div className="spinner"></div></div> : (
           <>
             {/* Desktop: table view */}
-            <div className="table-wrapper desktop-table-view">
+            <div className="desktop-table-view">
+             <div className="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -227,6 +228,7 @@ const Attendance = () => {
                   )}
                 </tbody>
               </table>
+             </div>
             </div>
 
             {/* Mobile: card view */}
