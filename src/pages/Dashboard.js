@@ -207,7 +207,7 @@ const Dashboard = () => {
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="table-wrapper">
+              <div className="table-wrapper dashboard-modal-table">
                 {modalConfig.type === 'student' ? (
                   <table>
                     <thead>

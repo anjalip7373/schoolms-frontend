@@ -74,7 +74,7 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
         <h3>{icon} {title}</h3>
         <button className="btn btn-primary btn-sm" onClick={() => { setShowAdd(true); setForm({}); }}>➕ Add {title}</button>
       </div>
-      <div className="table-wrapper" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
+      <div className="table-wrapper config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>  
         <table>
           <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
             <tr>
@@ -321,8 +321,7 @@ const Configuration = () => {
 
             <button className="btn btn-primary" onClick={handleSaveExamMapping}>💾 Save Criteria</button>
           </div>
-
-          <div className="table-wrapper" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
+          <div className="table-wrapper exam-config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
             <table>
               <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
                 <tr>
