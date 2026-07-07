@@ -90,10 +90,20 @@ const Dashboard = () => {
         <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
-        <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-          <option value="">All Classes</option>
-          {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        {isTeacher ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: '#eff6ff', color: '#1e40af', fontWeight: 700, fontSize: '13px',
+            padding: '9px 14px', borderRadius: '8px', border: '1px solid #bfdbfe'
+          }}>
+            🏫 {data?.classes?.[0]?.name || 'Your Class'}
+          </span>
+        ) : (
+          <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+            <option value="">All Classes</option>
+            {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
       </div>
 
       {loading ? (
