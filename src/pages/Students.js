@@ -179,7 +179,9 @@ setStudents(sorted);
                     </td>
                     <td>
                       <div style={{display:'flex', gap:'6px'}}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
+                        {s.fee_status === 'active' && (
+                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
+                        )}
                         <button
                           className={"btn btn-sm " + (s.fee_status === 'active' ? 'btn-warning' : 'btn-success')}
                           onClick={() => toggleFeeStatus(s)}>

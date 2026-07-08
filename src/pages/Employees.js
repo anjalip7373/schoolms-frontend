@@ -213,7 +213,9 @@ const handleSubmit = async (ev) => {
                     </td>
                     <td>
                       <div style={{display:'flex', gap:'6px'}}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(e)}>✏️ Edit</button>
+                        {e.is_active ? (
+                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(e)}>✏️ Edit</button>
+                        ) : null}
                         <button
                           className={"btn btn-sm " + (e.is_active ? 'btn-warning' : 'btn-success')}
                           onClick={() => handleDeactivate(e)}>

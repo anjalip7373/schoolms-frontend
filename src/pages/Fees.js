@@ -111,10 +111,10 @@ const Fees = () => {
 
   useEffect(() => {
     if (form.class_id) {
-      setStudents(allStudents.filter(s => s.class_id == form.class_id));
+      setStudents(allStudents.filter(s => s.class_id == form.class_id && s.fee_status === 'active'));
       setForm(f => ({ ...f, student_id: '' }));
     } else {
-      setStudents(allStudents);
+      setStudents(allStudents.filter(s => s.fee_status === 'active'));
     }
   }, [form.class_id, allStudents]);
 
