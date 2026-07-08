@@ -34,7 +34,21 @@ const Topbar = ({ title, subtitle, onMenuClick }) => {
           </div>
         </div>
         <button className="btn btn-logout btn-sm" onClick={handleLogout}>
-          🚪 <span className="logout-text">Logout</span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0 }}
+          >
+            <path d="M12 2v8" />
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+          </svg>
+          <span className="logout-text">Logout</span>
         </button>
       </div>
     </div>
