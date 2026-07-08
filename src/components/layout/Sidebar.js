@@ -46,6 +46,17 @@ const Sidebar = ({ isOpen, onClose }) => {
             {item.label}
           </button>
         ))}
+
+        {/* Admin-only — hard-restricted, not governed by the configurable Roles/access system */}
+        {(user?.role === 'Admin' || user?.role === 'admin') && (
+          <button
+            className={"nav-item " + (location.pathname === '/audit' ? 'active' : '')}
+            onClick={() => handleNav('/audit')}
+          >
+            <span className="nav-icon">🧾</span>
+            Audit
+          </button>
+        )}
       </nav>
     </div>
   );

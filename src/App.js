@@ -19,10 +19,12 @@ import Profile from './pages/Profile';
 import Marks from './pages/Marks';
 import MarksheetReport from './pages/MarksheetReport';
 import Broadcast from './pages/Broadcast';
+import Audit from './pages/Audit';
 
-const ProtectedRoute = ({ children, page }) => {
+const ProtectedRoute = ({ children, page, adminOnly }) => {
   const { user, hasAccess } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  if (adminOnly && !(user.role === 'Admin' || user.role === 'admin')) return <Navigate to="/dashboard" replace />;
   if (page && !hasAccess(page)) return <Navigate to="/dashboard" replace />;
   return children;
 };
@@ -47,6 +49,7 @@ const AppRoutes = () => {
       <Route path="/marks" element={<ProtectedRoute page="marks"><Marks /></ProtectedRoute>} />
       <Route path="/marksheet-report" element={<ProtectedRoute page="marks"><MarksheetReport /></ProtectedRoute>} />
       <Route path="/broadcast" element={<ProtectedRoute page="broadcast"><Broadcast /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute adminOnly><Audit /></ProtectedRoute>} />
     </Routes>
 
   );
