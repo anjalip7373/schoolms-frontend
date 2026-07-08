@@ -191,15 +191,15 @@ const Attendance = () => {
               <tbody>
                 {currentRecords.map((r, i) => (
                   <tr key={r.id + '-' + r.person_type}>
-                    <td>{i + 1}</td>
-                    <td>
+                    <td data-label="#">{i + 1}</td>
+                    <td data-label={personType === 'student' ? 'Roll No' : 'Emp ID'}>
                       <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
                         {r.identifier}
                       </code>
                     </td>
-                    <td><strong>{r.full_name}</strong></td>
-                    {personType === 'student' && <td>{r.class_name}</td>}
-                    <td>
+                    <td data-label="Name"><strong>{r.full_name}</strong></td>
+                    {personType === 'student' && <td data-label="Class">{r.class_name}</td>}
+                    <td data-label="Mark Attendance">
                       <div className="attendance-status-btns">
                         {['present','absent','late','halfday'].map(s => (
                           <button
