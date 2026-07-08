@@ -507,4 +507,16 @@ tbody tr:last-child td { border-bottom: none; }
   .filter-bar .form-control, .search-input {
     width: 100% !important; /* Inputs full width vertical stretch */
   }
+
+  /* Export dropdown (Excel/PDF) was anchored with right:0, which made it expand
+     leftward off the Export button. Combined with .page-content's overflow-x:hidden
+     above, that left-ward overflow got clipped — cutting off "Excel (.xlsx)" and
+     "PDF" text. Anchor to the left edge instead so it opens rightward, staying
+     inside the visible viewport. */
+  .dropdown-menu {
+    left: 0 !important;
+    right: auto !important;
+    min-width: 180px !important;
+    max-width: calc(100vw - 32px) !important;
+  }
 }
