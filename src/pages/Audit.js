@@ -3,6 +3,8 @@ import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 // Academic years run April -> March. Build a dropdown list e.g. "2026-2027"
 const buildAcademicYears = () => {
   const now = new Date();
@@ -11,21 +13,41 @@ const buildAcademicYears = () => {
   for (let y = currentStartYear + 1; y >= 2020; y--) {
     years.push(`${y}-${y + 1}`);
   }
+  return { years, currentAcademicYear: `${currentStartYear}-${currentStartYear + 1}` };
+};
+
+const buildYearOptions = () => {
+  const years = [];
+  for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
   return years;
 };
 
 const Audit = () => {
-  const academicYears = buildAcademicYears();
-  const [academicYear, setAcademicYear] = useState(academicYears[0]);
+  const { years: academicYears, currentAcademicYear } = buildAcademicYears();
+  const yearOptions = buildYearOptions();
+
+  const [academicYear, setAcademicYear] = useState(currentAcademicYear);
+
+  // Custom date range — overrides academicYear when all 4 are set
+  const [fromMonth, setFromMonth] = useState('');
+  const [fromYear, setFromYear] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const [toYear, setToYear] = useState('');
+
   const [feeTypes, setFeeTypes] = useState([]);
   const [bills, setBills] = useState([]);
   const [grandTotal, setGrandTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const hasCustomRange = fromMonth && fromYear && toMonth && toYear;
+
   const fetchAudit = async () => {
     setLoading(true);
     try {
-      const { data } = await API.get('/fees/audit', { params: { academic_year: academicYear } });
+      const params = hasCustomRange
+        ? { from_month: fromMonth, from_year: fromYear, to_month: toMonth, to_year: toYear }
+        : { academic_year: academicYear };
+      const { data } = await API.get('/fees/audit', { params });
       setFeeTypes(data.fee_types || []);
       setBills(data.bills || []);
       setGrandTotal(data.grand_total || 0);
@@ -36,22 +58,75 @@ const Audit = () => {
     }
   };
 
-  useEffect(() => { fetchAudit(); }, [academicYear]);
+  useEffect(() => { fetchAudit(); }, [academicYear, fromMonth, fromYear, toMonth, toYear]);
+
+  const clearCustomRange = () => {
+    setFromMonth(''); setFromYear(''); setToMonth(''); setToYear('');
+  };
+
+  const handleAcademicYearChange = (val) => {
+    setAcademicYear(val);
+    clearCustomRange();
+  };
 
   // Used during render to only show the date on the first bill of each date (merged-cell look)
   let lastDate = null;
 
   return (
     <AppLayout title="Fee Audit" subtitle="Full academic year fee payments — grouped by date and bill no">
-      <div className="filter-bar" style={{ marginBottom: '20px' }}>
-        <select
-          className="form-control"
-          style={{ maxWidth: '220px' }}
-          value={academicYear}
-          onChange={e => setAcademicYear(e.target.value)}
-        >
-          {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
+      <div className="filter-bar" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            Academic Year
+          </label>
+          <select
+            className="form-control"
+            style={{ maxWidth: '220px' }}
+            value={academicYear}
+            onChange={e => handleAcademicYearChange(e.target.value)}
+            disabled={hasCustomRange}
+          >
+            {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            From
+          </label>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <select className="form-control" value={fromMonth} onChange={e => setFromMonth(e.target.value)}>
+              <option value="">Month</option>
+              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="form-control" value={fromYear} onChange={e => setFromYear(e.target.value)}>
+              <option value="">Year</option>
+              {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            To
+          </label>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <select className="form-control" value={toMonth} onChange={e => setToMonth(e.target.value)}>
+              <option value="">Month</option>
+              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="form-control" value={toYear} onChange={e => setToYear(e.target.value)}>
+              <option value="">Year</option>
+              {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {hasCustomRange && (
+          <button className="btn btn-outline btn-sm" onClick={clearCustomRange}>
+            ✕ Clear custom range
+          </button>
+        )}
       </div>
 
       <div className="card">
@@ -99,7 +174,7 @@ const Audit = () => {
                     <td colSpan={4 + feeTypes.length}>
                       <div className="empty-state">
                         <div className="empty-icon">💰</div>
-                        <p>No fee payments found for {academicYear}</p>
+                        <p>No fee payments found for this period</p>
                       </div>
                     </td>
                   </tr>
