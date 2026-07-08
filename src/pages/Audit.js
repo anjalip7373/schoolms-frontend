@@ -130,71 +130,129 @@ const Audit = () => {
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
-          {loading ? (
-            <div className="loading"><div className="spinner"></div></div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Class</th>
-                  <th>Bill No</th>
-                  {feeTypes.map(ft => <th key={ft}>{ft}</th>)}
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bills.map(b => {
-                  const dateStr = b.payment_date?.split('T')[0];
-                  const showDate = dateStr !== lastDate;
-                  lastDate = dateStr;
-                  return (
-                    <tr key={b.bill_no}>
-                      <td style={{ fontWeight: showDate ? 700 : 400 }}>
-                        {showDate ? dateStr : ''}
+        {loading ? (
+          <div className="loading"><div className="spinner"></div></div>
+        ) : (
+          <>
+            {/* Desktop: table view */}
+            <div className="desktop-table-view">
+             <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Class</th>
+                    <th>Bill No</th>
+                    {feeTypes.map(ft => <th key={ft}>{ft}</th>)}
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bills.map(b => {
+                    const dateStr = b.payment_date?.split('T')[0];
+                    const showDate = dateStr !== lastDate;
+                    lastDate = dateStr;
+                    return (
+                      <tr key={b.bill_no}>
+                        <td style={{ fontWeight: showDate ? 700 : 400 }}>
+                          {showDate ? dateStr : ''}
+                        </td>
+                        <td>{b.class_name || '-'}</td>
+                        <td>
+                          <code style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                            {b.bill_no}
+                          </code>
+                        </td>
+                        {feeTypes.map(ft => (
+                          <td key={ft}>
+                            {b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
+                          </td>
+                        ))}
+                        <td><strong style={{ color: '#16a34a' }}>Rs. {parseFloat(b.total).toLocaleString()}</strong></td>
+                      </tr>
+                    );
+                  })}
+                  {!bills.length && (
+                    <tr>
+                      <td colSpan={4 + feeTypes.length}>
+                        <div className="empty-state">
+                          <div className="empty-icon">💰</div>
+                          <p>No fee payments found for this period</p>
+                        </div>
                       </td>
-                      <td>{b.class_name || '-'}</td>
-                      <td>
+                    </tr>
+                  )}
+                </tbody>
+                {bills.length > 0 && (
+                  <tfoot>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <td colSpan={3 + feeTypes.length} style={{ textAlign: 'right', padding: '12px', fontWeight: 800 }}>
+                        Grand Total
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 800, color: '#1e40af' }}>
+                        Rs. {parseFloat(grandTotal).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+             </div>
+            </div>
+
+            {/* Mobile: card view */}
+            <div className="mobile-card-list" style={{ padding: bills.length ? '16px' : '0' }}>
+              {bills.map(b => {
+                const dateStr = b.payment_date?.split('T')[0];
+                return (
+                  <div className="data-card" key={b.bill_no}>
+                    <div className="data-card-row">
+                      <span className="dc-label">Date</span>
+                      <span className="dc-value"><strong>{dateStr}</strong></span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="dc-label">Class</span>
+                      <span className="dc-value">{b.class_name || '-'}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="dc-label">Bill No</span>
+                      <span className="dc-value">
                         <code style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
                           {b.bill_no}
                         </code>
-                      </td>
-                      {feeTypes.map(ft => (
-                        <td key={ft}>
+                      </span>
+                    </div>
+                    {feeTypes.map(ft => (
+                      <div className="data-card-row" key={ft}>
+                        <span className="dc-label">{ft}</span>
+                        <span className="dc-value">
                           {b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
-                        </td>
-                      ))}
-                      <td><strong style={{ color: '#16a34a' }}>Rs. {parseFloat(b.total).toLocaleString()}</strong></td>
-                    </tr>
-                  );
-                })}
-                {!bills.length && (
-                  <tr>
-                    <td colSpan={4 + feeTypes.length}>
-                      <div className="empty-state">
-                        <div className="empty-icon">💰</div>
-                        <p>No fee payments found for this period</p>
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-              {bills.length > 0 && (
-                <tfoot>
-                  <tr style={{ background: '#f8fafc' }}>
-                    <td colSpan={3 + feeTypes.length} style={{ textAlign: 'right', padding: '12px', fontWeight: 800 }}>
-                      Grand Total
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: 800, color: '#1e40af' }}>
-                      Rs. {parseFloat(grandTotal).toLocaleString()}
-                    </td>
-                  </tr>
-                </tfoot>
+                    ))}
+                    <div className="data-card-row">
+                      <span className="dc-label">Total</span>
+                      <span className="dc-value"><strong style={{ color: '#16a34a' }}>Rs. {parseFloat(b.total).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+              {!bills.length && (
+                <div className="empty-state">
+                  <div className="empty-icon">💰</div>
+                  <p>No fee payments found for this period</p>
+                </div>
               )}
-            </table>
-          )}
-        </div>
+              {bills.length > 0 && (
+                <div className="data-card" style={{ background: '#f8fafc', border: '1px solid #1e40af' }}>
+                  <div className="data-card-row" style={{ borderBottom: 'none' }}>
+                    <span className="dc-label" style={{ fontSize: '13px' }}>Grand Total</span>
+                    <span className="dc-value"><strong style={{ color: '#1e40af', fontSize: '15px' }}>Rs. {parseFloat(grandTotal).toLocaleString()}</strong></span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
