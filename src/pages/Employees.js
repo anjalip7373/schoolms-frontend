@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 
 const emptyForm = {
   full_name:'', role_id:'', login_user_id:'', login_password:'',
-  phone:'', email:'', qualification:'', subject:'', salary:'', joining_date:'', class_assigned:''
+  phone:'', email:'', date_of_birth:'', qualification:'', subject:'', salary:'', joining_date:'', class_assigned:''
 };
 
 const EmployeePage = () => {
@@ -78,6 +78,7 @@ setEmployees(sorted);
       full_name: e.full_name, role_id: e.role_id,
       login_user_id: e.login_user_id, login_password: '',
       phone: e.phone, email: e.email || '',
+      date_of_birth: e.date_of_birth?.split('T')[0] || '',
       qualification: e.qualification,
       subject: e.subject || '', salary: e.salary,
       joining_date: e.joining_date?.split('T')[0],
@@ -315,6 +316,11 @@ const handleSubmit = async (ev) => {
                     <input className="form-control" value={form.phone}
                       onChange={e => setForm({...form, phone: e.target.value})}
                       required placeholder="Phone number" />
+                  </div>
+                  <div className="form-group">
+                    <label>Date of Birth <span>*</span></label>
+                    <input type="date" className="form-control" value={form.date_of_birth}
+                      onChange={e => setForm({...form, date_of_birth: e.target.value})} required />
                   </div>
                   <div className="form-group">
                     <label>Email <span>*</span></label>
