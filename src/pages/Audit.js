@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
+import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -38,6 +39,7 @@ const Audit = () => {
   const [bills, setBills] = useState([]);
   const [grandTotal, setGrandTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showExport, setShowExport] = useState(false);
 
   const hasCustomRange = fromMonth && fromYear && toMonth && toYear;
 
@@ -72,8 +74,71 @@ const Audit = () => {
   // Used during render to only show the date on the first bill of each date (merged-cell look)
   let lastDate = null;
 
+  const periodLabel = hasCustomRange
+    ? `${MONTHS[fromMonth - 1]} ${fromYear} to ${MONTHS[toMonth - 1]} ${toYear}`
+    : academicYear;
+
+  // Export columns: Date, Class, Bill No, one column per fee type, Total
+  const auditCols = [
+    { key: 'date', label: 'Date' },
+    { key: 'class_name', label: 'Class' },
+    { key: 'bill_no', label: 'Bill No' },
+    ...feeTypes.map(ft => ({ key: ft, label: ft })),
+    { key: 'total', label: 'Total (Rs.)' },
+  ];
+
+  const buildExportRows = () => {
+    const rows = bills.map(b => {
+      const row = {};
+      row['Date'] = b.payment_date?.split('T')[0] || '';
+      row['Class'] = b.class_name || '-';
+      row['Bill No'] = b.bill_no;
+      feeTypes.forEach(ft => {
+        row[ft] = b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-';
+      });
+      row['Total (Rs.)'] = `Rs. ${parseFloat(b.total).toLocaleString()}`;
+      return row;
+    });
+
+    // Append a Grand Total summary row
+    if (bills.length) {
+      const totalRow = {};
+      totalRow['Date'] = '';
+      totalRow['Class'] = '';
+      totalRow['Bill No'] = 'GRAND TOTAL';
+      feeTypes.forEach(ft => { totalRow[ft] = ''; });
+      totalRow['Total (Rs.)'] = `Rs. ${parseFloat(grandTotal).toLocaleString()}`;
+      rows.push(totalRow);
+    }
+    return rows;
+  };
+
   return (
     <AppLayout title="Fee Audit" subtitle="Full academic year fee payments — grouped by date and bill no">
+      <div className="page-header">
+        <div>
+          <h1>Fee Audit</h1>
+          <p>{bills.length} bill(s) • {periodLabel}</p>
+        </div>
+        <div className="dropdown-export">
+          <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
+          {showExport && (
+            <div className="dropdown-menu">
+              <button className="dropdown-item" onClick={() => {
+                if (!bills.length) { toast.error('No data to export'); return; }
+                exportToExcel(buildExportRows(), auditCols, `fee-audit-${periodLabel}`);
+                setShowExport(false);
+              }}>📊 Excel (.xlsx)</button>
+              <button className="dropdown-item" onClick={() => {
+                if (!bills.length) { toast.error('No data to export'); return; }
+                exportToPDF(buildExportRows(), auditCols, `fee-audit-${periodLabel}`, `Fee Audit Report — ${periodLabel}`);
+                setShowExport(false);
+              }}>📄 PDF</button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="filter-bar" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
         <div>
           <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
