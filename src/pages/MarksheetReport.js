@@ -224,9 +224,10 @@ const buildData = (dataSource) => {
         percentage >= 70 ? 'B+' : percentage >= 60 ? 'B' :
         percentage >= 50 ? 'C' : percentage >= 35 ? 'D' : 'F');
 
-      // resultStatus: PASS (all subjects cleared), PROMOTED (RTE no-detention class, fail/absent
-      // in a subject but still moved up per policy), or FAIL (Class 9+ fail/absent in any subject).
-      const resultStatus = passedYear ? 'PASS' : (isRTE ? 'PROMOTED' : 'FAIL');
+      // resultStatus: PASS (all subjects cleared), PROMOTED (only applies on the Annual/Final
+      // cumulative view — RTE no-detention classes still move up even with a fail/absent subject),
+      // or FAIL (any other exam type, or Class 9+ regardless of exam type).
+      const resultStatus = passedYear ? 'PASS' : ((isRTE && isFinalCumulative) ? 'PROMOTED' : 'FAIL');
 
       return { 
         ...s, 
@@ -422,27 +423,20 @@ const exportSingleStudentPDF = async (row) => {
     doc.text(String(value), x, summaryY + 14, { align: 'center' });
   });
  
-  // Grade legend — always 14mm tall
+  // Grade legend — single line now that the RTE/absent note is removed
   const gradeY = summaryY + 26;
   doc.setFillColor(239, 246, 255); doc.setDrawColor(147, 197, 253); doc.setLineWidth(0.4);
-  doc.roundedRect(12, gradeY, pageW - 24, 14, 1.5, 1.5, 'FD');
+  doc.roundedRect(12, gradeY, pageW - 24, 9, 1.5, 1.5, 'FD');
   doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175);
-  doc.text('Grade Scale:', 16, gradeY + 5);
+  doc.text('Grade Scale:', 16, gradeY + 5.5);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
   doc.text(
     'A+ (90-100%)   A (80-89%)   B+ (70-79%)   B (60-69%)   C (50-59%)   D (35-49%)   F (Below 35%)',
-    48, gradeY + 5
-  );
-  doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
-  doc.text(
-    row.isRTE
-      ? 'Note: As per RTE policy, students up to Class 8 are promoted even if they fail/absent in a subject'
-      : 'Note: Absent in any subject = FAIL',
-    16, gradeY + 10
+    48, gradeY + 5.5
   );
 
   // Remark box — always 10mm tall
-  const remarkBoxY = gradeY + 18;
+  const remarkBoxY = gradeY + 13;
   doc.setFillColor(254, 243, 199); doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.5);
   doc.roundedRect(12, remarkBoxY, pageW - 24, 10, 1.5, 1.5, 'FD');
   doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(146, 64, 14);
@@ -468,9 +462,6 @@ if (sigY + 20 > pageH - 10) {
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
     doc.text(label, x + 24, sigY + 5, { align: 'center' });
   });
- 
-  doc.setFontSize(7); doc.setTextColor(148, 163, 184);
-  doc.text('This is a computer generated marksheet. -- SchoolMS', pageW / 2, sigY + 14, { align: 'center' });
  
   await saveDocument(doc, `marksheet-${row.name.replace(/\s+/g, '_')}-${examType}.pdf`);
   toast.success(`Marksheet for ${row.name} downloaded!`);
