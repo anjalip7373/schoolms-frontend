@@ -491,11 +491,19 @@ const AttendanceReport = () => {
 
               {filteredData.map((row, i) => {
                 const pct = getPercentage(row);
+                const isDeactivated = filters.person_type === 'student'
+                  ? (row.fee_status && row.fee_status !== 'active')
+                  : !row.is_active;
                 return (
-                  <div key={row.id || i} className="mobile-card-container">
+                  <div key={row.id || i} className="mobile-card-container" style={isDeactivated ? {opacity:0.7} : undefined}>
                     <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
                       <div>
-                        <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>{row.full_name}</h3>
+                        <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>
+                          {row.full_name}
+                          {isDeactivated && (
+                            <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                          )}
+                        </h3>
                         <span style={{fontSize:'11px', opacity:0.75}}>
                           {row.roll_no ? `Roll No: ${row.roll_no} • ` : ''}{row.class_name || classLabel}
                         </span>
@@ -638,11 +646,19 @@ const AttendanceReport = () => {
                     <tbody>
                       {filteredData.map((row, i) => {
                         const pct = getPercentage(row);
+                        const isDeactivated = filters.person_type === 'student'
+                          ? (row.fee_status && row.fee_status !== 'active')
+                          : !row.is_active;
                         return (
-                          <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                          <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: isDeactivated ? '#fef2f2' : (i % 2 === 0 ? '#fff' : '#f8fafc'), opacity: isDeactivated ? 0.75 : 1}}>
                             <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontWeight:'600'}}>{i + 1}</td>
                             <td style={{padding:'10px', whiteSpace:'nowrap'}}>
-                              <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>{row.full_name}</div>
+                              <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>
+                                {row.full_name}
+                                {isDeactivated && (
+                                  <span style={{marginLeft:'6px', background:'#fee2e2', color:'#dc2626', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED</span>
+                                )}
+                              </div>
                               <div style={{fontSize:'10px', color:'#94a3b8'}}>
                                 {row.roll_no ? `Roll No: ${row.roll_no}` : row.class_name || ''}
                               </div>

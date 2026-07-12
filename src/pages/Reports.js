@@ -197,22 +197,12 @@ const Reports = () => {
           {showExport && (
             <div className="dropdown-menu">
               <button className="dropdown-item" onClick={() => {
-                const exportableRows = filteredData.filter(r =>
-                  activeTab === 'students' ? r.fee_status === 'active' :
-                  activeTab === 'employees' ? r.is_active :
-                  true
-                );
-                const exportData = formatForExport(exportableRows, activeCols);
+                const exportData = formatForExport(filteredData, activeCols);
                 exportToExcel(exportData, activeCols, `${activeTab}-report-${periodLabel}`);
                 setShowExport(false);
               }}>📊 Excel (.xlsx)</button>
               <button className="dropdown-item" onClick={() => {
-                const exportableRows = filteredData.filter(r =>
-                  activeTab === 'students' ? r.fee_status === 'active' :
-                  activeTab === 'employees' ? r.is_active :
-                  true
-                );
-                const exportData = formatForExport(exportableRows, activeCols);
+                const exportData = formatForExport(filteredData, activeCols);
                 exportToPDF(exportData, activeCols, `${activeTab}-report-${periodLabel}`, `${activeTitle} — ${periodLabel}`);
                 setShowExport(false);
               }}>📄 PDF</button>
