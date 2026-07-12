@@ -111,10 +111,10 @@ const Fees = () => {
 
   useEffect(() => {
     if (form.class_id) {
-      setStudents(allStudents.filter(s => s.class_id == form.class_id && s.fee_status === 'active'));
+      setStudents(allStudents.filter(s => s.class_id == form.class_id));
       setForm(f => ({ ...f, student_id: '' }));
     } else {
-      setStudents(allStudents.filter(s => s.fee_status === 'active'));
+      setStudents(allStudents);
     }
   }, [form.class_id, allStudents]);
 
@@ -344,7 +344,7 @@ const Fees = () => {
                     <label>Student <span>*</span></label>
                     <select className="form-control" value={form.student_id} onChange={e => setForm({...form, student_id: e.target.value})} required disabled={!form.class_id}>
                       <option value="">{form.class_id ? 'Select Student' : 'Select class first'}</option>
-                      {students.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.roll_no})</option>)}
+                      {students.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.roll_no}){s.fee_status !== 'active' ? ' — Deactivated' : ''}</option>)}
                     </select>
                   </div>
                   <div className="form-group">

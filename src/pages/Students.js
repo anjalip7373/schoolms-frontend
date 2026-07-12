@@ -71,6 +71,10 @@ setStudents(sorted);
   };
 
   const openEdit = (s) => {
+    if (s.fee_status !== 'active') {
+      toast.error(`${s.full_name} is deactivated and cannot be edited. Reactivate first.`);
+      return;
+    }
     setForm({
       full_name: s.full_name, class_id: s.class_id, phone: s.phone,
       whatsapp_no: s.whatsapp_no, email: s.email,
@@ -179,9 +183,7 @@ setStudents(sorted);
                     </td>
                     <td>
                       <div style={{display:'flex', gap:'6px'}}>
-                        {s.fee_status === 'active' && (
-                          <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
-                        )}
+                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
                         <button
                           className={"btn btn-sm " + (s.fee_status === 'active' ? 'btn-warning' : 'btn-success')}
                           onClick={() => toggleFeeStatus(s)}>

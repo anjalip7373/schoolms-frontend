@@ -298,14 +298,20 @@ const Marks = () => {
                 const isAbsent = cellData?.is_absent || false;
                 const markVal = cellData?.marks ?? '';
                 const numVal = parseFloat(markVal);
+                const isDeactivated = student.fee_status && student.fee_status !== 'active';
                 
                 const currentSub = currentMobileSubject;
                 const isFail = !isAbsent && !isNaN(numVal) && markVal !== '' && currentSub && numVal < currentSub.pass_marks;
                 const isPass = !isAbsent && !isNaN(numVal) && markVal !== '' && currentSub && numVal >= currentSub.pass_marks;
 
                 return (
-                  <div key={student.id} className="mobile-student-card">
-                    <h3 className="mobile-student-name">{i + 1}. {student.full_name}</h3>
+                  <div key={student.id} className="mobile-student-card" style={isDeactivated ? {opacity:0.7, background:'#fef2f2'} : undefined}>
+                    <h3 className="mobile-student-name">
+                      {i + 1}. {student.full_name}
+                      {isDeactivated && (
+                        <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                      )}
+                    </h3>
                     
                     <div className="mobile-input-row">
                       <span className="mobile-input-label">Score:</span>
@@ -314,26 +320,27 @@ const Marks = () => {
                         min="0" 
                         max={currentSub?.max_marks || 100}
                         value={isAbsent ? '' : markVal}
-                        disabled={isAbsent}
+                        disabled={isAbsent || isDeactivated}
                         onChange={e => handleMarkChange(student.id, parseInt(selectedSubjectId), e.target.value)}
-                        placeholder={isAbsent ? 'AB' : 'Enter score'}
+                        placeholder={isDeactivated ? '—' : isAbsent ? 'AB' : 'Enter score'}
                         style={{
                           flex:'1', padding:'10px', fontWeight:'800', fontSize:'15px',
                           border: isAbsent ? '1px solid #fcd34d' : '1px solid #cbd5e1',
                           borderRadius:'8px', outline:'none', textAlign:'center',
-                          background: isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
+                          background: isDeactivated ? '#f1f5f9' : isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
                           color: isAbsent ? '#d97706' : isFail ? '#dc2626' : isPass ? '#16a34a' : '#1e293b',
                         }}
                       />
 
                       <button
                         onClick={() => handleAbsentToggle(student.id, parseInt(selectedSubjectId))}
+                        disabled={isDeactivated}
                         style={{
                           padding:'10px 14px', borderRadius:'8px', fontSize:'13px', fontWeight:'700',
                           border: isAbsent ? '1px solid #f59e0b' : '1px solid #cbd5e1',
                           background: isAbsent ? '#f59e0b' : '#f8fafc',
                           color: isAbsent ? '#fff' : '#64748b',
-                          cursor:'pointer'
+                          cursor: isDeactivated ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {isAbsent ? '✓ Absent' : 'Mark Absent'}
@@ -346,10 +353,12 @@ const Marks = () => {
                         type="text"
                         value={remarksMap[student.id] ?? ''}
                         onChange={e => handleRemarkChange(student.id, e.target.value)}
-                        placeholder="Overall performance remark..."
+                        disabled={isDeactivated}
+                        placeholder={isDeactivated ? 'Deactivated' : 'Overall performance remark...'}
                         style={{
                           flex:'1', padding:'8px 12px', border:'1px solid #cbd5e1',
-                          borderRadius:'8px', fontSize:'13px', outline:'none'
+                          borderRadius:'8px', fontSize:'13px', outline:'none',
+                          background: isDeactivated ? '#f1f5f9' : '#fff'
                         }}
                       />
                     </div>
@@ -401,11 +410,17 @@ const Marks = () => {
                           }
                         });
                         const pct = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(1) : '—';
+                        const isDeactivated = student.fee_status && student.fee_status !== 'active';
 
                         return (
-                          <tr key={student.id} style={{borderBottom:'1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                          <tr key={student.id} style={{borderBottom:'1px solid #f1f5f9', background: isDeactivated ? '#fef2f2' : (i % 2 === 0 ? '#fff' : '#f8fafc'), opacity: isDeactivated ? 0.7 : 1}}>
                             <td style={{padding:'10px', fontSize:'12px', color:'#64748b'}}>{i + 1}</td>
-                            <td style={{padding:'10px', fontWeight:'700', color:'#1e293b'}}>{student.full_name}</td>
+                            <td style={{padding:'10px', fontWeight:'700', color:'#1e293b'}}>
+                              {student.full_name}
+                              {isDeactivated && (
+                                <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                              )}
+                            </td>
                             <td style={{padding:'10px', fontSize:'12px', color:'#64748b'}}>
                               <code style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{student.roll_no}</code>
                             </td>
@@ -423,25 +438,26 @@ const Marks = () => {
                                     <input
                                       type="number" min="0" max={s.max_marks}
                                       value={isAbsent ? '' : markVal}
-                                      disabled={isAbsent}
+                                      disabled={isAbsent || isDeactivated}
                                       onChange={e => handleMarkChange(student.id, s.id, e.target.value)}
                                       style={{
                                         width:'65px', padding:'5px', textAlign:'center',
                                         border: isAbsent ? '1px solid #fcd34d' : '1px solid #e2e8f0',
                                         borderRadius:'6px',
                                         fontSize:'12px', fontWeight:'700', outline:'none',
-                                        background: isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
+                                        background: isDeactivated ? '#f1f5f9' : isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
                                         color: isAbsent ? '#d97706' : isFail ? '#dc2626' : isPass ? '#16a34a' : '#1e293b',
-                                        cursor: isAbsent ? 'not-allowed' : 'text',
+                                        cursor: (isAbsent || isDeactivated) ? 'not-allowed' : 'text',
                                       }}
-                                      placeholder={isAbsent ? 'AB' : '—'}
+                                      placeholder={isDeactivated ? '—' : isAbsent ? 'AB' : '—'}
                                     />
                                     <button
                                       onClick={() => handleAbsentToggle(student.id, s.id)}
+                                      disabled={isDeactivated}
                                       style={{
                                         width:'65px', padding:'2px 0',
                                         border: isAbsent ? '1px solid #f59e0b' : '1px solid #e2e8f0',
-                                        borderRadius:'4px', cursor:'pointer',
+                                        borderRadius:'4px', cursor: isDeactivated ? 'not-allowed' : 'pointer',
                                         fontSize:'10px', fontWeight:'700',
                                         background: isAbsent ? '#f59e0b' : '#f8fafc',
                                         color: isAbsent ? '#fff' : '#94a3b8',
@@ -470,11 +486,13 @@ const Marks = () => {
                                 type="text"
                                 value={remarksMap[student.id] ?? ''}
                                 onChange={e => handleRemarkChange(student.id, e.target.value)}
-                                placeholder="Enter remark..."
+                                disabled={isDeactivated}
+                                placeholder={isDeactivated ? 'Deactivated' : 'Enter remark...'}
                                 style={{
                                   width:'130px', padding:'6px 8px',
                                   border:'1px solid #e2e8f0', borderRadius:'6px',
-                                  fontSize:'11px', outline:'none', fontFamily:'inherit'
+                                  fontSize:'11px', outline:'none', fontFamily:'inherit',
+                                  background: isDeactivated ? '#f1f5f9' : '#fff'
                                 }}
                               />
                             </td>

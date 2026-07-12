@@ -43,9 +43,12 @@ const Attendance = () => {
   };
 
   const markAllPresent = () => {
-    setRecords(prev => prev.map(r =>
-      r.person_type === personType ? { ...r, status: 'present' } : r
-    ));
+    setRecords(prev => prev.map(r => {
+      if (r.person_type !== personType) return r;
+      const isDeactivated = r.person_type === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
+      if (isDeactivated) return r;
+      return { ...r, status: 'present' };
+    }));
   };
 
   const saveAttendance = async () => {
@@ -69,7 +72,8 @@ const Attendance = () => {
     // WhatsApp notifications for absent/late/halfday students
     if (personType === 'student') {
       const notifyStudents = records.filter(r =>
-        r.person_type === 'student' && ['absent', 'late', 'halfday'].includes(r.status)
+        r.person_type === 'student' && ['absent', 'late', 'halfday'].includes(r.status) &&
+        !(r.fee_status && r.fee_status !== 'active')
       );
 
       if (notifyStudents.length > 0) {
@@ -189,22 +193,31 @@ const Attendance = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentRecords.map((r, i) => (
-                  <tr key={r.id + '-' + r.person_type}>
+                {currentRecords.map((r, i) => {
+                  const isDeactivated = personType === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
+                  return (
+                  <tr key={r.id + '-' + r.person_type} style={isDeactivated ? {background:'#fef2f2', opacity:0.7} : undefined}>
                     <td data-label="#">{i + 1}</td>
                     <td data-label={personType === 'student' ? 'Roll No' : 'Emp ID'}>
                       <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
                         {r.identifier}
                       </code>
                     </td>
-                    <td data-label="Name"><strong>{r.full_name}</strong></td>
+                    <td data-label="Name">
+                      <strong>{r.full_name}</strong>
+                      {isDeactivated && (
+                        <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                      )}
+                    </td>
                     {personType === 'student' && <td data-label="Class">{r.class_name}</td>}
                     <td data-label="Mark Attendance">
                       <div className="attendance-status-btns">
                         {['present','absent','late','halfday'].map(s => (
                           <button
                             key={s}
+                            disabled={isDeactivated}
                             className={"att-btn " + s + (r.status === s ? ' active' : '')}
+                            style={isDeactivated ? {opacity:0.4, cursor:'not-allowed'} : undefined}
                             onClick={() => setStatus(r.id, s)}>
                             {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
                           </button>
@@ -212,7 +225,8 @@ const Attendance = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {!currentRecords.length && !loading && (
                   <tr>
                     <td colSpan="6">
