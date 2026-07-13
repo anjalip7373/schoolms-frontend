@@ -202,19 +202,6 @@ const getExportRows = (data) => {
   return { rows, highlightRows };
 };
 
-const isRowDeactivated = (row) => {
-  if (activeTab === 'employees' || activeTab === 'salary') {
-    return row.is_active === false || row.is_active === 0;
-  }
-  if (activeTab === 'students') {
-    return row.fee_status === 'inactive';
-  }
-  if (activeTab === 'fees') {
-    return row.student_status === 'inactive';   // ← this line specifically
-  }
-  return false;
-};
-
   const renderCell = (row, col) => {
     switch(col.key) {
       case 'roll_no': case 'emp_id': case 'slip_no': case 'receipt_no':
