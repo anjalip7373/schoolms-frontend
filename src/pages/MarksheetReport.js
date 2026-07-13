@@ -208,9 +208,13 @@ const buildData = (dataSource) => {
 
       const percentage = totalMaxYear > 0 ? ((totalObtainedYear / totalMaxYear) * 100).toFixed(1) : 0;
 
-      const isRTE = isRTEProtectedClass(s.class_name);
+      // RTE no-detention promotion is a year-end decision — it only applies when viewing
+      // the Annual Exam. Interim exams (Unit Test, Semester, etc.) always show a plain
+      // PASS/FAIL, even for RTE-protected classes (Nursery/KG - Class 8), since nobody
+      // gets "promoted" off a mid-year test.
+      const isRTE = isRTEProtectedClass(s.class_name) && isFinalCumulative;
       // showMetrics: percentage/grade are visible whenever all subjects were passed, OR the
-      // class falls under the RTE no-detention policy (Nursery/KG - Class 8), where a fail/absent
+      // class falls under the RTE no-detention policy on the Annual Exam, where a fail/absent
       // in a subject still surfaces the percentage & grade instead of hiding them.
       const showMetrics = passedYear || isRTE;
 
@@ -219,7 +223,8 @@ const buildData = (dataSource) => {
         percentage >= 50 ? 'C' : percentage >= 35 ? 'D' : 'F');
 
       // resultStatus: PASS (all subjects cleared), PROMOTED (RTE no-detention class, fail/absent
-      // in a subject but still moved up per policy), or FAIL (Class 9+ fail/absent in any subject).
+      // in a subject but still moved up per policy — Annual Exam only), or FAIL (Class 9+, or
+      // any interim exam, with a fail/absent in any subject).
       const resultStatus = passedYear ? 'PASS' : (isRTE ? 'PROMOTED' : 'FAIL');
 
       return { 

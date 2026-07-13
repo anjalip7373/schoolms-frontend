@@ -125,11 +125,13 @@ const AttendanceReport = () => {
 
   const teacherClassName = rawData.length > 0 ? rawData[0]?.class_name : null;
 
-  const classLabel = filters.class_id
-    ? classes.find(c => c.id == filters.class_id)?.name || 'Selected Class'
-    : isTeacher && teacherClassName
-      ? teacherClassName
-      : 'All Classes';
+  const classLabel = filters.person_type === 'employee'
+    ? 'Employees'
+    : filters.class_id
+      ? classes.find(c => c.id == filters.class_id)?.name || 'Selected Class'
+      : isTeacher && teacherClassName
+        ? teacherClassName
+        : 'All Classes';
 
   const getStatusLabel = (status) => {
     if (status === 'present') return 'P';
@@ -483,7 +485,14 @@ const AttendanceReport = () => {
               </select>
             </div>
             {!isTeacher && (
-              <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
+              <select
+                className="form-control"
+                value={filters.class_id}
+                onChange={e => setFilters({...filters, class_id: e.target.value})}
+                disabled={filters.person_type === 'employee'}
+                title={filters.person_type === 'employee' ? 'Class filter applies to students only' : undefined}
+                style={filters.person_type === 'employee' ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+              >
                 <option value="">All Classes</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -494,7 +503,7 @@ const AttendanceReport = () => {
                   onClick={() => setFilters({...filters, person_type: 'student'})}>👨‍🎓 Students</button>
                 {canSeeEmployees && (
                   <button className={"btn btn-sm " + (filters.person_type === 'employee' ? 'btn-primary' : 'btn-outline')}
-                    onClick={() => setFilters({...filters, person_type: 'employee'})}>👨‍💼 Employees</button>
+                    onClick={() => setFilters({...filters, person_type: 'employee', class_id: ''})}>👨‍💼 Employees</button>
                 )}
               </div>
             )}
