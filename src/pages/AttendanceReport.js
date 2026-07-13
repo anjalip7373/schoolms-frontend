@@ -157,23 +157,6 @@ const AttendanceReport = () => {
   });
 
   const getDeactivationInfo = (row, month, year) => {
-  const isDeactivated = filters.person_type === 'student'
-    ? (row.fee_status && row.fee_status !== 'active')
-    : !row.is_active;
-  if (!isDeactivated) return { include: true, highlight: false };
-
-  const rawDate = row.deactivated_date;
-  if (!rawDate) return { include: true, highlight: true }; // no date yet — fail safe
-
-  const d = new Date(rawDate);
-  const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
-  const targetYM = year * 12 + month;
-  if (deactYM < targetYM) return { include: false, highlight: false };
-  if (deactYM === targetYM) return { include: true, highlight: true };
-  return { include: true, highlight: false };
-};
-
-const getDeactivationInfo = (row, month, year) => {
     const isDeactivated = filters.person_type === 'student'
       ? (row.fee_status && row.fee_status !== 'active')
       : !row.is_active;
