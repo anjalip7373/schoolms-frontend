@@ -35,7 +35,7 @@ body {
 /* Layout */
 .app-layout { display: flex; min-height: 100vh; }
 .sidebar {
-  width: 260px; min-height: 100vh; background: var(--sidebar-bg);
+  width: 260px; height: 100vh; background: var(--sidebar-bg);
   display: flex; flex-direction: column; position: fixed; top: 0; left: 0; z-index: 100;
   transition: width 0.3s ease;
 }
