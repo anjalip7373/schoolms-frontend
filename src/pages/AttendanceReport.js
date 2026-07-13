@@ -37,7 +37,7 @@ const AttendanceReport = () => {
   for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
 
   const isSingleMonth = filters.from_month === filters.to_month && filters.from_year === filters.to_year;
-  const isSingleClass = !!filters.class_id || isTeacher;
+  const isSingleClass = filters.person_type === 'employee' ? true : (!!filters.class_id || isTeacher);
   const showInUI = isSingleMonth && isSingleClass;
 
   const daysInMonth = new Date(filters.from_year, filters.from_month, 0).getDate();
@@ -223,7 +223,9 @@ const AttendanceReport = () => {
 
       const monthLabel = `${fullMonths[month - 1]} ${year}`;
       const titleRow     = [`Attendance Report — ${monthLabel}`];
-      const infoRow      = [`Class: ${classLabel} | Type: ${filters.person_type} | Generated: ${new Date().toLocaleDateString('en-IN')}`];
+      const infoRow      = [filters.person_type === 'employee'
+        ? `Type: Employee | Generated: ${new Date().toLocaleDateString('en-IN')}`
+        : `Class: ${classLabel} | Type: ${filters.person_type} | Generated: ${new Date().toLocaleDateString('en-IN')}`];
       const legendRow    = ['P=Present | A=Absent | L=Late | H=Half Day | -=Not Marked'];
       const emptyRow     = [];
       const headers = ['No.', 'Name', 'Class', ...days.map(String), 'Present', 'Absent', 'Late', 'Half Day', 'Attendance %'];
@@ -440,13 +442,13 @@ const AttendanceReport = () => {
                 <button className="dropdown-item" onClick={exportExcel}>📊 Excel (.xlsx)</button>
                 <button
                   className="dropdown-item"
-                  onClick={showInUI ? exportPDF : () => toast.error('PDF only available for single month + single class')}
+                  onClick={showInUI ? exportPDF : () => toast.error(filters.person_type === 'employee' ? 'PDF only available for a single month' : 'PDF only available for single month + single class')}
                   style={{
                     opacity: showInUI ? 1 : 0.4,
                     cursor: showInUI ? 'pointer' : 'not-allowed',
                     color: showInUI ? '' : '#94a3b8'
                   }}>
-                  📄 PDF {!showInUI && '(Select 1 month + 1 class)'}
+                  📄 PDF {!showInUI && (filters.person_type === 'employee' ? '(Select 1 month)' : '(Select 1 month + 1 class)')}
                 </button>
               </div>
             )}

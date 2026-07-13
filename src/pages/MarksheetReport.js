@@ -893,10 +893,10 @@ const exportPDF = async () => {
                         <h4 className="mobile-section-title">▼ Subject Marks Breakdown</h4>
                         <div style={{marginBottom:'14px'}}>
                           {subjects.map(s => {
-                            const m = row.marks[s.id];
+                            const m = getMarksForExport(row.marks, s.id, examType, isFinalCumulative);
                             const isAbsent = m?.is_absent;
                             const obtained = m?.obtained;
-                            const failed = !isAbsent && obtained !== undefined && parseFloat(obtained) < (m.pass || s.pass_marks);
+                            const failed = !isAbsent && obtained !== undefined && obtained !== null && parseFloat(obtained) < (m.pass || s.pass_marks);
 
                             return (
                               <div key={s.id} className="mobile-subject-row">
@@ -904,7 +904,7 @@ const exportPDF = async () => {
                                 <span className="mobile-subj-score" style={{
                                   color: isAbsent ? '#d97706' : failed ? '#dc2626' : '#16a34a'
                                 }}>
-                                  {isAbsent ? 'AB (Absent)' : obtained !== undefined ? `${obtained} / ${m.max || s.max_marks}` : '—'}
+                                  {isAbsent ? 'AB (Absent)' : (obtained !== undefined && obtained !== null) ? `${obtained} / ${m.max || s.max_marks}` : '—'}
                                 </span>
                               </div>
                             );
