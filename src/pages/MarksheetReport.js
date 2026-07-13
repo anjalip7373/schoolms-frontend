@@ -3,7 +3,7 @@ import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style'; // was 'xlsx'
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveWorkbook, saveDocument } from '../utils/exportUtils';
@@ -458,22 +458,32 @@ const exportSingleStudentPDF = async (row) => {
 };
 
 // ── EXCEL EXPORT ─────────────────────────────────────────────────────────────
+  const applyHighlight = (ws, rowIndices) => {
+  if (!rowIndices.length || !ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  rowIndices.forEach(r => {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (!ws[ref]) continue;
+      ws[ref].s = { fill: { fgColor: { rgb: 'FEF08A' } }, font: { color: { rgb: '92400E' }, bold: true } };
+    }
+  });
+};
+
 const exportExcel = async () => {
   setShowExport(false);
   const wb = XLSX.utils.book_new();
 
   const buildSheetData = (clsRows, clsSubjects, clsName, etName, clsExamTypesFound, clsIsCumulative) => {
-    let headers, subHeaders, dataRows;
+    let headers, dataRows;
+    const highlightOffsets = [];
 
     if (clsIsCumulative) {
-      // Row 1: merged group headers — exam type names
-      // Row 2: subject names under each exam type + Total/Max/% etc.
-      // We'll use two header rows in aoa format
       const groupRow = ['', '', ''];
       const subRow = ['#', 'Roll No', 'Student Name'];
       clsExamTypesFound.forEach(et => {
         clsSubjects.forEach((s, si) => {
-          groupRow.push(si === 0 ? et : ''); // only label first subject column of each exam group
+          groupRow.push(si === 0 ? et : '');
           subRow.push(`${s.name}\n(Max:${clsRows[0]?.marks[s.id]?.[et]?.max || s.max_marks || '?'})`);
         });
       });
@@ -490,7 +500,7 @@ const exportExcel = async () => {
             return m.obtained ?? '—';
           })
         );
-
+        if (r.fee_status && r.fee_status !== 'active') highlightOffsets.push(4 + i); // title,blank,group,sub = 4 rows before data
         return [
           i + 1, r.roll_no, r.name,
           ...examCells,
@@ -501,24 +511,27 @@ const exportExcel = async () => {
       });
 
       const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
-      return [title, [], groupRow, subRow, ...dataRows, [], []];
+      return { sheetRows: [title, [], groupRow, subRow, ...dataRows, [], []], highlightOffsets };
 
     } else {
       headers = ['#', 'Roll No', 'Student Name',
         ...clsSubjects.map(s => `${s.name} (Max:${s.max_marks})`),
         'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'
       ];
-      dataRows = clsRows.map((r, i) => [
-        i + 1, r.roll_no, r.name,
-        ...clsSubjects.map(s => {
-          const m = getMarksForExport(r.marks, s.id, etName, false);
-          if (m.is_absent) return 'AB';
-          return m.obtained ?? '—';
-        }),
-        r.total, r.maxTotal, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
-      ]);
+      dataRows = clsRows.map((r, i) => {
+        if (r.fee_status && r.fee_status !== 'active') highlightOffsets.push(3 + i); // title,blank,headers = 3 rows before data
+        return [
+          i + 1, r.roll_no, r.name,
+          ...clsSubjects.map(s => {
+            const m = getMarksForExport(r.marks, s.id, etName, false);
+            if (m.is_absent) return 'AB';
+            return m.obtained ?? '—';
+          }),
+          r.total, r.maxTotal, r.showMetrics ? `${r.percentage}%` : '—', r.grade, resultLabel(r.resultStatus), r.overall_remark || '—'
+        ];
+      });
       const title = [`${clsName} — ${etName} — ${filters.academic_year}`];
-      return [title, [], headers, ...dataRows, [], []];
+      return { sheetRows: [title, [], headers, ...dataRows, [], []], highlightOffsets };
     }
   };
 
@@ -529,7 +542,9 @@ const exportExcel = async () => {
           const { data } = await API.get('/marks/marksheet', { params: { class_id: cls.id, exam_type_id: filters.exam_type_id, academic_year: filters.academic_year } });
           if (!data.length) continue;
           const built = buildData(data);
-          const ws = XLSX.utils.aoa_to_sheet(buildSheetData(built.rows, built.subjects, cls.name, examType, built.examTypesFound, built.isFinalCumulative));
+          const { sheetRows, highlightOffsets } = buildSheetData(built.rows, built.subjects, cls.name, examType, built.examTypesFound, built.isFinalCumulative);
+          const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+          applyHighlight(ws, highlightOffsets);
           XLSX.utils.book_append_sheet(wb, ws, cls.name.slice(0, 31));
         } catch { continue; }
       }
@@ -540,16 +555,21 @@ const exportExcel = async () => {
     } else if (!isTeacher && !filters.class_id && !filters.exam_type_id) {
       for (const cls of classes) {
         const allSectionRows = [];
+        const allHighlightOffsets = [];
         for (const et of examTypes) {
           try {
             const { data } = await API.get('/marks/marksheet', { params: { class_id: cls.id, exam_type_id: et.id, academic_year: filters.academic_year } });
             if (!data.length) continue;
             const built = buildData(data);
-            allSectionRows.push(...buildSheetData(built.rows, built.subjects, cls.name, et.name, built.examTypesFound, built.isFinalCumulative));
+            const { sheetRows, highlightOffsets } = buildSheetData(built.rows, built.subjects, cls.name, et.name, built.examTypesFound, built.isFinalCumulative);
+            const baseOffset = allSectionRows.length;
+            highlightOffsets.forEach(o => allHighlightOffsets.push(baseOffset + o));
+            allSectionRows.push(...sheetRows);
           } catch { continue; }
         }
         if (!allSectionRows.length) continue;
         const ws = XLSX.utils.aoa_to_sheet(allSectionRows);
+        applyHighlight(ws, allHighlightOffsets);
         XLSX.utils.book_append_sheet(wb, ws, cls.name.slice(0, 31));
       }
       if (!wb.SheetNames.length) { toast.error('No data found'); return; }
@@ -558,25 +578,30 @@ const exportExcel = async () => {
 
     } else if (filters.class_id && !filters.exam_type_id) {
       const allSectionRows = [];
+      const allHighlightOffsets = [];
       for (const et of examTypes) {
         try {
           const { data } = await API.get('/marks/marksheet', { params: { class_id: filters.class_id, exam_type_id: et.id, academic_year: filters.academic_year } });
           if (!data.length) continue;
           const built = buildData(data);
-          allSectionRows.push(...buildSheetData(built.rows, built.subjects, className, et.name, built.examTypesFound, built.isFinalCumulative));
+          const { sheetRows, highlightOffsets } = buildSheetData(built.rows, built.subjects, className, et.name, built.examTypesFound, built.isFinalCumulative);
+          const baseOffset = allSectionRows.length;
+          highlightOffsets.forEach(o => allHighlightOffsets.push(baseOffset + o));
+          allSectionRows.push(...sheetRows);
         } catch { continue; }
       }
       if (!allSectionRows.length) { toast.error('No data found'); return; }
       const ws = XLSX.utils.aoa_to_sheet(allSectionRows);
+      applyHighlight(ws, allHighlightOffsets);
       XLSX.utils.book_append_sheet(wb, ws, className.slice(0, 31));
       await saveWorkbook(wb, `marksheet-${className.replace(/\s+/g, '_')}-AllExams.xlsx`);
       toast.success('Downloaded! All exams in one sheet');
 
     } else {
-      // Single class + single exam
-      const sheetData = buildSheetData(rows, subjects, className, examType, examTypesFound, isFinalCumulative);
-      const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...Array(sheetData[2]?.length - 3 || 10).fill({ wch: 18 })];
+      const { sheetRows, highlightOffsets } = buildSheetData(rows, subjects, className, examType, examTypesFound, isFinalCumulative);
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      applyHighlight(ws, highlightOffsets);
+      ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 22 }, ...Array(sheetRows[2]?.length - 3 || 10).fill({ wch: 18 })];
       XLSX.utils.book_append_sheet(wb, ws, examType.slice(0, 31));
       await saveWorkbook(wb, `marksheet-${className.replace(/\s+/g, '_')}-${examType}.xlsx`);
       toast.success('Excel downloaded!');
@@ -651,6 +676,11 @@ const exportPDF = async () => {
         if (val === 'PROMOTED (RTE)') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
         if (val === 'AB') { data.cell.styles.textColor = [217, 119, 6]; data.cell.styles.fontStyle = 'bold'; }
         if (val === 'ABSENT') { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
+
+        const rowData = rows[data.row.index];
+        if (rowData && rowData.fee_status && rowData.fee_status !== 'active') {
+          data.cell.styles.fillColor = [254, 240, 138];
+        }
       }
     },
     margin: { left: 14, right: 14 }

@@ -3,7 +3,7 @@ import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveWorkbook, saveDocument } from '../utils/exportUtils';
@@ -156,6 +156,40 @@ const AttendanceReport = () => {
     return nameMatch || rollNoMatch || idMatch;
   });
 
+  const getDeactivationInfo = (row, month, year) => {
+  const isDeactivated = filters.person_type === 'student'
+    ? (row.fee_status && row.fee_status !== 'active')
+    : !row.is_active;
+  if (!isDeactivated) return { include: true, highlight: false };
+
+  const rawDate = row.deactivated_date;
+  if (!rawDate) return { include: true, highlight: true }; // no date yet — fail safe
+
+  const d = new Date(rawDate);
+  const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
+  const targetYM = year * 12 + month;
+  if (deactYM < targetYM) return { include: false, highlight: false };
+  if (deactYM === targetYM) return { include: true, highlight: true };
+  return { include: true, highlight: false };
+};
+
+const getDeactivationInfo = (row, month, year) => {
+    const isDeactivated = filters.person_type === 'student'
+      ? (row.fee_status && row.fee_status !== 'active')
+      : !row.is_active;
+    if (!isDeactivated) return { include: true, highlight: false };
+
+    const rawDate = row.deactivated_date;
+    if (!rawDate) return { include: true, highlight: true }; // no date on record — fail safe, always show+highlight
+
+    const d = new Date(rawDate);
+    const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
+    const targetYM = year * 12 + month;
+    if (deactYM < targetYM) return { include: false, highlight: false }; // deactivated before this month — hide
+    if (deactYM === targetYM) return { include: true, highlight: true };  // deactivated this month — show+highlight
+    return { include: true, highlight: false }; // deactivated after this month — was active, show normally
+  };
+
   const exportExcel = async () => {
     const wb = XLSX.utils.book_new();
     const monthRanges = [];
@@ -184,17 +218,22 @@ const AttendanceReport = () => {
         return monthDailyData[String(personId)]?.[dateKey] || monthDailyData[personId]?.[dateKey] || null;
       };
 
-      const monthData = [...filteredData].sort((a, b) => {
+      const monthDataRaw = [...filteredData].sort((a, b) => {
         const classCompare = (a.class_name || '').localeCompare(b.class_name || '');
         if (classCompare !== 0) return classCompare;
         return (a.full_name || '').localeCompare(b.full_name || '');
       });
 
+      // Filter out anyone deactivated before this month; flag who to highlight
+      const monthData = monthDataRaw
+        .map(row => ({ row, ...getDeactivationInfo(row, month, year) }))
+        .filter(x => x.include);
+
       const grouped = {};
-      monthData.forEach(row => {
-        const cls = row.class_name || 'No Class';
+      monthData.forEach(entry => {
+        const cls = entry.row.class_name || 'No Class';
         if (!grouped[cls]) grouped[cls] = [];
-        grouped[cls].push(row);
+        grouped[cls].push(entry);
       });
 
       const monthLabel = `${fullMonths[month - 1]} ${year}`;
@@ -205,11 +244,12 @@ const AttendanceReport = () => {
       const headers = ['No.', 'Name', 'Class', ...days.map(String), 'Present', 'Absent', 'Late', 'Half Day', 'Attendance %'];
 
       const wsData = [titleRow, infoRow, legendRow, emptyRow, headers];
+      const highlightRowIndices = [];
       let rowNo = 1;
 
-      Object.entries(grouped).forEach(([className, students]) => {
+      Object.entries(grouped).forEach(([className, entries]) => {
         wsData.push([`— ${className} —`]);
-        students.forEach(row => {
+        entries.forEach(({ row, highlight }) => {
           const rowData = [rowNo++, row.full_name, row.class_name || ''];
           days.forEach(day => {
             const status = getMonthStatus(row.id, day);
@@ -222,6 +262,7 @@ const AttendanceReport = () => {
             row.halfday_days || 0,
             `${getPercentage(row)}%`
           );
+          if (highlight) highlightRowIndices.push(wsData.length);
           wsData.push(rowData);
         });
         wsData.push([]);
@@ -233,6 +274,21 @@ const AttendanceReport = () => {
         ...days.map(() => ({ wch: 4 })),
         { wch: 9 }, { wch: 9 }, { wch: 7 }, { wch: 10 }, { wch: 13 }
       ];
+
+      if (highlightRowIndices.length && wsSheet['!ref']) {
+        const range = XLSX.utils.decode_range(wsSheet['!ref']);
+        highlightRowIndices.forEach(r => {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const ref = XLSX.utils.encode_cell({ r, c });
+            if (!wsSheet[ref]) continue;
+            wsSheet[ref].s = {
+              fill: { fgColor: { rgb: 'FEF08A' } },
+              font: { color: { rgb: '92400E' }, bold: true },
+            };
+          }
+        });
+      }
+
       XLSX.utils.book_append_sheet(wb, wsSheet, monthLabel.substring(0, 31));
     }
 
@@ -257,8 +313,14 @@ const AttendanceReport = () => {
     doc.setTextColor(100, 116, 139);
     doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 29);
 
+    // PDF export is always single month + single class (enforced by showInUI),
+    // so filters.from_month/from_year is exactly the target month.
+    const pdfEntries = filteredData
+      .map(row => ({ row, ...getDeactivationInfo(row, filters.from_month, filters.from_year) }))
+      .filter(x => x.include);
+
     const headers = ['No.', 'Name', ...dayNumbers.map(String), 'P', 'A', 'L', 'H', '%'];
-    const body = filteredData.map((row, i) => [
+    const body = pdfEntries.map(({ row }, i) => [
       i + 1,
       row.full_name,
       ...dayNumbers.map(day => getStatusLabel(getStatus(row.id, day))),
@@ -268,6 +330,9 @@ const AttendanceReport = () => {
       row.halfday_days || 0,
       `${getPercentage(row)}%`
     ]);
+    const highlightSet = new Set(
+      pdfEntries.map((x, i) => x.highlight ? i : -1).filter(i => i >= 0)
+    );
 
     autoTable(doc, {
       head: [headers],
@@ -276,6 +341,12 @@ const AttendanceReport = () => {
       styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [241, 245, 249] },
+      didParseCell: (data) => {
+        if (data.section === 'body' && highlightSet.has(data.row.index)) {
+          data.cell.styles.fillColor = [254, 240, 138];
+          data.cell.styles.textColor = [146, 64, 14];
+        }
+      },
       margin: { left: 14, right: 14 },
     });
 

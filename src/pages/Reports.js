@@ -161,10 +161,21 @@ const Reports = () => {
   });
 
   // Change this if your actual column name differs (see SQL check above)
-const DEACTIVATION_DATE_FIELD = 'deactivated_date';
+ const DEACTIVATION_DATE_FIELD = 'deactivated_date';
 
-// Decides, for the currently selected period, which rows to include
-// and which to highlight (deactivated sometime inside this period).
+const isRowDeactivated = (row) => {
+  if (activeTab === 'employees' || activeTab === 'salary') {
+    return row.is_active === false || row.is_active === 0;
+  }
+  if (activeTab === 'students') {
+    return row.fee_status === 'inactive';
+  }
+  if (activeTab === 'fees') {
+    return row.student_status === 'inactive';
+  }
+  return false;
+};
+
 const getExportRows = (data) => {
   const periodFromYM = Number(filters.from_year) * 12 + Number(filters.from_month);
   const periodToYM = Number(filters.to_year) * 12 + Number(filters.to_month);
@@ -172,23 +183,17 @@ const getExportRows = (data) => {
   const highlightRows = [];
 
   data.forEach(row => {
-    const isDeactivated = row.is_active === false || row.is_active === 0;
     let include = true;
     let highlight = false;
 
-    if (isDeactivated) {
+    if (isRowDeactivated(row)) {
       const rawDate = row[DEACTIVATION_DATE_FIELD];
       if (rawDate) {
         const d = new Date(rawDate);
         const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
-        if (deactYM < periodFromYM) {
-          include = false; // deactivated before this period — hide entirely
-        } else if (deactYM <= periodToYM) {
-          highlight = true; // deactivated within this period — show + highlight
-        }
-        // deactivated after periodToYM => was active the whole period, show normally
+        if (deactYM < periodFromYM) include = false;
+        else if (deactYM <= periodToYM) highlight = true;
       } else {
-        // no date recorded yet on this row — fall back to just highlighting
         highlight = true;
       }
     }
