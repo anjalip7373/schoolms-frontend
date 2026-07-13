@@ -147,11 +147,17 @@ const Attendance = () => {
       {/* Filters Row */}
       <div className="filter-bar" style={{marginBottom:'16px', flexWrap:'wrap'}}>
         {/* Student/Employee toggle */}
-        <button
-          className={"btn " + (personType === 'student' ? 'btn-primary' : 'btn-outline')}
-          onClick={() => setPersonType('student')}>
-          👨‍🎓 Students
-        </button>
+        {isTeacher ? (
+          <div style={{background:'#1e40af', color:'#fff', padding:'8px 16px', borderRadius:'8px', fontSize:'14px', fontWeight:'600'}}>
+            👨‍🎓 Students
+          </div>
+        ) : (
+          <button
+            className={"btn " + (personType === 'student' ? 'btn-primary' : 'btn-outline')}
+            onClick={() => setPersonType('student')}>
+            👨‍🎓 Students
+          </button>
+        )}
         {!isTeacher && (
           <button
             className={"btn " + (personType === 'employee' ? 'btn-primary' : 'btn-outline')}
