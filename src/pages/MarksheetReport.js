@@ -505,9 +505,10 @@ const exportExcel = async () => {
             return m.obtained ?? '—';
           })
         );
-        if (r.fee_status && r.fee_status !== 'active') highlightOffsets.push(4 + i); // title,blank,group,sub = 4 rows before data
+        const isDeact = r.fee_status && r.fee_status !== 'active';
+        if (isDeact) highlightOffsets.push(4 + i); // title,blank,group,sub = 4 rows before data
         return [
-          i + 1, r.roll_no, r.name,
+          i + 1, r.roll_no, isDeact ? `${r.name} (DEACTIVATED)` : r.name,        
           ...examCells,
           r.total, r.maxTotal,
           r.showMetrics ? `${r.percentage}%` : '—',
@@ -524,9 +525,10 @@ const exportExcel = async () => {
         'Total', 'Max Marks', 'Percentage', 'Grade', 'Result', 'Remark'
       ];
       dataRows = clsRows.map((r, i) => {
-        if (r.fee_status && r.fee_status !== 'active') highlightOffsets.push(3 + i); // title,blank,headers = 3 rows before data
+        const isDeact = r.fee_status && r.fee_status !== 'active';
+        if (isDeact) highlightOffsets.push(3 + i); // title,blank,headers = 3 rows before data
         return [
-          i + 1, r.roll_no, r.name,
+          i + 1, r.roll_no, isDeact ? `${r.name} (DEACTIVATED)` : r.name,
           ...clsSubjects.map(s => {
             const m = getMarksForExport(r.marks, s.id, etName, false);
             if (m.is_absent) return 'AB';
@@ -642,7 +644,7 @@ const exportPDF = async () => {
     headers = [headRow1, headRow2];
 
     body = rows.map((r, i) => {
-      const row = [i + 1, r.roll_no, r.name];
+      const row = [i + 1, r.roll_no, (r.fee_status && r.fee_status !== 'active') ? `${r.name} (DEACTIVATED)` : r.name,];
       examTypesFound.forEach(et => {
         subjects.forEach(s => {
           const m = r.marks[s.id]?.[et];

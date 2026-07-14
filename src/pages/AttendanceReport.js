@@ -240,7 +240,7 @@ const AttendanceReport = () => {
       Object.entries(grouped).forEach(([className, entries]) => {
         wsData.push([`— ${className} —`]);
         entries.forEach(({ row, highlight }) => {
-          const rowData = [rowNo++, row.full_name, row.class_name || ''];
+          const rowData = [rowNo++, highlight ? `${row.full_name} (DEACTIVATED)` : row.full_name, row.class_name || ''];
           days.forEach(day => {
             const status = getMonthStatus(row.id, day);
             rowData.push(getStatusLabel(status));
@@ -310,9 +310,9 @@ const AttendanceReport = () => {
       .filter(x => x.include);
 
     const headers = ['No.', 'Name', ...dayNumbers.map(String), 'P', 'A', 'L', 'H', '%'];
-    const body = pdfEntries.map(({ row }, i) => [
+    const body = pdfEntries.map(({ row, highlight }, i) => [
       i + 1,
-      row.full_name,
+      highlight ? `${row.full_name} (DEACTIVATED)` : row.full_name,
       ...dayNumbers.map(day => getStatusLabel(getStatus(row.id, day))),
       row.present_days || 0,
       row.absent_days || 0,

@@ -249,6 +249,8 @@ const getExportRows = (data) => {
               <button className="dropdown-item" onClick={() => {
   const { rows, highlightRows } = getExportRows(filteredData);
   const exportData = formatForExport(rows, activeCols);
+  const nameLabel = activeCols.find(c => c.key === 'full_name')?.label;
+  if (nameLabel) highlightRows.forEach(i => { exportData[i][nameLabel] = `${exportData[i][nameLabel]} (DEACTIVATED)`; });
   exportToExcel(exportData, activeCols, `${activeTab}-report-${periodLabel}`, highlightRows);
   setShowExport(false);
 }}>📊 Excel (.xlsx)</button>
@@ -256,9 +258,12 @@ const getExportRows = (data) => {
 <button className="dropdown-item" onClick={() => {
   const { rows, highlightRows } = getExportRows(filteredData);
   const exportData = formatForExport(rows, activeCols);
+  const nameLabel = activeCols.find(c => c.key === 'full_name')?.label;
+  if (nameLabel) highlightRows.forEach(i => { exportData[i][nameLabel] = `${exportData[i][nameLabel]} (DEACTIVATED)`; });
   exportToPDF(exportData, activeCols, `${activeTab}-report-${periodLabel}`, `${activeTitle} — ${periodLabel}`, highlightRows);
   setShowExport(false);
 }}>📄 PDF</button>
+         
             </div>
           )}
         </div>
