@@ -233,12 +233,15 @@ const getExportRows = (data) => {
     }
   };
 
+  const { rows: visibleData, highlightRows: highlightIdxArr } = getExportRows(filteredData);
+  const highlightIdxSet = new Set(highlightIdxArr);
+
   const periodLabel = `${months[filters.from_month-1]} ${filters.from_year} to ${months[filters.to_month-1]} ${filters.to_year}`;
 
   return (
     <AppLayout title="Reports" subtitle="Comprehensive school reports">
       <div className="page-header">
-        <div><h1>Reports</h1><p>{filteredData.length} records • {periodLabel}</p></div>
+        <div><h1>Reports</h1><p>{visibleData.length} records • {periodLabel}</p></div>
         <div className="dropdown-export">
           <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
           {showExport && (
@@ -333,14 +336,20 @@ const getExportRows = (data) => {
                     <tr>{activeCols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
                   </thead>
                   <tbody>
-                    {filteredData.map((row, i) => (
-                      <tr key={i}>
+                    {visibleData.map((row, i) => (
+                      <tr key={i} style={highlightIdxSet.has(i) ? {background:'#fef9c3'} : undefined}>
                         {activeCols.map(c => (
-                          <td key={c.key} data-label={c.label}>{renderCell(row, c)}</td>
+                          <td key={c.key} data-label={c.label}>
+                            {renderCell(row, c)}
+                            {c.key === activeCols[0].key && highlightIdxSet.has(i) && (
+                              <span style={{marginLeft:'6px', background:'#fef08a', color:'#92400e', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED THIS PERIOD</span>
+                            )}
+                          </td>
                         ))}
                       </tr>
                     ))}
-                    {!filteredData.length && (
+                    {!visibleData.length && (
+                  
                       <tr>
                         <td colSpan={activeCols.length}>
                           <div className="empty-state">
@@ -356,9 +365,12 @@ const getExportRows = (data) => {
             </div>
 
             {/* Mobile: card view */}
-            <div className="mobile-card-list" style={{ padding: filteredData.length ? '16px' : '0' }}>
-              {filteredData.map((row, i) => (
-                <div className="data-card" key={i}>
+            <div className="mobile-card-list" style={{ padding: visibleData.length ? '16px' : '0' }}>
+              {visibleData.map((row, i) => (
+                <div className="data-card" key={i} style={highlightIdxSet.has(i) ? {background:'#fef9c3', borderRadius:'8px'} : undefined}>
+                  {highlightIdxSet.has(i) && (
+                    <div style={{background:'#fef08a', color:'#92400e', padding:'3px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:'800', marginBottom:'6px', display:'inline-block'}}>DEACTIVATED THIS PERIOD</div>
+                  )}
                   {activeCols.map(c => (
                     <div className="data-card-row" key={c.key}>
                       <span className="dc-label">{c.label}</span>
@@ -367,7 +379,7 @@ const getExportRows = (data) => {
                   ))}
                 </div>
               ))}
-              {!filteredData.length && (
+              {!visibleData.length && (
                 <div className="empty-state">
                   <div className="empty-icon">📑</div>
                   <p>No data found</p>

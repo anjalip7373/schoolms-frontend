@@ -140,9 +140,9 @@ const AttendanceReport = () => {
   };
 
   const getAveragePresentDays = () => {
-    if (!filteredData.length) return 0;
-    const totalPresent = filteredData.reduce((acc, row) => acc + (row.present_days || 0), 0);
-    return Math.round(totalPresent / filteredData.length);
+    if (!visibleData.length) return 0;
+    const totalPresent = visibleData.reduce((acc, row) => acc + (row.present_days || 0), 0);
+    return Math.round(totalPresent / visibleData.length);
   };
 
   const filteredData = rawData.filter(row => {
@@ -172,6 +172,11 @@ const AttendanceReport = () => {
     if (deactYM === targetYM) return { include: true, highlight: true };  // deactivated this month — show+highlight
     return { include: true, highlight: false }; // deactivated after this month — was active, show normally
   };
+
+  const visibleData = filteredData
+    .map(row => ({ row, ...getDeactivationInfo(row, filters.from_month, filters.from_year) }))
+    .filter(x => x.include)
+    .map(x => ({ ...x.row, __highlighted: x.highlight }));
 
   const exportExcel = async () => {
     const wb = XLSX.utils.book_new();
@@ -429,7 +434,7 @@ const AttendanceReport = () => {
         <div className="page-header">
           <div>
             <h1>Attendance Report</h1>
-            <p>{filteredData.length} records • {periodLabel} • {classLabel}</p>
+            <p>{visibleData.length} records • {periodLabel} • {classLabel}</p>
           </div>
           <div className="dropdown-export">
             <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>
@@ -542,7 +547,7 @@ const AttendanceReport = () => {
                 
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
                   <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
-                    <div style={{fontSize:'22px', fontWeight:'800'}}>{filteredData.length}</div>
+                    <div style={{fontSize:'22px', fontWeight:'800'}}>{visibleData.length}</div>
                     <div style={{fontSize:'12px', opacity:0.85}}>Total students</div>
                   </div>
                   <div>
@@ -552,21 +557,20 @@ const AttendanceReport = () => {
                 </div>
               </div>
 
-              {filteredData.map((row, i) => {
+              {visibleData.map((row, i) => {
                 const pct = getPercentage(row);
-                const isDeactivated = filters.person_type === 'student'
-                  ? (row.fee_status && row.fee_status !== 'active')
-                  : !row.is_active;
+                const isDeactivated = row.__highlighted;
                 return (
-                  <div key={row.id || i} className="mobile-card-container" style={isDeactivated ? {opacity:0.7} : undefined}>
+                  <div key={row.id || i} className="mobile-card-container" style={isDeactivated ? {background:'#fffbeb', border:'2px solid #fbbf24'} : undefined}>
                     <div className="mobile-card-header" style={{background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)'}}>
                       <div>
                         <h3 style={{margin:0, fontSize:'16px', fontWeight:'700'}}>
                           {row.full_name}
                           {isDeactivated && (
-                            <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                            <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED THIS MONTH</span>
                           )}
                         </h3>
+
                         <span style={{fontSize:'11px', opacity:0.75}}>
                           {row.roll_no ? `Roll No: ${row.roll_no} • ` : ''}{row.class_name || classLabel}
                         </span>
@@ -623,7 +627,7 @@ const AttendanceReport = () => {
                 );
               })}
 
-              {filteredData.length === 0 && (
+              {visibleData.length === 0 && (
                 <div style={{padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:'12px'}}>
                   <p>No students match your search filter.</p>
                 </div>
@@ -654,9 +658,9 @@ const AttendanceReport = () => {
 
               <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'16px'}}>
                 {[
-                  { label:'Total People', value: filteredData.length, color:'#1e40af', icon:'👥' },
-                  { label:'Avg Present', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.present_days||0), 0) / filteredData.length) : 0, color:'#10b981', icon:'✅' },
-                  { label:'Avg Absent', value: filteredData.length ? Math.round(filteredData.reduce((a,r) => a + (r.absent_days||0), 0) / filteredData.length) : 0, color:'#ef4444', icon:'❌' },
+                  { label:'Total People', value: visibleData.length, color:'#1e40af', icon:'👥' },
+                  { label:'Avg Present', value: visibleData.length ? Math.round(visibleData.reduce((a,r) => a + (r.present_days||0), 0) / visibleData.length) : 0, color:'#10b981', icon:'✅' },
+                  { label:'Avg Absent', value: visibleData.length ? Math.round(visibleData.reduce((a,r) => a + (r.absent_days||0), 0) / visibleData.length) : 0, color:'#ef4444', icon:'❌' },
                   { label:'Working Days', value: daysInMonth, color:'#f59e0b', icon:'📅' },
                 ].map(s => (
                   <div key={s.label} style={{background:'#fff', borderRadius:'12px', padding:'14px 16px', border:'1px solid #e2e8f0', borderLeft:`4px solid ${s.color}`}}>
@@ -705,19 +709,17 @@ const AttendanceReport = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredData.map((row, i) => {
+                      {visibleData.map((row, i) => {
                         const pct = getPercentage(row);
-                        const isDeactivated = filters.person_type === 'student'
-                          ? (row.fee_status && row.fee_status !== 'active')
-                          : !row.is_active;
+                        const isDeactivated = row.__highlighted;
                         return (
-                          <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: isDeactivated ? '#fef2f2' : (i % 2 === 0 ? '#fff' : '#f8fafc'), opacity: isDeactivated ? 0.75 : 1}}>
+                          <tr key={row.id || i} style={{borderBottom:'1px solid #f1f5f9', background: isDeactivated ? '#fffbeb' : (i % 2 === 0 ? '#fff' : '#f8fafc')}}>
                             <td style={{padding:'10px', fontSize:'12px', color:'#64748b', fontWeight:'600'}}>{i + 1}</td>
                             <td style={{padding:'10px', whiteSpace:'nowrap'}}>
                               <div style={{fontSize:'13px', fontWeight:'700', color:'#1e293b'}}>
                                 {row.full_name}
                                 {isDeactivated && (
-                                  <span style={{marginLeft:'6px', background:'#fee2e2', color:'#dc2626', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED</span>
+                                  <span style={{marginLeft:'6px', background:'#fef08a', color:'#92400e', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED THIS MONTH</span>
                                 )}
                               </div>
                               <div style={{fontSize:'10px', color:'#94a3b8'}}>
