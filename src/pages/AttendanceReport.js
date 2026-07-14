@@ -89,8 +89,6 @@ const AttendanceReport = () => {
 
   useEffect(() => {
     fetchReport();
-    const interval = setInterval(fetchReport, 30000);
-    return () => clearInterval(interval);
   }, [filters]);
 
   const getStatus = (personId, day) => {
@@ -591,11 +589,9 @@ const AttendanceReport = () => {
                         <span className="mobile-stat-num" style={{color:'#d97706'}}>{row.late_days || 0}</span>
                         <span className="mobile-stat-lbl">Late</span>
                       </div>
-                      <div className="mobile-grid-stats" style={{background:'#f5f3ff', borderBottom:'none', width:'100%'}}>
-                        <div className="mobile-stat-box" style={{width:'100%'}}>
-                          <span className="mobile-stat-num" style={{color:'#7c3aed'}}>{row.halfday_days || 0}</span>
-                          <span className="mobile-stat-lbl">Half day</span>
-                        </div>
+                      <div className="mobile-stat-box" style={{background:'#f5f3ff'}}>
+                        <span className="mobile-stat-num" style={{color:'#7c3aed'}}>{row.halfday_days || 0}</span>
+                        <span className="mobile-stat-lbl">Half day</span>
                       </div>
                     </div>
 

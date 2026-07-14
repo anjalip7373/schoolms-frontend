@@ -323,34 +323,59 @@ const getExportRows = (data) => {
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table className="reports-table">
-              <thead>
-                <tr>{activeCols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
-              </thead>
-              <tbody>
-                {filteredData.map((row, i) => (
-                  <tr key={i}>
-                    {activeCols.map(c => (
-                      <td key={c.key} data-label={c.label}>{renderCell(row, c)}</td>
+        {loading ? <div className="loading"><div className="spinner"></div></div> : (
+          <>
+            {/* Desktop: table view */}
+            <div className="desktop-table-view">
+              <div className="table-wrapper">
+                <table className="reports-table">
+                  <thead>
+                    <tr>{activeCols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((row, i) => (
+                      <tr key={i}>
+                        {activeCols.map(c => (
+                          <td key={c.key} data-label={c.label}>{renderCell(row, c)}</td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-                {!filteredData.length && !loading && (
-                  <tr>
-                    <td colSpan={activeCols.length}>
-                      <div className="empty-state">
-                        <div className="empty-icon">📑</div>
-                        <p>No data found</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    {!filteredData.length && (
+                      <tr>
+                        <td colSpan={activeCols.length}>
+                          <div className="empty-state">
+                            <div className="empty-icon">📑</div>
+                            <p>No data found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile: card view */}
+            <div className="mobile-card-list" style={{ padding: filteredData.length ? '16px' : '0' }}>
+              {filteredData.map((row, i) => (
+                <div className="data-card" key={i}>
+                  {activeCols.map(c => (
+                    <div className="data-card-row" key={c.key}>
+                      <span className="dc-label">{c.label}</span>
+                      <span className="dc-value">{renderCell(row, c)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {!filteredData.length && (
+                <div className="empty-state">
+                  <div className="empty-icon">📑</div>
+                  <p>No data found</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
