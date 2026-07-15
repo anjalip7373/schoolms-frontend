@@ -544,15 +544,22 @@ const AttendanceReport = () => {
                     <div style={{fontSize:'12px', opacity:0.7}}>{filters.from_year}</div>
                   </div>
                 </div>
-                
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center'}}>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', background:'rgba(255,255,255,0.15)', borderRadius:'12px', padding:'12px', marginTop:'16px', textAlign:'center', rowGap:'12px'}}>
                   <div style={{borderRight:'1px solid rgba(255,255,255,0.2)'}}>
                     <div style={{fontSize:'22px', fontWeight:'800'}}>{visibleData.length}</div>
-                    <div style={{fontSize:'12px', opacity:0.85}}>Total students</div>
+                    <div style={{fontSize:'12px', opacity:0.85}}>Total {filters.person_type === 'student' ? 'students' : 'employees'}</div>
                   </div>
                   <div>
                     <div style={{fontSize:'22px', fontWeight:'800'}}>{getAveragePresentDays()}</div>
                     <div style={{fontSize:'12px', opacity:0.85}}>Avg present days</div>
+                  </div>
+                  <div style={{borderRight:'1px solid rgba(255,255,255,0.2)', borderTop:'1px solid rgba(255,255,255,0.2)', paddingTop:'10px'}}>
+                    <div style={{fontSize:'22px', fontWeight:'800'}}>{visibleData.length ? Math.round(visibleData.reduce((a,r)=>a+(r.absent_days||0),0)/visibleData.length) : 0}</div>
+                    <div style={{fontSize:'12px', opacity:0.85}}>Avg absent days</div>
+                  </div>
+                  <div style={{borderTop:'1px solid rgba(255,255,255,0.2)', paddingTop:'10px'}}>
+                    <div style={{fontSize:'22px', fontWeight:'800'}}>{visibleData.length ? Math.round(visibleData.reduce((a,r)=>a+(r.halfday_days||0),0)/visibleData.length) : 0}</div>
+                    <div style={{fontSize:'12px', opacity:0.85}}>Avg half day</div>
                   </div>
                 </div>
               </div>

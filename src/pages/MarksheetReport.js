@@ -657,8 +657,8 @@ const exportPDF = async () => {
     });
   } else {
     headers = [['#', 'Roll No', 'Student Name', ...subjects.map(s => `${s.name}\n(Max:${s.max_marks})`), 'Total', '%', 'Grade', 'Result', 'Remark']];
-    body = rows.map((r, i) => [
-      i + 1, r.roll_no, r.name,
+   body = rows.map((r, i) => [
+      i + 1, r.roll_no, (r.fee_status && r.fee_status !== 'active') ? `${r.name} (DEACTIVATED)` : r.name,
       ...subjects.map(s => {
         const m = getMarksForExport(r.marks, s.id, examType, false);
         if (m.is_absent) return 'AB';

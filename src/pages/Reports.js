@@ -153,7 +153,7 @@ const Reports = () => {
       else if (col.key === 'payment_date' || col.key === 'joining_date') val = val?.split('T')[0] || '';
       else if (col.key === 'date_of_birth') val = val?.split('T')[0] || '';
       else if (col.key === 'amount' || col.key === 'net_salary' || col.key === 'basic_salary' || col.key === 'deductions' || col.key === 'salary') val = parseFloat(val || 0).toLocaleString();
-      else if (col.key === 'status' && activeTab === 'fees') val = 'Paid';
+      else if (col.key === 'fee_status' && activeTab === 'students') val = getEffectiveFeeStatus(row) === 'active' ? 'Active' : 'Inactive';
       else val = val || '';
       formatted[col.label] = val;
     });
@@ -207,13 +207,29 @@ const getExportRows = (data) => {
   return { rows, highlightRows };
 };
 
+// NEW: computes what the student's status actually was during the selected period,
+// instead of just showing their current live status
+const getEffectiveFeeStatus = (row) => {
+  if (activeTab !== 'students') return row.fee_status;
+  if (!row.deactivated_date) return row.fee_status; // never deactivated — current value is accurate
+  const d = new Date(row.deactivated_date);
+  const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
+  const periodToYM = Number(filters.to_year) * 12 + Number(filters.to_month);
+  // If deactivation happened AFTER the period being viewed, they were still active back then
+  return deactYM > periodToYM ? 'active' : row.fee_status;
+};
+
   const renderCell = (row, col) => {
     switch(col.key) {
       case 'roll_no': case 'emp_id': case 'slip_no': case 'receipt_no':
         return <code style={{fontFamily:'JetBrains Mono', fontSize:'11px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{row[col.key] || '—'}</code>;
-      case 'fee_status':
+    case 'fee_status':
+        if (activeTab === 'students') {
+          const effective = getEffectiveFeeStatus(row);
+          return <span className={"badge " + (effective === 'active' ? 'badge-success' : 'badge-danger')}>{effective === 'active' ? 'Active' : 'Inactive'}</span>;
+        }
         return <span className={"badge " + (row[col.key] === 'Paid' ? 'badge-success' : 'badge-danger')}>{row[col.key]}</span>;
-      case 'payment_status':
+        case 'payment_status':
         return <span className={"badge " + (
           row[col.key] === 'paid' ? 'badge-success' :
           row[col.key] === 'generated' ? 'badge-warning' : 'badge-danger'
