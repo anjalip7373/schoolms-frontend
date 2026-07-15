@@ -149,7 +149,7 @@ const Reports = () => {
     const formatted = {};
     cols.forEach(col => {
       let val = row[col.key];
-      if (col.key === 'is_active') val = val ? 'Active' : 'Inactive';
+      if (col.key === 'is_active') val = getEffectiveActiveStatus(row) ? 'Active' : 'Inactive';
       else if (col.key === 'payment_date' || col.key === 'joining_date') val = val?.split('T')[0] || '';
       else if (col.key === 'date_of_birth') val = val?.split('T')[0] || '';
       else if (col.key === 'amount' || col.key === 'net_salary' || col.key === 'basic_salary' || col.key === 'deductions' || col.key === 'salary') val = parseFloat(val || 0).toLocaleString();
@@ -219,6 +219,21 @@ const getEffectiveFeeStatus = (row) => {
   return deactYM > periodToYM ? 'active' : row.fee_status;
 };
 
+// NEW: same idea as getEffectiveFeeStatus, but for employees/salary tabs.
+// row.is_active is the employee's CURRENT live status — it does not tell you
+// whether they were active during the month(s) being viewed. This derives
+// the correct historical status from deactivated_date + the selected period.
+const getEffectiveActiveStatus = (row) => {
+  if (!(activeTab === 'employees' || activeTab === 'salary')) return !!row.is_active;
+  if (row.is_active) return true; // currently active — was active for any period up to now
+  if (!row.deactivated_date) return !!row.is_active; // no date on record — fall back to live flag
+  const d = new Date(row.deactivated_date);
+  const deactYM = d.getFullYear() * 12 + (d.getMonth() + 1);
+  const periodToYM = Number(filters.to_year) * 12 + Number(filters.to_month);
+  // If deactivation happened AFTER the period being viewed ends, they were still active back then
+  return deactYM > periodToYM;
+};
+
   const renderCell = (row, col) => {
     switch(col.key) {
       case 'roll_no': case 'emp_id': case 'slip_no': case 'receipt_no':
@@ -236,8 +251,10 @@ const getEffectiveFeeStatus = (row) => {
         )}>{row[col.key] === 'not_generated' ? 'Not Generated' : row[col.key]}</span>;
       case 'status':
         return <span className={"badge " + (row[col.key] === 'paid' ? 'badge-success' : 'badge-warning')}>{row[col.key]}</span>;
-      case 'is_active':
-        return <span className={"badge " + (row[col.key] ? 'badge-success' : 'badge-danger')}>{row[col.key] ? 'Active' : 'Inactive'}</span>;
+      case 'is_active': {
+        const effectiveActive = getEffectiveActiveStatus(row);
+        return <span className={"badge " + (effectiveActive ? 'badge-success' : 'badge-danger')}>{effectiveActive ? 'Active' : 'Inactive'}</span>;
+      }
       case 'paid_amount': case 'net_salary': case 'basic_salary': case 'deductions': case 'salary':
         return row[col.key] ? `Rs. ${parseFloat(row[col.key] || 0).toLocaleString()}` : '—';
       case 'payment_date': case 'joining_date': case 'date_of_birth': case 'last_payment_date':
