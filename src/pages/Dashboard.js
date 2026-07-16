@@ -60,6 +60,12 @@ const Dashboard = () => {
 
   const modalConfig = getModalConfig();
 
+  const isDeactivatedThisMonth = (row) => {
+    if (!row.deactivated_date) return false;
+    const d = new Date(row.deactivated_date);
+    return d.getFullYear() === Number(year) && (d.getMonth() + 1) === Number(month);
+  };
+
   const cardStyle = {
     background: '#fff',
     borderRadius: '16px',
@@ -227,9 +233,14 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {modalConfig.rows.map(s => (
-                        <tr key={s.id}>
+                        <tr key={s.id} style={isDeactivatedThisMonth(s) ? {background:'#fef9c3'} : undefined}>
                           <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
-                          <td><strong>{s.full_name}</strong></td>
+                          <td>
+                            <strong>{s.full_name}</strong>
+                            {isDeactivatedThisMonth(s) && (
+                              <span style={{marginLeft:'6px', background:'#fef08a', color:'#92400e', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED THIS MONTH</span>
+                            )}
+                          </td>
                           <td>{s.class_name}</td>
                         </tr>
                       ))}
@@ -245,9 +256,14 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {modalConfig.rows.map(e => (
-                        <tr key={e.id}>
+                        <tr key={e.id} style={isDeactivatedThisMonth(e) ? {background:'#fef9c3'} : undefined}>
                           <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{e.emp_id}</code></td>
-                          <td><strong>{e.full_name}</strong></td>
+                          <td>
+                            <strong>{e.full_name}</strong>
+                            {isDeactivatedThisMonth(e) && (
+                              <span style={{marginLeft:'6px', background:'#fef08a', color:'#92400e', padding:'1px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:'800'}}>DEACTIVATED THIS MONTH</span>
+                            )}
+                          </td>
                           <td>{e.role_name}</td>
                         </tr>
                       ))}
@@ -264,7 +280,10 @@ const Dashboard = () => {
               <div className="mobile-card-list">
                 {modalConfig.type === 'student' ? (
                   modalConfig.rows.map(s => (
-                    <div className="data-card" key={s.id}>
+                    <div className="data-card" key={s.id} style={isDeactivatedThisMonth(s) ? {background:'#fef9c3', borderRadius:'8px'} : undefined}>
+                      {isDeactivatedThisMonth(s) && (
+                        <div style={{background:'#fef08a', color:'#92400e', padding:'3px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:'800', marginBottom:'6px', display:'inline-block'}}>DEACTIVATED THIS MONTH</div>
+                      )}
                       <div className="data-card-row">
                         <span className="dc-label">Roll No</span>
                         <span className="dc-value"><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></span>
@@ -281,7 +300,10 @@ const Dashboard = () => {
                   ))
                 ) : (
                   modalConfig.rows.map(e => (
-                    <div className="data-card" key={e.id}>
+                    <div className="data-card" key={e.id} style={isDeactivatedThisMonth(e) ? {background:'#fef9c3', borderRadius:'8px'} : undefined}>
+                      {isDeactivatedThisMonth(e) && (
+                        <div style={{background:'#fef08a', color:'#92400e', padding:'3px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:'800', marginBottom:'6px', display:'inline-block'}}>DEACTIVATED THIS MONTH</div>
+                      )}
                       <div className="data-card-row">
                         <span className="dc-label">Emp ID</span>
                         <span className="dc-value"><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{e.emp_id}</code></span>
