@@ -250,7 +250,7 @@ const Salary = () => {
                       setForm({...form, employee_id: e.target.value, basic_salary: emp?.salary || ''});
                     }} required>
                       <option value="">Select Employee</option>
-                      {employees.map(e => <option key={e.id} value={e.id}>{e.full_name} ({e.emp_id}) — {e.role_name}{!e.is_active ? ' — Deactivated' : ''}</option>)}
+                      {employees.filter(e => e.is_active).map(e => <option key={e.id} value={e.id}>{e.full_name} ({e.emp_id}) — {e.role_name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
