@@ -78,6 +78,12 @@ const Marks = () => {
         });
       });
       setInputMarks(init);
+
+      // Notify when this class has no students at all for the selected academic year
+      if (marksRes.data.students.length === 0) {
+        const clsName = classes.find(c => c.id == (filters.class_id || marksRes.data.class_id))?.name || 'this class';
+        toast.info(`No students found for ${clsName} in academic year ${filters.academic_year}`);
+      }
     } catch (err) {
       console.error('fetchMarks error:', err);
       toast.error(err.response?.data?.message || 'Failed to load marks');
