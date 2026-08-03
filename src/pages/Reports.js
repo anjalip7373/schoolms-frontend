@@ -42,7 +42,7 @@ const Reports = () => {
       const classParam = (!isTeacher && filters.class_id) ? { class_id: filters.class_id } : {};
       
       const [studRes, feeRes] = await Promise.all([
-        API.get('/students', { params: { ...classParam, search } }).catch(() => ({ data: [] })),
+        API.get('/students', { params: { ...classParam, search, to_month: filters.to_month, to_year: filters.to_year } }).catch(() => ({ data: [] })),
         API.get('/fees/all-students-status', { params: {
           ...classParam,
           from_month: filters.from_month,
@@ -57,7 +57,7 @@ const Reports = () => {
 
       if (isAdminOrPrincipal) {
         const [empRes, salRes] = await Promise.all([
-          API.get('/employees', { params: { role_type: 'employee' } }).catch(() => ({ data: [] })),
+          API.get('/employees', { params: { role_type: 'employee', to_month: filters.to_month, to_year: filters.to_year } }).catch(() => ({ data: [] })),
           API.get('/salary/all-employees-status', { params: {
             from_month: filters.from_month,
             from_year: filters.from_year,
