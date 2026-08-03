@@ -78,7 +78,18 @@ const Marks = () => {
         });
       });
       setInputMarks(init);
+
+      // Notify if no marks have been entered yet for this class/exam/year
+      const hasAnyMarks = Object.values(marksRes.data.marksMap || {}).some(subjMap =>
+        Object.values(subjMap || {}).some(entry => entry && (entry.marks !== null && entry.marks !== undefined || entry.is_absent))
+      );
+      if (!hasAnyMarks && marksRes.data.students.length > 0) {
+        const clsName = classes.find(c => c.id == (filters.class_id || marksRes.data.class_id))?.name || 'this class';
+        const examName = examTypes.find(e => e.id == filters.exam_type_id)?.name || 'this exam';
+        toast.info(`No marks entered yet for ${clsName} - ${examName} (${filters.academic_year})`);
+      }
     } catch (err) {
+      
       console.error('fetchMarks error:', err);
       toast.error(err.response?.data?.message || 'Failed to load marks');
     } finally { setLoading(false); }
