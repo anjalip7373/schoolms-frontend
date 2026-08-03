@@ -267,7 +267,6 @@ const Configuration = () => {
     setSelectedSubjectToAdd(cfg.subject_id);
     setMaxMarks(cfg.max_marks);
     setPassMarks(cfg.pass_marks);
-    window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
     toast.info('Loaded into fields for quick editing!');
   };
 
