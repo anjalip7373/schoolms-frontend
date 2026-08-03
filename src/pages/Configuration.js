@@ -267,7 +267,6 @@ const Configuration = () => {
     setSelectedSubjectToAdd(cfg.subject_id);
     setMaxMarks(cfg.max_marks);
     setPassMarks(cfg.pass_marks);
-    toast.info('Loaded into fields for quick editing!');
   };
 
   const wrap = (fn) => async (...args) => { await fn(...args); fetchAll(); };
