@@ -252,11 +252,12 @@ tbody tr:last-child td { border-bottom: none; }
 
 /* ─── Data Card View (mobile) — used by Attendance & Dashboard modal ─── */
 .desktop-table-view { display: block; }
-.mobile-card-list { display: none; flex-direction: column; gap: 12px; }
+.mobile-card-list { display: none; flex-direction: column; gap: 12px; scroll-snap-type: y proximity; }
 
 .data-card {
   background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
   padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px;
+  scroll-snap-align: start;
 }
 .data-card-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -269,6 +270,8 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex; justify-content: flex-end; padding-top: 10px; margin-top: 4px;
   border-top: 1px solid var(--border);
 }
+
+
 
 @media (max-width: 1024px) {
   .desktop-table-view { display: none !important; }
