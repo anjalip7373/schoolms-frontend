@@ -114,7 +114,7 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
       </div>
 
       {/* Mobile: card view */}
-      <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'320px', overflowY:'auto'}}>
+      <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'240px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'10px'}}>
         {items.map(item => (
           <div className="data-card" key={item.id}>
             <div className="data-card-row">
@@ -394,7 +394,7 @@ const Configuration = () => {
           </div>
 
           {/* Mobile: card view */}
-          <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'320px', overflowY:'auto'}}>
+          <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'240px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'10px'}}>
             {examConfigs
               .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
               .map(cfg => (
