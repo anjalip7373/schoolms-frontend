@@ -114,7 +114,7 @@ const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, ed
       </div>
 
       {/* Mobile: card view */}
-      <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
+      <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'320px', overflowY:'auto'}}>
         {items.map(item => (
           <div className="data-card" key={item.id}>
             <div className="data-card-row">
@@ -291,7 +291,7 @@ const Configuration = () => {
         <div style={{padding:'14px 20px', borderBottom:'1px solid #e2e8f0'}}>
           <h3 style={{margin:0, fontSize:'14px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
         </div>
-        <div style={{padding:'14px 20px', maxHeight:'250px', overflowY:'auto'}}>
+        <div className="mobile-card-scroll" style={{padding:'14px 20px', maxHeight:'250px', overflowY:'auto'}}>
           {classes.map(cls => {
             const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
             return (
@@ -394,7 +394,7 @@ const Configuration = () => {
           </div>
 
           {/* Mobile: card view */}
-          <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
+          <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'320px', overflowY:'auto'}}>
             {examConfigs
               .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
               .map(cfg => (
