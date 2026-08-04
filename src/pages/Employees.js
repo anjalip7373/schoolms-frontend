@@ -175,48 +175,132 @@ const handleSubmit = async (ev) => {
   
       {/* Table */}
       <div className="card">
-        <div className="table-wrapper employees-table">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Emp ID</th>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>User ID</th>
-                  <th>Phone</th>
-                  <th>Class</th>
-                  <th>Subject</th>
-                  <th>Salary</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentList.map(e => (
-                  <tr key={e.id}>
-                    <td>
+        {loading ? <div className="loading"><div className="spinner"></div></div> : (
+          <>
+            {/* Desktop: table view */}
+            <div className="desktop-table-view">
+              <div className="table-wrapper employees-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Emp ID</th>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>User ID</th>
+                      <th>Phone</th>
+                      <th>Class</th>
+                      <th>Subject</th>
+                      <th>Salary</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentList.map(e => (
+                      <tr key={e.id}>
+                        <td>
+                          <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
+                            {e.emp_id}
+                          </code>
+                        </td>
+                        <td><strong>{e.full_name}</strong></td>
+                        <td><span className="badge badge-info">{e.role_name}</span></td>
+                        <td>
+                          <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
+                            {e.login_user_id}
+                          </code>
+                        </td>
+                        <td>{e.phone}</td>
+                        <td>{e.class_name || '—'}</td>
+                        <td>{e.subject || '—'}</td>
+                        <td>Rs. {parseFloat(e.salary || 0).toLocaleString()}</td>
+                        <td>
+                          <span className={"badge " + (e.is_active ? 'badge-success' : 'badge-danger')}>
+                            {e.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{display:'flex', gap:'6px'}}>
+                            <button className="btn btn-outline btn-sm" onClick={() => openEdit(e)}>✏️ Edit</button>
+                            <button
+                              className={"btn btn-sm " + (e.is_active ? 'btn-warning' : 'btn-success')}
+                              onClick={() => handleDeactivate(e)}>
+                              {e.is_active ? '🔴 Deactivate' : '🟢 Activate'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!currentList.length && (
+                      <tr>
+                        <td colSpan="10">
+                          <div className="empty-state">
+                          <div className="empty-icon">👨‍💼</div>
+                          <p>No staff members found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile: card view */}
+            <div className="mobile-card-list" style={{ padding: currentList.length ? '16px' : '0' }}>
+              {currentList.map(e => (
+                <div className="data-card" key={e.id}>
+                  <div className="data-card-row">
+                    <span className="dc-label">Emp ID</span>
+                    <span className="dc-value">
                       <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
                         {e.emp_id}
                       </code>
-                    </td>
-                    <td><strong>{e.full_name}</strong></td>
-                    <td><span className="badge badge-info">{e.role_name}</span></td>
-                    <td>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Name</span>
+                    <span className="dc-value"><strong>{e.full_name}</strong></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Role</span>
+                    <span className="dc-value"><span className="badge badge-info">{e.role_name}</span></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">User ID</span>
+                    <span className="dc-value">
                       <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
                         {e.login_user_id}
                       </code>
-                    </td>
-                    <td>{e.phone}</td>
-                    <td>{e.class_name || '—'}</td>
-                    <td>{e.subject || '—'}</td>
-                    <td>Rs. {parseFloat(e.salary || 0).toLocaleString()}</td>
-                    <td>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Phone</span>
+                    <span className="dc-value">{e.phone}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Class</span>
+                    <span className="dc-value">{e.class_name || '—'}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Subject</span>
+                    <span className="dc-value">{e.subject || '—'}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Salary</span>
+                    <span className="dc-value">Rs. {parseFloat(e.salary || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Status</span>
+                    <span className="dc-value">
                       <span className={"badge " + (e.is_active ? 'badge-success' : 'badge-danger')}>
                         {e.is_active ? 'Active' : 'Inactive'}
                       </span>
-                    </td>
-                    <td>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Actions</span>
+                    <span className="dc-value">
                       <div style={{display:'flex', gap:'6px'}}>
                         <button className="btn btn-outline btn-sm" onClick={() => openEdit(e)}>✏️ Edit</button>
                         <button
@@ -225,23 +309,19 @@ const handleSubmit = async (ev) => {
                           {e.is_active ? '🔴 Deactivate' : '🟢 Activate'}
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {!currentList.length && !loading && (
-                  <tr>
-                    <td colSpan="10">
-                      <div className="empty-state">
-                      <div className="empty-icon">👨‍💼</div>
-                      <p>No staff members found</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {!currentList.length && (
+                <div className="empty-state">
+                  <div className="empty-icon">👨‍💼</div>
+                  <p>No staff members found</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

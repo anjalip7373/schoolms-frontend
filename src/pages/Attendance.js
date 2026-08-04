@@ -188,67 +188,133 @@ const Attendance = () => {
       </div>
 
       <div className="card">
-        <div className="table-wrapper">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>{personType === 'student' ? 'Roll No' : 'Emp ID'}</th>
-                  <th>Name</th>
-                  {personType === 'student' && <th>Class</th>}
-                  <th>Mark Attendance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentRecords.map((r, i) => {
-                  const isDeactivated = personType === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
-                  return (
-                  <tr key={r.id + '-' + r.person_type} style={isDeactivated ? {background:'#fef2f2', opacity:0.7} : undefined}>
-                    <td data-label="#">{i + 1}</td>
-                    <td data-label={personType === 'student' ? 'Roll No' : 'Emp ID'}>
-                      <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
-                        {r.identifier}
-                      </code>
-                    </td>
-                    <td data-label="Name">
-                      <strong>{r.full_name}</strong>
-                      {isDeactivated && (
-                        <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
-                      )}
-                    </td>
-                    {personType === 'student' && <td data-label="Class">{r.class_name}</td>}
-                    <td data-label="Mark Attendance">
-                      <div className="attendance-status-btns">
-                        {['present','absent','late','halfday'].map(s => (
-                          <button
-                            key={s}
-                            disabled={isDeactivated}
-                            className={"att-btn " + s + (r.status === s ? ' active' : '')}
-                            style={isDeactivated ? {opacity:0.4, cursor:'not-allowed'} : undefined}
-                            onClick={() => setStatus(r.id, s)}>
-                            {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
-                          </button>
-                        ))}
+        {loading ? <div className="loading"><div className="spinner"></div></div> : (
+          <>
+            {/* Desktop: table view */}
+            <div className="desktop-table-view">
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>{personType === 'student' ? 'Roll No' : 'Emp ID'}</th>
+                      <th>Name</th>
+                      {personType === 'student' && <th>Class</th>}
+                      <th>Mark Attendance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRecords.map((r, i) => {
+                      const isDeactivated = personType === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
+                      return (
+                      <tr key={r.id + '-' + r.person_type} style={isDeactivated ? {background:'#fef2f2', opacity:0.7} : undefined}>
+                        <td data-label="#">{i + 1}</td>
+                        <td data-label={personType === 'student' ? 'Roll No' : 'Emp ID'}>
+                          <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
+                            {r.identifier}
+                          </code>
+                        </td>
+                        <td data-label="Name">
+                          <strong>{r.full_name}</strong>
+                          {isDeactivated && (
+                            <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                          )}
+                        </td>
+                        {personType === 'student' && <td data-label="Class">{r.class_name}</td>}
+                        <td data-label="Mark Attendance">
+                          <div className="attendance-status-btns">
+                            {['present','absent','late','halfday'].map(s => (
+                              <button
+                                key={s}
+                                disabled={isDeactivated}
+                                className={"att-btn " + s + (r.status === s ? ' active' : '')}
+                                style={isDeactivated ? {opacity:0.4, cursor:'not-allowed'} : undefined}
+                                onClick={() => setStatus(r.id, s)}>
+                                {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                      );
+                    })}
+                    {!currentRecords.length && (
+                      <tr>
+                        <td colSpan="6">
+                          <div className="empty-state">
+                            <div className="empty-icon">📋</div>
+                            <p>No records found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile: card view */}
+            <div className="mobile-card-list" style={{ padding: currentRecords.length ? '16px' : '0' }}>
+              {currentRecords.map((r, i) => {
+                const isDeactivated = personType === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
+                return (
+                  <div className="data-card" key={r.id + '-' + r.person_type} style={isDeactivated ? {background:'#fef2f2'} : undefined}>
+                    <div className="data-card-row">
+                      <span className="dc-label">#</span>
+                      <span className="dc-value">{i + 1}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="dc-label">{personType === 'student' ? 'Roll No' : 'Emp ID'}</span>
+                      <span className="dc-value">
+                        <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
+                          {r.identifier}
+                        </code>
+                      </span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="dc-label">Name</span>
+                      <span className="dc-value">
+                        <strong>{r.full_name}</strong>
+                        {isDeactivated && (
+                          <span style={{marginLeft:'8px', background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:'8px', fontSize:'10px', fontWeight:'800'}}>DEACTIVATED</span>
+                        )}
+                      </span>
+                    </div>
+                    {personType === 'student' && (
+                      <div className="data-card-row">
+                        <span className="dc-label">Class</span>
+                        <span className="dc-value">{r.class_name}</span>
                       </div>
-                    </td>
-                  </tr>
-                  );
-                })}
-                {!currentRecords.length && !loading && (
-                  <tr>
-                    <td colSpan="6">
-                      <div className="empty-state">
-                        <div className="empty-icon">📋</div>
-                        <p>No records found</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    )}
+                    <div className="data-card-row">
+                      <span className="dc-label">Mark Attendance</span>
+                      <span className="dc-value">
+                        <div className="attendance-status-btns">
+                          {['present','absent','late','halfday'].map(s => (
+                            <button
+                              key={s}
+                              disabled={isDeactivated}
+                              className={"att-btn " + s + (r.status === s ? ' active' : '')}
+                              style={isDeactivated ? {opacity:0.4, cursor:'not-allowed'} : undefined}
+                              onClick={() => setStatus(r.id, s)}>
+                              {s === 'present' ? 'P' : s === 'absent' ? 'A' : s === 'late' ? 'L' : 'H'}
+                            </button>
+                          ))}
+                        </div>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              {!currentRecords.length && (
+                <div className="empty-state">
+                  <div className="empty-icon">📋</div>
+                  <p>No records found</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );

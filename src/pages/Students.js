@@ -159,29 +159,88 @@ setStudents(sorted);
       </div>
 
       <div className="card">
-        <div className="table-wrapper students-table">
-          {loading ? <div className="loading"><div className="spinner"></div></div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Roll No</th><th>Name</th><th>Class</th><th>Phone</th>
-                  <th>WhatsApp</th><th>Fee Status</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map(s => (
-                  <tr key={s.id}>
-                    <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
-                    <td><strong>{s.full_name}</strong></td>
-                    <td>{s.class_name}</td>
-                    <td>{s.phone}</td>
-                    <td>{s.whatsapp_no}</td>
-                    <td>
+        {loading ? <div className="loading"><div className="spinner"></div></div> : (
+          <>
+            {/* Desktop: table view */}
+            <div className="desktop-table-view">
+              <div className="table-wrapper students-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Roll No</th><th>Name</th><th>Class</th><th>Phone</th>
+                      <th>WhatsApp</th><th>Fee Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map(s => (
+                      <tr key={s.id}>
+                        <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
+                        <td><strong>{s.full_name}</strong></td>
+                        <td>{s.class_name}</td>
+                        <td>{s.phone}</td>
+                        <td>{s.whatsapp_no}</td>
+                        <td>
+                          <span className={"badge " + (s.fee_status === 'active' ? 'badge-success' : 'badge-danger')}>
+                            {s.fee_status === 'active' ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{display:'flex', gap:'6px'}}>
+                            <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
+                            <button
+                              className={"btn btn-sm " + (s.fee_status === 'active' ? 'btn-warning' : 'btn-success')}
+                              onClick={() => toggleFeeStatus(s)}>
+                              {s.fee_status === 'active' ? '🔴 Deactivate' : '🟢 Activate'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!students.length && (
+                      <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">👨‍🎓</div><p>No students found</p></div></td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile: card view */}
+            <div className="mobile-card-list" style={{ padding: students.length ? '16px' : '0' }}>
+              {students.map(s => (
+                <div className="data-card" key={s.id}>
+                  <div className="data-card-row">
+                    <span className="dc-label">Roll No</span>
+                    <span className="dc-value">
+                      <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Name</span>
+                    <span className="dc-value"><strong>{s.full_name}</strong></span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Class</span>
+                    <span className="dc-value">{s.class_name}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Phone</span>
+                    <span className="dc-value">{s.phone}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">WhatsApp</span>
+                    <span className="dc-value">{s.whatsapp_no}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Fee Status</span>
+                    <span className="dc-value">
                       <span className={"badge " + (s.fee_status === 'active' ? 'badge-success' : 'badge-danger')}>
                         {s.fee_status === 'active' ? 'Active' : 'Inactive'}
                       </span>
-                    </td>
-                    <td>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="dc-label">Actions</span>
+                    <span className="dc-value">
                       <div style={{display:'flex', gap:'6px'}}>
                         <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>✏️ Edit</button>
                         <button
@@ -190,17 +249,19 @@ setStudents(sorted);
                           {s.fee_status === 'active' ? '🔴 Deactivate' : '🟢 Activate'}
                         </button>
                       </div>
-                    </td>
-                    
-                  </tr>
-                ))}
-                {!students.length && !loading && (
-                  <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">👨‍🎓</div><p>No students found</p></div></td></tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {!students.length && (
+                <div className="empty-state">
+                  <div className="empty-icon">👨‍🎓</div>
+                  <p>No students found</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {showModal && (
