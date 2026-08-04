@@ -394,7 +394,7 @@ const Configuration = () => {
           </div>
 
           {/* Mobile: card view */}
-          <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
+          <div className="mobile-card-list">
             {examConfigs
               .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
               .map(cfg => (

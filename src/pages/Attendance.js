@@ -145,7 +145,8 @@ const Attendance = () => {
       </div>
 
       {/* Filters Row */}
-      <div className="filter-bar" style={{marginBottom:'16px', flexWrap:'wrap'}}>
+      <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
+      <div className="filter-bar" style={{flexWrap:'wrap'}}>
         {/* Student/Employee toggle */}
         {isTeacher ? (
           <div style={{background:'#1e40af', color:'#fff', padding:'8px 16px', borderRadius:'8px', fontSize:'14px', fontWeight:'600'}}>
@@ -183,6 +184,7 @@ const Attendance = () => {
             📚 Your class students only
           </div>
         )}
+      </div>
       </div>
 
       <div className="card">

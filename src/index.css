@@ -433,7 +433,7 @@ tbody tr:last-child td { border-bottom: none; }
   .table-wrapper td:last-child { 
     border-bottom: none !important; 
     padding-top: 12px !important; /* Action buttons (Edit/Delete) ke liye space */
-    justify-content: center !important; /* Buttons ko center me fit karne ke liye */
+    justify-content: flex-end !important; /* Buttons ko right side me align karne ke liye */
     gap: 8px !important;
   }
 
