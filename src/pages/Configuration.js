@@ -291,7 +291,7 @@ const Configuration = () => {
         <div style={{padding:'14px 20px', borderBottom:'1px solid #e2e8f0'}}>
           <h3 style={{margin:0, fontSize:'14px', fontWeight:'800'}}>🏫 Classes & Their Subjects</h3>
         </div>
-        <div className="mobile-card-scroll" style={{padding:'14px 20px', maxHeight:'250px', overflowY:'auto'}}>
+        <div className="mobile-card-scroll" style={{margin:'14px 20px', padding:'12px', maxHeight:'250px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
           {classes.map(cls => {
             const clsSubjects = classSubjects.filter(cs => cs.class_id === cls.id);
             return (
