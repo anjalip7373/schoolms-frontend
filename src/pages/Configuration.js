@@ -313,9 +313,9 @@ const Configuration = () => {
       </div>
 
       {/* ─── EXAM PATTERN CONFIG PANEL WITH SCROLL WRAPPER ─── */}
-      <div className="card" style={{marginBottom:'20px', border:'2px solid #3b82f6'}}>
-        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#f0f9ff'}}>
-          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800', color:'#1e40af'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
+      <div className="card" style={{marginBottom:'20px'}}>
+        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0'}}>
+          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800'}}>📝 Exam Type Wise Subjects & Marks Configuration</h3>
         </div>
         <div style={{padding:'16px 20px'}}>
           <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
@@ -394,7 +394,7 @@ const Configuration = () => {
           </div>
 
           {/* Mobile: card view */}
-          <div className="mobile-card-list">
+          <div className="mobile-card-list" style={{maxHeight:'320px', overflowY:'auto'}}>
             {examConfigs
               .filter(cfg => !selectedConfigClass || cfg.class_id == selectedConfigClass)
               .map(cfg => (
