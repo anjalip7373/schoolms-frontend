@@ -55,10 +55,33 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-// Toggleable password input — custom icon so it renders the same on web and Android WebView
-// (browsers show their own native reveal-eye, but Android's WebView doesn't render it)
+// Detect the Capacitor native app (Android WebView doesn't render the browser's
+// built-in password reveal-eye, so we only add our own icon there — web keeps
+// using the browser's native one, untouched)
+const isNativeApp =
+  typeof window !== 'undefined' &&
+  window.Capacitor &&
+  typeof window.Capacitor.isNativePlatform === 'function' &&
+  window.Capacitor.isNativePlatform();
+
 const PasswordField = ({ value, onChange, placeholder, required, style, inputStyle }) => {
   const [show, setShow] = useState(false);
+
+  if (!isNativeApp) {
+    // Web: plain password input — browser already provides its own reveal-eye
+    return (
+      <input
+        type="password"
+        className="form-control"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
+        style={style || inputStyle}
+      />
+    );
+  }
+
   return (
     <div style={{position:'relative', ...style}}>
       <input
