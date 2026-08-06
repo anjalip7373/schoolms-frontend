@@ -41,6 +41,51 @@ const StrengthBar = ({ pw }) => {
   );
 };
 
+const EyeIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+);
+
+// Toggleable password input — custom icon so it renders the same on web and Android WebView
+// (browsers show their own native reveal-eye, but Android's WebView doesn't render it)
+const PasswordField = ({ value, onChange, placeholder, required, style, inputStyle }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{position:'relative', ...style}}>
+      <input
+        type={show ? 'text' : 'password'}
+        className="form-control"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
+        style={{paddingRight:'40px', ...inputStyle}}
+      />
+      <button
+        type="button"
+        onClick={() => setShow(s => !s)}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        style={{
+          position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)',
+          background:'none', border:'none', padding:'4px', margin:0,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          cursor:'pointer', lineHeight:0
+        }}>
+        {show ? <EyeOffIcon/> : <EyeIcon/>}
+      </button>
+    </div>
+  );
+};
+
 export default function Login() {
   const [form, setForm] = useState({login_user_id:'',login_password:''});
   const [loading, setLoading] = useState(false);
@@ -139,7 +184,7 @@ export default function Login() {
               </div>
               <div className="form-group">
                 <label>Password <span style={{color:'red'}}>*</span></label>
-                <input type="password" className="form-control" placeholder="Enter your password"
+                <PasswordField placeholder="Enter your password"
                   value={form.login_password}
                   onChange={e=>setForm({...form,login_password:e.target.value})} required/>
               </div>
@@ -226,7 +271,7 @@ export default function Login() {
 
                 <div className="form-group">
                   <label>New Password <span style={{color:'red'}}>*</span></label>
-                  <input type="password" className="form-control"
+                  <PasswordField
                     placeholder="Create a strong password"
                     value={newPw}
                     onChange={e=>setNewPw(e.target.value)}
@@ -236,7 +281,7 @@ export default function Login() {
 
                 <div className="form-group">
                   <label>Confirm Password <span style={{color:'red'}}>*</span></label>
-                  <input type="password" className="form-control"
+                  <PasswordField
                     placeholder="Confirm new password"
                     value={confirmPw}
                     onChange={e=>setConfirmPw(e.target.value)}
