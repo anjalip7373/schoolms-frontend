@@ -108,8 +108,40 @@ setEmployees(sorted);
     } catch (err) { toast.error('Failed'); }
   };
 
+  const validate = () => {
+    const name = form.full_name.trim();
+    if (!name) { toast.error('Full name is required'); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols'); return false; }
+
+    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits'); return false; }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form.email || '').trim())) { toast.error('Enter a valid email address'); return false; }
+
+    if (!form.date_of_birth) { toast.error('Date of birth is required'); return false; }
+    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future'); return false; }
+
+    if (!form.joining_date) { toast.error('Joining date is required'); return false; }
+
+    if (form.salary === '' || isNaN(form.salary) || Number(form.salary) < 0) { toast.error('Enter a valid salary'); return false; }
+
+    if (!editMode) {
+      if (!form.login_user_id.trim()) { toast.error('Login User ID is required'); return false; }
+      if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces'); return false; }
+    }
+
+    return true;
+  };
+
+  // Only allow digits to reach the phone field, capped at 10 chars
+  const handlePhoneChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm(prev => ({ ...prev, phone: digitsOnly }));
+  };
+
 const handleSubmit = async (ev) => {
   ev.preventDefault();
+
+  if (!validate()) return;
 
   // ✅ Password validation for new staff only
   if (!editMode) {
@@ -396,12 +428,15 @@ const handleSubmit = async (ev) => {
                   <div className="form-group">
                     <label>Phone No <span>*</span></label>
                     <input className="form-control" value={form.phone}
-                      onChange={e => setForm({...form, phone: e.target.value})}
-                      required placeholder="Phone number" />
+                      onChange={handlePhoneChange}
+                      type="tel" inputMode="numeric" pattern="\d{10}" maxLength={10}
+                      title="Enter exactly 10 digits"
+                      required placeholder="10-digit phone number" />
                   </div>
                   <div className="form-group">
                     <label>Date of Birth <span>*</span></label>
                     <input type="date" className="form-control" value={form.date_of_birth}
+                      max={new Date().toISOString().split('T')[0]}
                       onChange={e => setForm({...form, date_of_birth: e.target.value})} required />
                   </div>
                   <div className="form-group">
@@ -465,6 +500,7 @@ const handleSubmit = async (ev) => {
                     <label>Salary (Rs.) <span>*</span></label>
                     <input type="number" className="form-control" value={form.salary}
                       onChange={e => setForm({...form, salary: e.target.value})}
+                      min="0" step="0.01"
                       required placeholder="0.00" />
                   </div>
                   <div className="form-group">
