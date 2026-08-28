@@ -129,6 +129,18 @@ setEmployees(sorted);
       if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces'); return false; }
     }
 
+    // Duplicate check against already-loaded staff list (name + DOB + phone), excluding the record being edited
+    const dup = employees.find(e =>
+      e.id !== editId &&
+      e.full_name.trim().toLowerCase() === name.toLowerCase() &&
+      (e.date_of_birth?.split('T')[0] || '') === form.date_of_birth &&
+      e.phone === form.phone
+    );
+    if (dup) {
+      toast.error(`${name} already exists with the same date of birth and phone number.`);
+      return false;
+    }
+
     return true;
   };
 
