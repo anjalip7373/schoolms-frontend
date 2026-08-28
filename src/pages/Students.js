@@ -100,6 +100,19 @@ setStudents(sorted);
     if (!form.address.trim()) { toast.error('Address is required'); return false; }
     if (!form.class_id) { toast.error('Please select a class'); return false; }
 
+    // Duplicate check against currently-loaded students list (name + DOB + phone), excluding the record being edited.
+    // Best-effort only — the list may be filtered by search/class, so the backend is the real guard.
+    const dup = students.find(s =>
+      s.id !== editId &&
+      s.full_name.trim().toLowerCase() === name.toLowerCase() &&
+      (s.date_of_birth?.split('T')[0] || '') === form.date_of_birth &&
+      s.phone === form.phone
+    );
+    if (dup) {
+      toast.error(`${name} already exists with the same date of birth and phone number.`);
+      return false;
+    }
+
     return true;
   };
 
