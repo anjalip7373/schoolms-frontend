@@ -104,8 +104,27 @@ const Profile = () => {
     } catch (err) {}
   };
 
+  const validate = () => {
+    const name = form.full_name.trim();
+    if (!name) { toast.error('Full name is required'); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols'); return false; }
+
+    if (form.phone && !/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits'); return false; }
+
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Enter a valid email address'); return false; }
+
+    return true;
+  };
+
+  // Only allow digits to reach the phone field, capped at 10 chars
+  const handlePhoneChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm(prev => ({ ...prev, phone: digitsOnly }));
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
     try {
       await API.put('/auth/profile', form);
@@ -251,12 +270,19 @@ const Profile = () => {
                     <div className="form-group" style={{gridColumn:'1/-1'}}>
                       <label>Full Name <span>*</span></label>
                       <input className="form-control" value={form.full_name}
-                        onChange={e => setForm({...form, full_name: e.target.value})} required />
+                        onChange={e => {
+                          const lettersOnly = e.target.value.replace(/[^A-Za-z ._'-]/g, '');
+                          setForm({...form, full_name: lettersOnly});
+                        }}
+                        title="Letters, spaces and . ' - only" required />
                     </div>
                     <div className="form-group">
                       <label>Phone Number</label>
                       <input className="form-control" value={form.phone}
-                        onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone number" />
+                        onChange={handlePhoneChange}
+                        type="tel" inputMode="numeric" pattern="\d{10}" maxLength={10}
+                        title="Enter exactly 10 digits"
+                        placeholder="10-digit phone number" />
                     </div>
                     <div className="form-group">
                       <label>Email Address</label>
