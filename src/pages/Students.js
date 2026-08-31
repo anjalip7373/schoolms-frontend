@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
 const emptyForm = { full_name:'', class_id:'', phone:'', whatsapp_no:'', email:'', date_of_birth:'', address:'', fee_status:'active' };
@@ -86,19 +86,19 @@ setStudents(sorted);
 
   const validate = () => {
     const name = form.full_name.trim();
-    if (!name) { toast.error('Full name is required'); return false; }
-    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols'); return false; }
+    if (!name) { toast.error('Full name is required', { containerId: 'formToast' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { containerId: 'formToast' }); return false; }
 
-    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits'); return false; }
-    if (!/^\d{10}$/.test(form.whatsapp_no)) { toast.error('WhatsApp number must be exactly 10 digits'); return false; }
+    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
+    if (!/^\d{10}$/.test(form.whatsapp_no)) { toast.error('WhatsApp number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Enter a valid email address'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Enter a valid email address', { containerId: 'formToast' }); return false; }
 
-    if (!form.date_of_birth) { toast.error('Date of birth is required'); return false; }
-    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future'); return false; }
+    if (!form.date_of_birth) { toast.error('Date of birth is required', { containerId: 'formToast' }); return false; }
+    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { containerId: 'formToast' }); return false; }
 
-    if (!form.address.trim()) { toast.error('Address is required'); return false; }
-    if (!form.class_id) { toast.error('Please select a class'); return false; }
+    if (!form.address.trim()) { toast.error('Address is required', { containerId: 'formToast' }); return false; }
+    if (!form.class_id) { toast.error('Please select a class', { containerId: 'formToast' }); return false; }
 
     // Duplicate check against currently-loaded students list (name + DOB + phone), excluding the record being edited.
     // Best-effort only — the list may be filtered by search/class, so the backend is the real guard.
@@ -109,7 +109,7 @@ setStudents(sorted);
       s.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`);
+      toast.error(`${name} already exists with the same date of birth and phone number.`, { containerId: 'formToast' });
       return false;
     }
 
@@ -129,14 +129,14 @@ setStudents(sorted);
     try {
       if (editMode) {
         await API.put(`/students/${editId}`, form);
-        toast.success('Student updated!');
+        toast.success('Student updated!', { containerId: 'formToast' });
       } else {
         const { data } = await API.post('/students', form);
-        toast.success(`Student added! Roll No: ${data.roll_no}`);
+        toast.success(`Student added! Roll No: ${data.roll_no}`, { containerId: 'formToast' });
       }
       setShowModal(false);
       fetchStudents();
-    } catch (err) { toast.error(err.response?.data?.message || 'Operation failed'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Operation failed', { containerId: 'formToast' }); }
     finally { setSaving(false); }
   };
 
@@ -305,7 +305,18 @@ setStudents(sorted);
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px'}}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px', position:'relative'}}>
+            <ToastContainer
+              containerId="formToast"
+              position="top-center"
+              autoClose={3500}
+              hideProgressBar={false}
+              closeOnClick
+              newestOnTop
+              limit={1}
+              style={{ position: 'absolute', top: 8, left: 0, right: 0, width: 'auto', margin: '0 auto', zIndex: 2000 }}
+              toastStyle={{ maxWidth: '90%', margin: '0 auto' }}
+            />
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Student' : '➕ Add New Student'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
@@ -317,8 +328,6 @@ setStudents(sorted);
                     <label>Full Name <span>*</span></label>
                     <input className="form-control" value={form.full_name}
                       onChange={e => setForm({...form, full_name: e.target.value})}
-                      pattern="[A-Za-z ._'-]+"
-                      title="Full name should not contain numbers or symbols"
                       required placeholder="Enter full name" />
                   </div>
                   <div className="form-group">

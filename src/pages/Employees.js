@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
 const emptyForm = {
@@ -110,23 +110,23 @@ setEmployees(sorted);
 
   const validate = () => {
     const name = form.full_name.trim();
-    if (!name) { toast.error('Full name is required'); return false; }
-    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols'); return false; }
+    if (!name) { toast.error('Full name is required', { containerId: 'formToast' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { containerId: 'formToast' }); return false; }
 
-    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits'); return false; }
+    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form.email || '').trim())) { toast.error('Enter a valid email address'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form.email || '').trim())) { toast.error('Enter a valid email address', { containerId: 'formToast' }); return false; }
 
-    if (!form.date_of_birth) { toast.error('Date of birth is required'); return false; }
-    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future'); return false; }
+    if (!form.date_of_birth) { toast.error('Date of birth is required', { containerId: 'formToast' }); return false; }
+    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { containerId: 'formToast' }); return false; }
 
-    if (!form.joining_date) { toast.error('Joining date is required'); return false; }
+    if (!form.joining_date) { toast.error('Joining date is required', { containerId: 'formToast' }); return false; }
 
-    if (form.salary === '' || isNaN(form.salary) || Number(form.salary) < 0) { toast.error('Enter a valid salary'); return false; }
+    if (form.salary === '' || isNaN(form.salary) || Number(form.salary) < 0) { toast.error('Enter a valid salary', { containerId: 'formToast' }); return false; }
 
     if (!editMode) {
-      if (!form.login_user_id.trim()) { toast.error('Login User ID is required'); return false; }
-      if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces'); return false; }
+      if (!form.login_user_id.trim()) { toast.error('Login User ID is required', { containerId: 'formToast' }); return false; }
+      if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces', { containerId: 'formToast' }); return false; }
     }
 
     // Duplicate check against already-loaded staff list (name + DOB + phone), excluding the record being edited
@@ -137,7 +137,7 @@ setEmployees(sorted);
       e.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`);
+      toast.error(`${name} already exists with the same date of birth and phone number.`, { containerId: 'formToast' });
       return false;
     }
 
@@ -165,7 +165,7 @@ const handleSubmit = async (ev) => {
     const hasMinLength = pwd.length >= 8;
 
     if (!hasMinLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-      toast.error('Password must be 8+ chars with uppercase, lowercase, number & special character');
+      toast.error('Password must be 8+ chars with uppercase, lowercase, number & special character', { containerId: 'formToast' });
       return;
     }
   }
@@ -175,11 +175,11 @@ const handleSubmit = async (ev) => {
       let empId = editId;
       if (editMode) {
         await API.put(`/employees/${editId}`, form);
-        toast.success('Updated successfully!');
+        toast.success('Updated successfully!', { containerId: 'formToast' });
       } else {
         const { data } = await API.post('/employees', form);
         empId = data.id;
-        toast.success(`Added! Emp ID: ${data.emp_id}`);
+        toast.success(`Added! Emp ID: ${data.emp_id}`, { containerId: 'formToast' });
       }
       // Save teacher subjects if teacher role
       if (isTeacherRole && empId) {
@@ -191,7 +191,7 @@ const handleSubmit = async (ev) => {
       setShowModal(false);
       setSelectedSubjectIds([]);
       fetchAll();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed', { containerId: 'formToast' }); }
     finally { setSaving(false); }
   };
 
@@ -371,7 +371,18 @@ const handleSubmit = async (ev) => {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px'}}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px', position:'relative'}}>
+            <ToastContainer
+              containerId="formToast"
+              position="top-center"
+              autoClose={3500}
+              hideProgressBar={false}
+              closeOnClick
+              newestOnTop
+              limit={1}
+              style={{ position: 'absolute', top: 8, left: 0, right: 0, width: 'auto', margin: '0 auto', zIndex: 2000 }}
+              toastStyle={{ maxWidth: '90%', margin: '0 auto' }}
+            />
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Staff Member' : '➕ Add Staff Member'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
@@ -389,8 +400,6 @@ const handleSubmit = async (ev) => {
                     <label>Full Name <span>*</span></label>
                     <input className="form-control" value={form.full_name}
                       onChange={e => setForm({...form, full_name: e.target.value})}
-                      pattern="[A-Za-z ._'-]+"
-                      title="Full name should not contain numbers or symbols"
                       required placeholder="Full name" />
                   </div>
                   {!editMode && (
