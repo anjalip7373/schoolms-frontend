@@ -317,6 +317,8 @@ setStudents(sorted);
                     <label>Full Name <span>*</span></label>
                     <input className="form-control" value={form.full_name}
                       onChange={e => setForm({...form, full_name: e.target.value})}
+                      pattern="[A-Za-z ._'-]+"
+                      title="Full name should not contain numbers or symbols"
                       required placeholder="Enter full name" />
                   </div>
                   <div className="form-group">

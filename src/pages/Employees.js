@@ -389,6 +389,8 @@ const handleSubmit = async (ev) => {
                     <label>Full Name <span>*</span></label>
                     <input className="form-control" value={form.full_name}
                       onChange={e => setForm({...form, full_name: e.target.value})}
+                      pattern="[A-Za-z ._'-]+"
+                      title="Full name should not contain numbers or symbols"
                       required placeholder="Full name" />
                   </div>
                   {!editMode && (
