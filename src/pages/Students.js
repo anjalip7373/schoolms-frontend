@@ -308,16 +308,17 @@ setStudents(sorted);
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px', position:'relative'}}>
 
             <ToastContainer
-              containerId="formToast"
-              position="top-center"
-              autoClose={3500}
-              hideProgressBar={false}
-              closeOnClick
-              newestOnTop
-              limit={1}
-              style={{ position: 'absolute', top: 90, left: '50%', right: 'auto', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', maxWidth: '420px', margin: 0, zIndex: 2000 }}
-              toastStyle={{ maxWidth: '100%', margin: '0 auto' }}
-            />
+  enableMultiContainer
+  containerId="formToast"
+  position="top-center"
+  autoClose={3500}
+  hideProgressBar={false}
+  closeOnClick
+  newestOnTop
+  limit={1}
+  style={{ position: 'absolute', top: 90, left: '50%', right: 'auto', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', maxWidth: '420px', margin: 0, zIndex: 2000 }}
+  toastStyle={{ maxWidth: '100%', margin: '0 auto' }}
+/>
             
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Student' : '➕ Add New Student'}</h2>

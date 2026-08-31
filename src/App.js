@@ -60,10 +60,32 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <AppRoutes />
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
+        <ToastContainer 
+          enableMultiContainer
+          containerId="defaultAppToast"
+          position="top-right" 
+          autoClose={3000} 
+          hideProgressBar={false} 
+          newestOnTop 
+          closeOnClick 
+          pauseOnHover 
+        />
       </BrowserRouter>
     </AuthProvider>
   );
 }
 
 export default App;
+
+// function App() {
+//   return (
+//     <AuthProvider>
+//       <BrowserRouter>
+//         <AppRoutes />
+//         <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
+//       </BrowserRouter>
+//     </AuthProvider>
+//   );
+// }
+
+// export default App;
