@@ -380,8 +380,8 @@ const handleSubmit = async (ev) => {
               closeOnClick
               newestOnTop
               limit={1}
-              style={{ position: 'absolute', top: 8, left: 0, right: 0, width: 'auto', margin: '0 auto', zIndex: 2000 }}
-              toastStyle={{ maxWidth: '90%', margin: '0 auto' }}
+              style={{ position: 'absolute', top: 90, left: '50%', right: 'auto', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', maxWidth: '420px', margin: 0, zIndex: 2000 }}
+              toastStyle={{ maxWidth: '100%', margin: '0 auto' }}
             />
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Staff Member' : '➕ Add Staff Member'}</h2>
