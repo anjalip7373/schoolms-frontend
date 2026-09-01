@@ -372,7 +372,7 @@ const handleSubmit = async (ev) => {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px', position:'relative'}}>
-            <ToastContainer
+            {/* <ToastContainer
   enableMultiContainer
   containerId="formToast"
   position="top-center"
@@ -383,7 +383,7 @@ const handleSubmit = async (ev) => {
   limit={1}
   style={{ position: 'absolute', top: 90, left: '50%', right: 'auto', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', maxWidth: '420px', margin: 0, zIndex: 2000 }}
   toastStyle={{ maxWidth: '100%', margin: '0 auto' }}
-/>
+/> */}
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Staff Member' : '➕ Add Staff Member'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
