@@ -529,3 +529,9 @@ tbody tr:last-child td { border-bottom: none; }
     max-width: calc(100vw - 32px) !important;
   }
 }
+
+/* ─── Notification Modal Center Control ─── */
+body:has(.modal-overlay) .Toastify__toast-container--top-right {
+  display: none !important;
+}
+
