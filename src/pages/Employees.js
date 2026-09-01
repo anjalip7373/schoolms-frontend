@@ -110,23 +110,23 @@ setEmployees(sorted);
 
   const validate = () => {
     const name = form.full_name.trim();
-    if (!name) { toast.error('Full name is required', { containerId: 'formToast' }); return false; }
-    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { containerId: 'formToast' }); return false; }
+    if (!name) { toast.error('Full name is required', { position: 'top-center' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { position: 'top-center' }); return false; }
 
-    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
+    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { position: 'top-center' }); return false; }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form.email || '').trim())) { toast.error('Enter a valid email address', { containerId: 'formToast' }); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form.email || '').trim())) { toast.error('Enter a valid email address', { position: 'top-center' }); return false; }
 
-    if (!form.date_of_birth) { toast.error('Date of birth is required', { containerId: 'formToast' }); return false; }
-    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { containerId: 'formToast' }); return false; }
+    if (!form.date_of_birth) { toast.error('Date of birth is required', { position: 'top-center' }); return false; }
+    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { position: 'top-center' }); return false; }
 
-    if (!form.joining_date) { toast.error('Joining date is required', { containerId: 'formToast' }); return false; }
+    if (!form.joining_date) { toast.error('Joining date is required', { position: 'top-center' }); return false; }
 
-    if (form.salary === '' || isNaN(form.salary) || Number(form.salary) < 0) { toast.error('Enter a valid salary', { containerId: 'formToast' }); return false; }
+    if (form.salary === '' || isNaN(form.salary) || Number(form.salary) < 0) { toast.error('Enter a valid salary', { position: 'top-center' }); return false; }
 
     if (!editMode) {
-      if (!form.login_user_id.trim()) { toast.error('Login User ID is required', { containerId: 'formToast' }); return false; }
-      if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces', { containerId: 'formToast' }); return false; }
+      if (!form.login_user_id.trim()) { toast.error('Login User ID is required', { position: 'top-center' }); return false; }
+      if (/\s/.test(form.login_user_id)) { toast.error('Login User ID should not contain spaces', { position: 'top-center' }); return false; }
     }
 
     // Duplicate check against already-loaded staff list (name + DOB + phone), excluding the record being edited
@@ -137,7 +137,7 @@ setEmployees(sorted);
       e.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`, { containerId: 'formToast' });
+      toast.error(`${name} already exists with the same date of birth and phone number.`, { position: 'top-center' });
       return false;
     }
 
@@ -165,7 +165,7 @@ const handleSubmit = async (ev) => {
     const hasMinLength = pwd.length >= 8;
 
     if (!hasMinLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-      toast.error('Password must be 8+ chars with uppercase, lowercase, number & special character', { containerId: 'formToast' });
+      toast.error('Password must be 8+ chars with uppercase, lowercase, number & special character', { position: 'top-center' });
       return;
     }
   }
@@ -175,11 +175,11 @@ const handleSubmit = async (ev) => {
       let empId = editId;
       if (editMode) {
         await API.put(`/employees/${editId}`, form);
-        toast.success('Updated successfully!', { containerId: 'formToast' });
+        toast.success('Updated successfully!', { position: 'top-center' });
       } else {
         const { data } = await API.post('/employees', form);
         empId = data.id;
-        toast.success(`Added! Emp ID: ${data.emp_id}`, { containerId: 'formToast' });
+        toast.success(`Added! Emp ID: ${data.emp_id}`, { position: 'top-center' });
       }
       // Save teacher subjects if teacher role
       if (isTeacherRole && empId) {
@@ -191,7 +191,7 @@ const handleSubmit = async (ev) => {
       setShowModal(false);
       setSelectedSubjectIds([]);
       fetchAll();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed', { containerId: 'formToast' }); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed', { position: 'top-center' }); }
     finally { setSaving(false); }
   };
 

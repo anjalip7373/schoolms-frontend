@@ -86,19 +86,19 @@ setStudents(sorted);
 
   const validate = () => {
     const name = form.full_name.trim();
-    if (!name) { toast.error('Full name is required', { containerId: 'formToast' }); return false; }
-    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { containerId: 'formToast' }); return false; }
+    if (!name) { toast.error('Full name is required', { position: 'top-center' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(name)) { toast.error('Full name should not contain numbers or symbols', { position: 'top-center' }); return false; }
 
-    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
-    if (!/^\d{10}$/.test(form.whatsapp_no)) { toast.error('WhatsApp number must be exactly 10 digits', { containerId: 'formToast' }); return false; }
+    if (!/^\d{10}$/.test(form.phone)) { toast.error('Phone number must be exactly 10 digits', { position: 'top-center' }); return false; }
+    if (!/^\d{10}$/.test(form.whatsapp_no)) { toast.error('WhatsApp number must be exactly 10 digits', { position: 'top-center' }); return false; }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Enter a valid email address', { containerId: 'formToast' }); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Enter a valid email address', { position: 'top-center' }); return false; }
 
-    if (!form.date_of_birth) { toast.error('Date of birth is required', { containerId: 'formToast' }); return false; }
-    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { containerId: 'formToast' }); return false; }
+    if (!form.date_of_birth) { toast.error('Date of birth is required', { position: 'top-center' }); return false; }
+    if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { position: 'top-center' }); return false; }
 
-    if (!form.address.trim()) { toast.error('Address is required', { containerId: 'formToast' }); return false; }
-    if (!form.class_id) { toast.error('Please select a class', { containerId: 'formToast' }); return false; }
+    if (!form.address.trim()) { toast.error('Address is required', { position: 'top-center' }); return false; }
+    if (!form.class_id) { toast.error('Please select a class', { position: 'top-center' }); return false; }
 
     // Duplicate check against currently-loaded students list (name + DOB + phone), excluding the record being edited.
     // Best-effort only — the list may be filtered by search/class, so the backend is the real guard.
@@ -109,7 +109,7 @@ setStudents(sorted);
       s.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`, { containerId: 'formToast' });
+      toast.error(`${name} already exists with the same date of birth and phone number.`, { position: 'top-center' });
       return false;
     }
 
@@ -129,14 +129,14 @@ setStudents(sorted);
     try {
       if (editMode) {
         await API.put(`/students/${editId}`, form);
-        toast.success('Student updated!', { containerId: 'formToast' });
+        toast.success('Student updated!', { position: 'top-center' });
       } else {
         const { data } = await API.post('/students', form);
-        toast.success(`Student added! Roll No: ${data.roll_no}`, { containerId: 'formToast' });
+        toast.success(`Student added! Roll No: ${data.roll_no}`, { position: 'top-center' });
       }
       setShowModal(false);
       fetchStudents();
-    } catch (err) { toast.error(err.response?.data?.message || 'Operation failed', { containerId: 'formToast' }); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Operation failed', { position: 'top-center' }); }
     finally { setSaving(false); }
   };
 
@@ -307,18 +307,6 @@ setStudents(sorted);
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'700px', position:'relative'}}>
 
-            {/* <ToastContainer
-  enableMultiContainer
-  containerId="formToast"
-  position="top-center"
-  autoClose={3500}
-  hideProgressBar={false}
-  closeOnClick
-  newestOnTop
-  limit={1}
-  style={{ position: 'absolute', top: 90, left: '50%', right: 'auto', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', maxWidth: '420px', margin: 0, zIndex: 2000 }}
-  toastStyle={{ maxWidth: '100%', margin: '0 auto' }}
-/> */}
             
             <div className="modal-header">
               <h2>{editMode ? '✏️ Edit Student' : '➕ Add New Student'}</h2>
