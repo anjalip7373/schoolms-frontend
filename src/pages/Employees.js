@@ -26,6 +26,7 @@ const EmployeePage = () => {
   const [allSubjects, setAllSubjects] = useState([]);
   const [classSubjects, setClassSubjects] = useState([]);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isPrincipalTab = activeTab === 'principal';
   const selectedRole = roles.find(r => r.id == form.role_id);
@@ -197,6 +198,21 @@ const handleSubmit = async (ev) => {
 
   const currentList = isPrincipalTab ? principals : employees;
 
+  const filteredList = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return currentList;
+    return currentList.filter(e => (
+      e.full_name?.toLowerCase().includes(q) ||
+      e.emp_id?.toLowerCase().includes(q) ||
+      e.login_user_id?.toLowerCase().includes(q) ||
+      e.phone?.toLowerCase().includes(q) ||
+      e.email?.toLowerCase().includes(q) ||
+      e.role_name?.toLowerCase().includes(q) ||
+      e.class_name?.toLowerCase().includes(q) ||
+      e.subject?.toLowerCase().includes(q)
+    ));
+  }, [currentList, searchQuery]);
+
   const getFilteredRoles = () => {
     if (isAdmin) {
       return roles.filter(r => r.name !== 'admin');
@@ -216,7 +232,31 @@ const handleSubmit = async (ev) => {
         </button>
       </div>
 
-  
+      {/* Search */}
+      <div className="card" style={{padding:'12px 16px', marginBottom:'16px'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          <span style={{fontSize:'16px'}}>🔍</span>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search by name, Emp ID, phone, email, user ID, role, class or subject..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{flex:1}}
+          />
+          {searchQuery && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setSearchQuery('')}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p style={{margin:'8px 0 0', fontSize:'13px', color:'#64748b'}}>
+            {filteredList.length} of {currentList.length} matching "{searchQuery}"
+          </p>
+        )}
+      </div>
+
       {/* Table */}
       <div className="card">
         {loading ? <div className="loading"><div className="spinner"></div></div> : (
@@ -240,7 +280,7 @@ const handleSubmit = async (ev) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentList.map(e => (
+                    {filteredList.map(e => (
                       <tr key={e.id}>
                         <td>
                           <code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>
@@ -275,12 +315,12 @@ const handleSubmit = async (ev) => {
                         </td>
                       </tr>
                     ))}
-                    {!currentList.length && (
+                    {!filteredList.length && (
                       <tr>
                         <td colSpan="10">
                           <div className="empty-state">
                           <div className="empty-icon">👨‍💼</div>
-                          <p>No staff members found</p>
+                          <p>{searchQuery ? `No staff members match "${searchQuery}"` : 'No staff members found'}</p>
                           </div>
                         </td>
                       </tr>
@@ -291,8 +331,8 @@ const handleSubmit = async (ev) => {
             </div>
 
             {/* Mobile: card view */}
-            <div className="mobile-card-list" style={{ padding: currentList.length ? '16px' : '0' }}>
-              {currentList.map(e => (
+            <div className="mobile-card-list" style={{ padding: filteredList.length ? '16px' : '0' }}>
+              {filteredList.map(e => (
                 <div className="data-card" key={e.id}>
                   <div className="data-card-row">
                     <span className="dc-label">Emp ID</span>
@@ -357,10 +397,10 @@ const handleSubmit = async (ev) => {
                   </div>
                 </div>
               ))}
-              {!currentList.length && (
+              {!filteredList.length && (
                 <div className="empty-state">
                   <div className="empty-icon">👨‍💼</div>
-                  <p>No staff members found</p>
+                  <p>{searchQuery ? `No staff members match "${searchQuery}"` : 'No staff members found'}</p>
                 </div>
               )}
             </div>
