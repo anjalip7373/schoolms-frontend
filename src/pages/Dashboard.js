@@ -12,6 +12,7 @@ const Dashboard = () => {
   });
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
+  const isClerk = (user?.role || '').toLowerCase() === 'clerk';
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -162,8 +163,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* ── SALARY SUMMARY ───────────────────────────────────────────── */}
-          {!isTeacher && (
+                    {/* ── SALARY SUMMARY ───────────────────────────────────────────── */}
+          {!isTeacher && !isClerk && (
             <>
               <div style={{marginBottom:'12px'}}>
                 <h3 style={{fontWeight:700, fontSize:'14px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px'}}>💵 Salary Summary</h3>
