@@ -3,7 +3,7 @@ import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 
-const ACCESS_OPTIONS = ['dashboard','students','daily_attendance','attendance_report','fee_payment','salary_slip','employees','principals','reports'];
+const ACCESS_OPTIONS = ['dashboard','students','daily_attendance','attendance_report','fee_payment','salary_slip','employees','principals','reports','broadcast'];
 
 const ConfigSection = ({ title, icon, items, onAdd, onEdit, onDelete, fields, editFields }) => {
   const [showAdd, setShowAdd] = useState(false);

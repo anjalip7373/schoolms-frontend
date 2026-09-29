@@ -14,6 +14,7 @@ const cleanPhone = (phone) => {
 
 const Broadcast = () => {
   const { user } = useAuth();
+  const isTeacher = String(user?.role || '').toLowerCase() === 'teacher';
   const [broadcasts, setBroadcasts] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,12 @@ const Broadcast = () => {
 
   useEffect(() => {
     fetchBroadcasts();
-    API.get('/config/classes').then(r => setClasses(r.data));
+   API.get('/config/classes').then(r => {
+      setClasses(r.data);
+      if (isTeacher && user?.class_assigned) {
+        setForm(f => ({ ...f, target_type: 'class', target_class_id: String(user.class_assigned) }));
+      }
+    });
   }, []);
 
   const fetchBroadcasts = async () => {
@@ -225,27 +231,42 @@ const Broadcast = () => {
                 />
               </div>
 
-              {/* Target */}
-              <div className="form-group" style={{ margin: 0 }}>
-                <label>Send To <span style={{ color: 'red' }}>*</span></label>
-                <select className="form-control" value={form.target_type}
-                  onChange={e => setForm({ ...form, target_type: e.target.value, target_class_id: '' })}>
-                  {targetOptions.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Class selector */}
-              {form.target_type === 'class' && (
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label>Select Class <span style={{ color: 'red' }}>*</span></label>
-                  <select className="form-control" value={form.target_class_id}
-                    onChange={e => setForm({ ...form, target_class_id: e.target.value })} required>
-                    <option value="">Choose Class</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                          {/* Target */}
+              {isTeacher ? (
+                <div className="form-group" style={{ margin: 0, gridColumn: '1/-1' }}>
+                  <label>Send To</label>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: '#eff6ff', color: '#1e40af', fontWeight: 700, fontSize: '13px',
+                    padding: '9px 14px', borderRadius: '8px', border: '1px solid #bfdbfe'
+                  }}>
+                    🏫 {classes.find(c => c.id == form.target_class_id)?.name || 'Your Class'}
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Send To <span style={{ color: 'red' }}>*</span></label>
+                    <select className="form-control" value={form.target_type}
+                      onChange={e => setForm({ ...form, target_type: e.target.value, target_class_id: '' })}>
+                      {targetOptions.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Class selector */}
+                  {form.target_type === 'class' && (
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Select Class <span style={{ color: 'red' }}>*</span></label>
+                      <select className="form-control" value={form.target_class_id}
+                        onChange={e => setForm({ ...form, target_class_id: e.target.value })} required>
+                        <option value="">Choose Class</option>
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
