@@ -118,7 +118,9 @@ const Broadcast = () => {
     setSending(true);
     setSentResult(null);
     try {
-         const { data } = await API.post('/broadcasts', buildPayload());
+         const { data } = await API.post('/broadcasts', buildPayload(), {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setSelectedFile(null);
       setFileInputKey(k => k + 1);
       setSentResult({ ...data, channel: 'email' });
@@ -141,7 +143,9 @@ const Broadcast = () => {
   setSendingWhatsApp(true);
   setSentResult(null);
   try {
-    const { data } = await API.post('/broadcasts/whatsapp', buildPayload());
+        const { data } = await API.post('/broadcasts/whatsapp', buildPayload(), {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     setSelectedFile(null);
     setFileInputKey(k => k + 1);
     setSentResult({ channel: 'whatsapp', sent_count: data.sent_count, skipped: data.skipped });
