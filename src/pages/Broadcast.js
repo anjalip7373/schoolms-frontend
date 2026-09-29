@@ -26,7 +26,9 @@ const Broadcast = () => {
     target_type: 'all',
     target_class_id: ''
   });
-  const [sentResult, setSentResult] = useState(null);
+   const [sentResult, setSentResult] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [whatsappProgress, setWhatsappProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
@@ -72,6 +74,40 @@ const Broadcast = () => {
   };
 
   // ─── SEND VIA EMAIL ──────────────────────────────────────────
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0] || null;
+    if (!file) { setSelectedFile(null); return; }
+
+    const MAX_IMAGE_MB = 4;
+    const MAX_OTHER_MB = 16;
+    const isImage = file.type.startsWith('image/');
+    const limitMB = isImage ? MAX_IMAGE_MB : MAX_OTHER_MB;
+    const sizeMB = file.size / 1024 / 1024;
+
+    if (sizeMB > limitMB) {
+      window.alert(
+        `This file can't be uploaded.\n\n` +
+        `Your file is ${sizeMB.toFixed(2)} MB. The limit is ${limitMB} MB for ${isImage ? 'images' : 'videos and other files'}.\n\n` +
+        `Limits:\n• Images: ${MAX_IMAGE_MB} MB\n• Videos and other files: ${MAX_OTHER_MB} MB\n\n` +
+        `Please choose a smaller file and try again.`
+      );
+      e.target.value = '';
+      setSelectedFile(null);
+      return;
+    }
+    setSelectedFile(file);
+  };
+
+  const buildPayload = () => {
+    const fd = new FormData();
+    fd.append('title', form.title);
+    fd.append('message', form.message);
+    fd.append('target_type', form.target_type);
+    if (form.target_class_id) fd.append('target_class_id', form.target_class_id);
+    if (selectedFile) fd.append('media', selectedFile);
+    return fd;
+  };
+
   const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { toast.error('Please enter a title'); return; }
@@ -82,7 +118,9 @@ const Broadcast = () => {
     setSending(true);
     setSentResult(null);
     try {
-      const { data } = await API.post('/broadcasts', form);
+         const { data } = await API.post('/broadcasts', buildPayload());
+      setSelectedFile(null);
+      setFileInputKey(k => k + 1);
       setSentResult({ ...data, channel: 'email' });
       toast.success(data.message);
       setForm({ title: '', message: '', target_type: 'all', target_class_id: '' });
@@ -103,7 +141,9 @@ const Broadcast = () => {
   setSendingWhatsApp(true);
   setSentResult(null);
   try {
-    const { data } = await API.post('/broadcasts/whatsapp', form);
+    const { data } = await API.post('/broadcasts/whatsapp', buildPayload());
+    setSelectedFile(null);
+    setFileInputKey(k => k + 1);
     setSentResult({ channel: 'whatsapp', sent_count: data.sent_count, skipped: data.skipped });
     toast.success(`✅ WhatsApp broadcast sent to ${data.sent_count} recipients!`);
     if (data.skipped > 0) toast.warn(`⚠️ ${data.skipped} skipped — no phone number`);
@@ -223,6 +263,26 @@ const Broadcast = () => {
               />
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
                 {form.message.length} characters
+              </div>
+            </div>
+
+                        {/* Attachment */}
+            <div className="form-group" style={{ margin: '0 0 20px' }}>
+              <label>Attach Media / Documents (Images, PDF, Word)</label>
+              <input
+                key={fileInputKey}
+                type="file"
+                className="form-control"
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={handleFileSelect}
+              />
+              {selectedFile && (
+                <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>
+                  📎 Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                </div>
+              )}
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                Limits: images up to 4 MB, other files up to 16 MB
               </div>
             </div>
 
