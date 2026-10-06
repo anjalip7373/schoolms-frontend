@@ -109,7 +109,7 @@ setStudents(sorted);
       s.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`, { position: 'top-center' });
+      toast.error(`A student with the same Name, DOB and Phone already exists.`, { position: 'top-center' });
       return false;
     }
 

@@ -138,7 +138,7 @@ setEmployees(sorted);
       e.phone === form.phone
     );
     if (dup) {
-      toast.error(`${name} already exists with the same date of birth and phone number.`, { position: 'top-center' });
+      toast.error(`An employee with the same Name, DOB and Phone already exists.`, { position: 'top-center' });
       return false;
     }
 
