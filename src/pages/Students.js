@@ -4,7 +4,7 @@ import API from '../utils/api';
 import { toast, ToastContainer } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
-const emptyForm = { full_name:'', class_id:'', phone:'', whatsapp_no:'', email:'', date_of_birth:'', address:'', fee_status:'active' };
+const emptyForm = { full_name:'', gr_no:'', father_name:'', mother_name:'', class_id:'', phone:'', whatsapp_no:'', email:'', date_of_birth:'', address:'', fee_status:'active' };
 
 const Students = () => {
   const { user } = useAuth();
@@ -76,7 +76,8 @@ setStudents(sorted);
       return;
     }
     setForm({
-      full_name: s.full_name, class_id: s.class_id, phone: s.phone,
+      full_name: s.full_name, gr_no: s.gr_no || '', father_name: s.father_name || '', mother_name: s.mother_name || '',
+      class_id: s.class_id, phone: s.phone,
       whatsapp_no: s.whatsapp_no, email: s.email,
       date_of_birth: s.date_of_birth?.split('T')[0],
       address: s.address, fee_status: s.fee_status
@@ -98,6 +99,11 @@ setStudents(sorted);
     if (new Date(form.date_of_birth) > new Date()) { toast.error('Date of birth cannot be in the future', { position: 'top-center' }); return false; }
 
     if (!form.address.trim()) { toast.error('Address is required', { position: 'top-center' }); return false; }
+    if (!form.father_name.trim()) { toast.error("Father's name is required", { position: 'top-center' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(form.father_name.trim())) { toast.error("Father's name should not contain numbers or symbols", { position: 'top-center' }); return false; }
+    if (!form.mother_name.trim()) { toast.error("Mother's name is required", { position: 'top-center' }); return false; }
+    if (!/^[A-Za-z ._'-]+$/.test(form.mother_name.trim())) { toast.error("Mother's name should not contain numbers or symbols", { position: 'top-center' }); return false; }
+    if (form.gr_no && !/^[A-Za-z0-9\/-]{1,20}$/.test(form.gr_no.trim())) { toast.error('GR No can only contain letters, numbers, / and - (max 20 characters)', { position: 'top-center' }); return false; }
     if (!form.class_id) { toast.error('Please select a class', { position: 'top-center' }); return false; }
 
     // Duplicate check against currently-loaded students list (name + DOB + phone), excluding the record being edited.
@@ -147,6 +153,9 @@ setStudents(sorted);
     try {
       await API.put(`/students/${student.id}`, {
         full_name: student.full_name,
+        gr_no: student.gr_no || '',
+        father_name: student.father_name || '',
+        mother_name: student.mother_name || '',
         class_id: student.class_id,
         phone: student.phone,
         whatsapp_no: student.whatsapp_no,
@@ -206,13 +215,14 @@ setStudents(sorted);
                 <table>
                   <thead>
                     <tr>
-                      <th>Roll No</th><th>Name</th><th>Class</th><th>Phone</th>
+                      <th>GR No</th><th>Roll No</th><th>Name</th><th>Class</th><th>Phone</th>
                       <th>WhatsApp</th><th>Fee Status</th><th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {students.map(s => (
                       <tr key={s.id}>
+                        <td>{s.gr_no || '-'}</td>
                         <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
                         <td><strong>{s.full_name}</strong></td>
                         <td>{s.class_name}</td>
@@ -236,7 +246,7 @@ setStudents(sorted);
                       </tr>
                     ))}
                     {!students.length && (
-                      <tr><td colSpan="7"><div className="empty-state"><div className="empty-icon">👨‍🎓</div><p>No students found</p></div></td></tr>
+                      <tr><td colSpan="8"><div className="empty-state"><div className="empty-icon">👨‍🎓</div><p>No students found</p></div></td></tr>
                     )}
                   </tbody>
                 </table>
@@ -247,6 +257,10 @@ setStudents(sorted);
             <div className="mobile-card-list" style={{ padding: students.length ? '16px' : '0' }}>
               {students.map(s => (
                 <div className="data-card" key={s.id}>
+                  <div className="data-card-row">
+                    <span className="dc-label">GR No</span>
+                    <span className="dc-value">{s.gr_no || '-'}</span>
+                  </div>
                   <div className="data-card-row">
                     <span className="dc-label">Roll No</span>
                     <span className="dc-value">
@@ -330,6 +344,24 @@ setStudents(sorted);
                       <option value="">Select Class</option>
                       {visibleClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>GR No</label>
+                    <input className="form-control" value={form.gr_no}
+                      onChange={e => setForm({...form, gr_no: e.target.value.replace(/[^A-Za-z0-9\/-]/g, '').slice(0, 20)})}
+                      placeholder="General Register number" />
+                  </div>
+                  <div className="form-group">
+                    <label>Father's Name <span>*</span></label>
+                    <input className="form-control" value={form.father_name}
+                      onChange={e => setForm({...form, father_name: e.target.value})}
+                      required placeholder="Enter father's name" />
+                  </div>
+                  <div className="form-group">
+                    <label>Mother's Name <span>*</span></label>
+                    <input className="form-control" value={form.mother_name}
+                      onChange={e => setForm({...form, mother_name: e.target.value})}
+                      required placeholder="Enter mother's name" />
                   </div>
                   <div className="form-group">
                     <label>Roll No</label>
