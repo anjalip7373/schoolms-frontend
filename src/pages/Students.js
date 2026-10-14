@@ -336,6 +336,18 @@ setStudents(sorted);
                       required placeholder="Enter full name" />
                   </div>
                   <div className="form-group">
+                    <label>Father's Name <span>*</span></label>
+                    <input className="form-control" value={form.father_name}
+                      onChange={e => setForm({...form, father_name: e.target.value})}
+                      required placeholder="Enter father's name" />
+                  </div>
+                  <div className="form-group">
+                    <label>Mother's Name <span>*</span></label>
+                    <input className="form-control" value={form.mother_name}
+                      onChange={e => setForm({...form, mother_name: e.target.value})}
+                      required placeholder="Enter mother's name" />
+                  </div>
+                  <div className="form-group">
                     <label>Class <span>*</span></label>
                     {/* Teacher sees only their class in dropdown */}
                     <select className="form-control" value={form.class_id}
@@ -350,18 +362,6 @@ setStudents(sorted);
                     <input className="form-control" value={form.gr_no}
                       onChange={e => setForm({...form, gr_no: e.target.value.replace(/[^A-Za-z0-9\/-]/g, '').slice(0, 20)})}
                       placeholder="General Register number" />
-                  </div>
-                  <div className="form-group">
-                    <label>Father's Name <span>*</span></label>
-                    <input className="form-control" value={form.father_name}
-                      onChange={e => setForm({...form, father_name: e.target.value})}
-                      required placeholder="Enter father's name" />
-                  </div>
-                  <div className="form-group">
-                    <label>Mother's Name <span>*</span></label>
-                    <input className="form-control" value={form.mother_name}
-                      onChange={e => setForm({...form, mother_name: e.target.value})}
-                      required placeholder="Enter mother's name" />
                   </div>
                   <div className="form-group">
                     <label>Roll No</label>
