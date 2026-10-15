@@ -297,7 +297,7 @@ const handleSubmit = async (ev) => {
                         <td>{e.phone}</td>
                         <td>{e.class_name || '—'}</td>
                         <td>{e.subject || '—'}</td>
-                        <td>Rs. {parseFloat(e.salary || 0).toLocaleString()}</td>
+                        <td>₹{parseFloat(e.salary || 0).toLocaleString()}</td>
                         <td>
                           <span className={"badge " + (e.is_active ? 'badge-success' : 'badge-danger')}>
                             {e.is_active ? 'Active' : 'Inactive'}
@@ -372,7 +372,7 @@ const handleSubmit = async (ev) => {
                   </div>
                   <div className="data-card-row">
                     <span className="dc-label">Salary</span>
-                    <span className="dc-value">Rs. {parseFloat(e.salary || 0).toLocaleString()}</span>
+                    <span className="dc-value">₹{parseFloat(e.salary || 0).toLocaleString()}</span>
                   </div>
                   <div className="data-card-row">
                     <span className="dc-label">Status</span>
@@ -561,7 +561,7 @@ const handleSubmit = async (ev) => {
                   )}
 
                   <div className="form-group">
-                    <label>Salary (Rs.) <span>*</span></label>
+                    <label>Salary (₹) <span>*</span></label>
                     <input type="number" className="form-control" value={form.salary}
                       onChange={e => setForm({...form, salary: e.target.value})}
                       min="0" step="0.01"

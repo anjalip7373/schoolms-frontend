@@ -130,7 +130,7 @@ const Salary = () => {
     const withCountry = phone?.startsWith('91') ? phone : '91' + phone;
     const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const monthLabel = s.month ? (() => { const parts = s.month.split('-'); return `${monthNames[parseInt(parts[1])-1]} ${parts[0]}`; })() : s.month;
-    const message = `Salary Slip Ready - ${monthLabel}\n\nNet Salary: Rs. ${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\nSchoolMS`;
+    const message = `Salary Slip Ready - ${monthLabel}\n\nNet Salary: ₹${parseFloat(s.net_salary || 0).toLocaleString('en-IN')}\n\nSchoolMS`;
     window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

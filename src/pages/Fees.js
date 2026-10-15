@@ -44,13 +44,13 @@ const FeeReceipt = React.forwardRef(({ receipt }, ref) => (
         {(receipt?.items || [{ fee_type_name: receipt?.fee_type_name, amount: receipt?.amount }]).map((it, i) => (
           <tr key={i}>
             <td style={{padding:'8px', borderBottom:'1px solid #e2e8f0'}}>{it.fee_type_name}</td>
-            <td style={{padding:'8px', borderBottom:'1px solid #e2e8f0', textAlign:'right'}}>Rs. {it.amount}</td>
+            <td style={{padding:'8px', borderBottom:'1px solid #e2e8f0', textAlign:'right'}}>₹{it.amount}</td>
           </tr>
         ))}
       </tbody>
     </table>
     <div style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:'8px', padding:'16px', textAlign:'center'}}>
-      <div style={{fontSize:'24px', fontWeight:'800', color:'#16a34a'}}>Rs. {receipt?.total_amount ?? receipt?.amount}</div>
+      <div style={{fontSize:'24px', fontWeight:'800', color:'#16a34a'}}>₹{receipt?.total_amount ?? receipt?.amount}</div>
       <div style={{fontSize:'12px', color:'#64748b'}}>Total Amount Received</div>
     </div>
     <div style={{marginTop:'32px', textAlign:'center', fontSize:'11px', color:'#94a3b8'}}>
@@ -170,7 +170,7 @@ const Fees = () => {
     setSaving(true);
     try {
       const { data } = await API.post('/fees', { ...form, items: validItems });
-      toast.success(`Fee recorded! Receipt: ${data.receipt_no} | Total: Rs. ${data.total_amount ?? totalAmount}`);
+      toast.success(`Fee recorded! Receipt: ${data.receipt_no} | Total: ₹${data.total_amount ?? totalAmount}`);
       setShowModal(false);
       setForm(emptyForm);
       fetchAll();
@@ -187,7 +187,7 @@ const Fees = () => {
   };
 
   const shareWhatsApp = (p) => {
-    const msg = `Dear ${p.full_name},\n\nYour fee payment of Rs.${p.amount} for ${p.fee_type_name} has been received.\nReceipt No: ${p.receipt_no}\nClass: ${p.class_name}\nPayment Method: ${p.payment_method || 'N/A'}\nDate: ${p.payment_date?.split('T')[0]}\n\nThank you - SchoolMS`;
+    const msg = `Dear ${p.full_name},\n\nYour fee payment of ₹${p.amount} for ${p.fee_type_name} has been received.\nReceipt No: ${p.receipt_no}\nClass: ${p.class_name}\nPayment Method: ${p.payment_method || 'N/A'}\nDate: ${p.payment_date?.split('T')[0]}\n\nThank you - SchoolMS`;
     shareOnWhatsApp(p.phone, msg);
   };
 
@@ -303,7 +303,7 @@ const Fees = () => {
                 <div className="mobile-detail-item" style={{gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px'}}>
                   <span className="mobile-detail-lbl">Amount Paid</span>
                   <span className="mobile-detail-val" style={{color:'#16a34a', fontSize:'16px', fontWeight:'800'}}>
-                    Rs. {parseFloat(p.amount).toLocaleString()}
+                    ₹{parseFloat(p.amount).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -346,7 +346,7 @@ const Fees = () => {
                         <td><strong>{p.full_name}</strong><br/><small style={{color:'#64748b'}}>{p.roll_no}</small></td>
                         <td>{p.class_name}</td>
                         <td><span className={"badge " + (p.payment_method === 'Cash' ? 'badge-success' : p.payment_method === 'UPI' ? 'badge-info' : 'badge-warning')}>{p.payment_method || 'Cash'}</span></td>
-                        <td><strong style={{color:'#16a34a'}}>Rs. {parseFloat(p.amount).toLocaleString()}</strong></td>
+                        <td><strong style={{color:'#16a34a'}}>₹{parseFloat(p.amount).toLocaleString()}</strong></td>
                         <td>{p.payment_date?.split('T')[0]}</td>
                         <td>
                           <div style={{display:'flex', gap:'6px'}}>
@@ -430,7 +430,7 @@ const Fees = () => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Total Amount (Rs.)</label>
+                    <label>Total Amount (₹)</label>
                     <input type="text" className="form-control" value={totalAmount.toFixed(2)} readOnly style={{background:'#f1f5f9', fontWeight:700}} />
                   </div>
 
@@ -468,7 +468,7 @@ const Fees = () => {
                 <button className="btn btn-primary btn-sm" onClick={() => handleDownloadPDF(receipt)}>Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
                   receipt.phone,
-                  `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: Rs.${receipt.amount}`
+                  `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: ₹${receipt.amount}`
                 )}>Share</button>
                 <button className="modal-close" onClick={() => setShowReceipt(false)}>X</button>
               </div>

@@ -95,7 +95,7 @@ const Reports = () => {
     { key:'full_name', label:'Student Name' },
     { key:'class_name', label:'Class' },
     { key:'fee_types_paid', label:'Fee Types Paid' },
-    { key:'paid_amount', label:'Amount Paid (Rs.)' },
+    { key:'paid_amount', label:'Amount Paid (₹)' },
     { key:'last_payment_date', label:'Last Payment Date' },
     { key:'payment_method', label:'Payment Method' },
     { key:'fee_status', label:'Status' },
@@ -110,7 +110,7 @@ const Reports = () => {
     { key:'phone', label:'Phone' },
     { key:'qualification', label:'Qualification' },
     { key:'subject', label:'Subject' },
-    { key:'salary', label:'Salary (Rs.)' },
+    { key:'salary', label:'Salary (₹)' },
     { key:'joining_date', label:'Joining Date' },
     { key:'is_active', label:'Status' },
   ];
@@ -121,9 +121,9 @@ const Reports = () => {
     { key:'role_name', label:'Role' },
     { key:'slip_no', label:'Slip No' },
     { key:'salary_month', label:'Salary Month' },
-    { key:'basic_salary', label:'Basic Salary (Rs.)' },
-    { key:'deductions', label:'Deductions (Rs.)' },
-    { key:'net_salary', label:'Net Salary (Rs.)' },
+    { key:'basic_salary', label:'Basic Salary (₹)' },
+    { key:'deductions', label:'Deductions (₹)' },
+    { key:'net_salary', label:'Net Salary (₹)' },
     { key:'payment_status', label:'Status' },
   ];
 
@@ -256,7 +256,7 @@ const getEffectiveActiveStatus = (row) => {
         return <span className={"badge " + (effectiveActive ? 'badge-success' : 'badge-danger')}>{effectiveActive ? 'Active' : 'Inactive'}</span>;
       }
       case 'paid_amount': case 'net_salary': case 'basic_salary': case 'deductions': case 'salary':
-        return row[col.key] ? `Rs. ${parseFloat(row[col.key] || 0).toLocaleString()}` : '—';
+        return row[col.key] ? `₹${parseFloat(row[col.key] || 0).toLocaleString()}` : '—';
       case 'payment_date': case 'joining_date': case 'date_of_birth': case 'last_payment_date':
         return row[col.key]?.split('T')[0] || '—';
       case 'remarks':

@@ -84,7 +84,7 @@ const Audit = () => {
     { key: 'class_name', label: 'Class' },
     { key: 'bill_no', label: 'Bill No' },
     ...feeTypes.map(ft => ({ key: ft, label: ft })),
-    { key: 'total', label: 'Total (Rs.)' },
+    { key: 'total', label: 'Total (₹)' },
   ];
 
   const buildExportRows = () => {
@@ -94,9 +94,9 @@ const Audit = () => {
       row['Class'] = b.class_name || '-';
       row['Bill No'] = b.bill_no;
       feeTypes.forEach(ft => {
-        row[ft] = b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-';
+        row[ft] = b.fees[ft] ? `₹${parseFloat(b.fees[ft]).toLocaleString()}` : '-';
       });
-      row['Total (Rs.)'] = `Rs. ${parseFloat(b.total).toLocaleString()}`;
+      row['Total (₹)'] = `₹${parseFloat(b.total).toLocaleString()}`;
       return row;
     });
 
@@ -107,7 +107,7 @@ const Audit = () => {
       totalRow['Class'] = '';
       totalRow['Bill No'] = 'GRAND TOTAL';
       feeTypes.forEach(ft => { totalRow[ft] = ''; });
-      totalRow['Total (Rs.)'] = `Rs. ${parseFloat(grandTotal).toLocaleString()}`;
+      totalRow['Total (₹)'] = `₹${parseFloat(grandTotal).toLocaleString()}`;
       rows.push(totalRow);
     }
     return rows;
@@ -230,10 +230,10 @@ const Audit = () => {
                         </td>
                         {feeTypes.map(ft => (
                           <td key={ft}>
-                            {b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
+                            {b.fees[ft] ? `₹${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
                           </td>
                         ))}
-                        <td><strong style={{ color: '#16a34a' }}>Rs. {parseFloat(b.total).toLocaleString()}</strong></td>
+                        <td><strong style={{ color: '#16a34a' }}>₹{parseFloat(b.total).toLocaleString()}</strong></td>
                       </tr>
                     );
                   })}
@@ -255,7 +255,7 @@ const Audit = () => {
                         Grand Total
                       </td>
                       <td style={{ padding: '12px', fontWeight: 800, color: '#1e40af' }}>
-                        Rs. {parseFloat(grandTotal).toLocaleString()}
+                        ₹{parseFloat(grandTotal).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
@@ -290,13 +290,13 @@ const Audit = () => {
                       <div className="data-card-row" key={ft}>
                         <span className="dc-label">{ft}</span>
                         <span className="dc-value">
-                          {b.fees[ft] ? `Rs. ${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
+                          {b.fees[ft] ? `₹${parseFloat(b.fees[ft]).toLocaleString()}` : '-'}
                         </span>
                       </div>
                     ))}
                     <div className="data-card-row">
                       <span className="dc-label">Total</span>
-                      <span className="dc-value"><strong style={{ color: '#16a34a' }}>Rs. {parseFloat(b.total).toLocaleString()}</strong></span>
+                      <span className="dc-value"><strong style={{ color: '#16a34a' }}>₹{parseFloat(b.total).toLocaleString()}</strong></span>
                     </div>
                   </div>
                 );
@@ -311,7 +311,7 @@ const Audit = () => {
                 <div className="data-card" style={{ background: '#f8fafc', border: '1px solid #1e40af' }}>
                   <div className="data-card-row" style={{ borderBottom: 'none' }}>
                     <span className="dc-label" style={{ fontSize: '13px' }}>Grand Total</span>
-                    <span className="dc-value"><strong style={{ color: '#1e40af', fontSize: '15px' }}>Rs. {parseFloat(grandTotal).toLocaleString()}</strong></span>
+                    <span className="dc-value"><strong style={{ color: '#1e40af', fontSize: '15px' }}>₹{parseFloat(grandTotal).toLocaleString()}</strong></span>
                   </div>
                 </div>
               )}
