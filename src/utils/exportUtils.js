@@ -3,14 +3,25 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { toast } from 'react-toastify';
+import { registerPdfFonts } from './pdfFonts';
 
 const DownloadSaver = registerPlugin('DownloadSaver');
 
+// Used for FILE NAMES only (keeps them ASCII-safe on every device).
 const cleanText = (str) => {
   if (!str) return '';
   return String(str)
     .replace(/₹/g, 'Rs.')
     .replace(/[^\x20-\x7E]/g, '')
+    .trim();
+};
+
+// Used for text drawn INSIDE the PDF. The embedded NotoSans font supports
+// Latin + the Rupee sign, so we keep ₹ and common punctuation instead of stripping them.
+const cleanDisplay = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/[^\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20B9]/g, '')
     .trim();
 };
 
@@ -69,17 +80,17 @@ export const exportToExcel = async (data, columns, filename, highlightRows = [])
 export const exportToPDF = async (data, columns, filename, title, highlightRows = []) => {
   const isLandscape = columns.length > 6;
   const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait' });
+  registerPdfFonts(doc);
 
-  const cleanTitle = cleanText(title || filename);
-  const cleanCols = columns.map(c => ({ ...c, label: cleanText(c.label) }));
+  const cleanTitle = cleanDisplay(title || filename);
 
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('NotoSans', 'bold');
   doc.setTextColor(30, 64, 175);
   doc.text('SchoolMS', 14, 14);
 
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
   doc.text(cleanTitle, 14, 22);
 
@@ -93,11 +104,12 @@ export const exportToPDF = async (data, columns, filename, title, highlightRows 
   const highlightSet = new Set(highlightRows);
 
   autoTable(doc, {
-    head: [cleanCols.map(c => c.label)],
-    body: data.map(row => cleanCols.map(c => cleanText(row[c.label] ?? ''))),
+    // NOTE: look cells up by the ORIGINAL label (that is the row key); only the displayed text is cleaned.
+    head: [columns.map(c => cleanDisplay(c.label))],
+    body: data.map(row => columns.map(c => cleanDisplay(row[c.label] ?? ''))),
     startY: 34,
-    styles: { fontSize: 8, cellPadding: 3, font: 'helvetica', overflow: 'linebreak' },
-    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', font: 'helvetica' },
+    styles: { fontSize: 8, cellPadding: 3, font: 'NotoSans', overflow: 'linebreak' },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', font: 'NotoSans' },
     alternateRowStyles: { fillColor: [241, 245, 249] },
     margin: { left: 14, right: 14 },
     didParseCell: (hookData) => {
