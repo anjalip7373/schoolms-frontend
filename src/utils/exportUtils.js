@@ -25,6 +25,16 @@ const cleanDisplay = (str) => {
     .trim();
 };
 
+// Turns full ISO timestamps (e.g. 2026-10-15T00:00:00.000Z) into just the date (2026-10-15)
+// for BOTH Excel and PDF exports. Only exact timestamp values are touched.
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/;
+const stripTime = (v) => {
+  if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
+  return typeof v === 'string' && ISO_DATETIME.test(v.trim()) ? v.trim().slice(0, 10) : v;
+};
+const dateOnlyRows = (data) =>
+  data.map(row => Object.fromEntries(Object.entries(row).map(([k, v]) => [k, stripTime(v)])));
+
 const saveDirectToDownloads = async (base64Data, fileName, mimeType) => {
   try {
     toast.info(`Saving ${fileName}...`, { autoClose: 2000 });
@@ -40,7 +50,7 @@ const saveDirectToDownloads = async (base64Data, fileName, mimeType) => {
 // highlightRows: array of 0-indexed positions into `data` that should be
 // shown with a yellow fill (e.g. deactivated-during-this-period rows).
 export const exportToExcel = async (data, columns, filename, highlightRows = []) => {
-  const ws = XLSX.utils.json_to_sheet(data);
+  const ws = XLSX.utils.json_to_sheet(dateOnlyRows(data));
   ws['!cols'] = columns.map(() => ({ wch: 20 }));
 
   if (highlightRows.length) {
@@ -106,7 +116,7 @@ export const exportToPDF = async (data, columns, filename, title, highlightRows 
   autoTable(doc, {
     // NOTE: look cells up by the ORIGINAL label (that is the row key); only the displayed text is cleaned.
     head: [columns.map(c => cleanDisplay(c.label))],
-    body: data.map(row => columns.map(c => cleanDisplay(row[c.label] ?? ''))),
+    body: dateOnlyRows(data).map(row => columns.map(c => cleanDisplay(row[c.label] ?? ''))),
     startY: 34,
     styles: { fontSize: 8, cellPadding: 3, font: 'NotoSans', overflow: 'linebreak' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', font: 'NotoSans' },

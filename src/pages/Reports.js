@@ -150,11 +150,10 @@ const Reports = () => {
     cols.forEach(col => {
       let val = row[col.key];
       if (col.key === 'is_active') val = getEffectiveActiveStatus(row) ? 'Active' : 'Inactive';
-      else if (col.key === 'payment_date' || col.key === 'joining_date') val = val?.split('T')[0] || '';
-      else if (col.key === 'date_of_birth') val = val?.split('T')[0] || '';
+      else if (col.key === 'payment_date' || col.key === 'joining_date' || col.key === 'last_payment_date' || col.key === 'date_of_birth') val = val ? String(val).split('T')[0].split(' ')[0] : '';
       else if (col.key === 'amount' || col.key === 'net_salary' || col.key === 'basic_salary' || col.key === 'deductions' || col.key === 'salary') val = parseFloat(val || 0).toLocaleString();
       else if (col.key === 'fee_status' && activeTab === 'students') val = getEffectiveFeeStatus(row) === 'active' ? 'Active' : 'Inactive';
-      else val = val || '';
+      else val = (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(val)) ? val.slice(0, 10) : (val || '');
       formatted[col.label] = val;
     });
     return formatted;
