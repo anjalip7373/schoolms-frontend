@@ -143,7 +143,9 @@ export const exportToPDF = async (data, columns, filename, title, highlightRows 
 
 // ─── WHATSAPP / shared save helpers — unchanged ───────────────────────────
 export const shareOnWhatsApp = (phone, message) => {
-  const cleaned = phone?.replace(/\D/g, '');
+  let cleaned = phone?.toString().replace(/\D/g, '') || '';
+  if (cleaned.startsWith('0')) cleaned = '91' + cleaned.slice(1);
+  if (cleaned.length === 10) cleaned = '91' + cleaned;
   const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 };

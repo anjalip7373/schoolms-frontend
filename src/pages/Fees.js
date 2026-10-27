@@ -250,7 +250,7 @@ const Fees = () => {
 
   const shareWhatsApp = (p) => {
     const msg = `Dear ${p.full_name},\n\nYour fee payment of ₹${p.amount} for ${p.fee_type_name} has been received.\nReceipt No: ${p.receipt_no}\nClass: ${p.class_name}\nPayment Method: ${p.payment_method || 'N/A'}\nDate: ${fmtLocalDate(p.payment_date)}\n\nThank you - SchoolMS`;
-    shareOnWhatsApp(p.phone, msg);
+    shareOnWhatsApp(p.whatsapp, msg);
   };
 
   const paymentMethods = ['Cash', 'UPI', 'Account Transfer'];
@@ -545,7 +545,7 @@ const Fees = () => {
               <div style={{display:'flex', gap:'8px'}}>
                 <button className="btn btn-primary btn-sm" onClick={() => handleDownloadPDF(receipt)}>Download PDF</button>
                 <button className="btn btn-whatsapp btn-sm" onClick={() => shareOnWhatsApp(
-                  receipt.phone,
+                  receipt.whatsapp,
                   `Fee Receipt - ${receipt.receipt_no}\nStudent: ${receipt.full_name}\nClass: ${receipt.class_name}\nAmount: ₹${receipt.amount}`
                 )}>Share</button>
                 <button className="modal-close" onClick={() => setShowReceipt(false)}>X</button>
