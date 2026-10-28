@@ -53,6 +53,8 @@ const Audit = () => {
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
   const [level, setLevel] = useState('');
+  const [classId, setClassId] = useState('');
+  const [classes, setClasses] = useState([]);
 
   const hasCustomRange = fromMonth && fromYear && toMonth && toYear;
 
@@ -65,9 +67,16 @@ const Audit = () => {
       const { data } = await API.get('/fees/audit', { params });
       setFeeTypes(data.fee_types || []);
       const allBills = data.bills || [];
-      const levelBills = level ? allBills.filter(b => levelOfClass(b.class_name) === level) : allBills;
+      const selectedClassName = classId ? (classes.find(c => c.id == classId)?.name || '') : '';
+      const isFiltered = !!(level || classId);
+      const levelBills = isFiltered
+        ? allBills.filter(b =>
+            (!level || levelOfClass(b.class_name) === level) &&
+            (!classId || String(b.class_name || '').trim() === String(selectedClassName).trim())
+          )
+        : allBills;
       setBills(levelBills);
-      setGrandTotal(level ? levelBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0) : (data.grand_total || 0));
+      setGrandTotal(isFiltered ? levelBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0) : (data.grand_total || 0));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load audit data');
     } finally {
@@ -75,7 +84,11 @@ const Audit = () => {
     }
   };
 
-  useEffect(() => { fetchAudit(); }, [academicYear, fromMonth, fromYear, toMonth, toYear, level]);
+  useEffect(() => {
+    API.get('/config/classes').then(r => setClasses(r.data || [])).catch(() => setClasses([]));
+  }, []);
+
+  useEffect(() => { fetchAudit(); }, [academicYear, fromMonth, fromYear, toMonth, toYear, level, classId, classes]);
 
   const clearCustomRange = () => {
     setFromMonth(''); setFromYear(''); setToMonth(''); setToYear('');
@@ -92,7 +105,7 @@ const Audit = () => {
   const periodLabel = hasCustomRange
     ? `${MONTHS[fromMonth - 1]} ${fromYear} to ${MONTHS[toMonth - 1]} ${toYear}`
     : academicYear;
-  const periodLabelWithLevel = level ? `${periodLabel} (${level})` : periodLabel;
+  const periodLabelWithLevel = [periodLabel, level, classes.find(c => c.id == classId)?.name].filter(Boolean).join(' • ');
 
   // Export columns: Date, Class, Bill No, one column per fee type, Total
   const auditCols = [
@@ -158,6 +171,40 @@ const Audit = () => {
       <div className="filter-bar" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
         <div>
           <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            Level
+          </label>
+          <select
+            className="form-control"
+            style={{ minWidth: '160px' }}
+            value={level}
+            onChange={e => {
+              const lvl = e.target.value;
+              setLevel(lvl);
+              const sel = classes.find(c => c.id == classId);
+              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassId('');
+            }}
+          >
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            Class
+          </label>
+          <select
+            className="form-control"
+            style={{ minWidth: '160px' }}
+            value={classId}
+            onChange={e => setClassId(e.target.value)}
+          >
+            <option value="">All Classes</option>
+            {classes.filter(c => !level || levelOfClass(c.name) === level).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
             Academic Year
           </label>
           <select
@@ -201,15 +248,6 @@ const Audit = () => {
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-        </div>
-
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
-            Level
-          </label>
-          <select className="form-control" value={level} onChange={e => setLevel(e.target.value)}>
-            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
-          </select>
         </div>
 
         {hasCustomRange && (
