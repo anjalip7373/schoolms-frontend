@@ -200,9 +200,21 @@ const Configuration = () => {
   const [examConfigs, setExamConfigs] = useState([]);
   const [examTypes, setExamTypes] = useState([]);
 
+  // ─── TEACHER ASSIGNMENT STATES ──────────────────────────────
+  const [teachers, setTeachers] = useState([]);
+  const [teacherAssignments, setTeacherAssignments] = useState([]);
+  const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [selectedAssignClass, setSelectedAssignClass] = useState('');
+  const [selectedAssignSubject, setSelectedAssignSubject] = useState('');
+  const [assigningTeacher, setAssigningTeacher] = useState(false);
+
+  // ─── SCHOOL PROFILE ─────────────────────────────────────────
+  const [school, setSchool] = useState({ school_name: '', address: '', academic_year: '', reopen_date: '' });
+  const [savingSchool, setSavingSchool] = useState(false);
+
   const fetchAll = async () => {
     try {
-      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes, examSettingsRes, examTypesRes] = await Promise.all([
+      const [classesRes, feeTypesRes, rolesRes, subjectsRes, classSubjectsRes, examSettingsRes, examTypesRes, teacherAssignmentsRes] = await Promise.all([
         API.get('/config/classes'),
         API.get('/config/fee-types'),
         API.get('/config/roles'),
@@ -210,6 +222,7 @@ const Configuration = () => {
         API.get('/class-subjects'),
         API.get('/config/exam-settings'),
         API.get('/exam-types'),
+        API.get('/config/teacher-assignments').catch(() => ({ data: [] })),
       ]);
       setClasses(classesRes.data);
       setFeeTypes(feeTypesRes.data);
@@ -218,10 +231,53 @@ const Configuration = () => {
       setClassSubjects(classSubjectsRes.data);
       setExamConfigs(examSettingsRes.data);
       setExamTypes(examTypesRes.data);
+      setTeacherAssignments(teacherAssignmentsRes.data || []);
+
+      // Staff/employee fetch for the teacher dropdown
+      let usersData = [];
+      try {
+        const empRes = await API.get('/employees');
+        usersData = Array.isArray(empRes.data) ? empRes.data : (empRes.data?.employees || empRes.data?.users || []);
+      } catch (e) {
+        try {
+          const uRes = await API.get('/users');
+          usersData = Array.isArray(uRes.data) ? uRes.data : (uRes.data?.users || []);
+        } catch (err) {}
+      }
+      const teacherUsers = usersData.filter(u => {
+        const role = String(u.role_name || u.role || u.designation || '').toLowerCase();
+        return role.includes('teacher');
+      });
+      setTeachers(teacherUsers.length > 0 ? teacherUsers : usersData);
     } catch (err) { toast.error('Failed to load configuration'); }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const fetchSchool = async () => {
+    try {
+      const res = await API.get('/config/school-settings');
+      setSchool({
+        school_name: res.data.school_name || '',
+        address: res.data.address || '',
+        academic_year: res.data.academic_year || '',
+        reopen_date: res.data.reopen_date || ''
+      });
+    } catch (e) {}
+  };
+
+  const handleSaveSchool = async () => {
+    if (!school.school_name.trim()) return toast.error('School name is required');
+    setSavingSchool(true);
+    try {
+      await API.put('/config/school-settings', school);
+      toast.success('School profile saved. Marksheets will use the new details.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save school profile');
+    } finally {
+      setSavingSchool(false);
+    }
+  };
+
+  useEffect(() => { fetchAll(); fetchSchool(); }, []);
 
   const handleExamTypeChange = (type) => {
     setExamType(type);
@@ -269,6 +325,44 @@ const Configuration = () => {
     setPassMarks(cfg.pass_marks);
   };
 
+  // ─── TEACHER ASSIGNMENT HANDLERS ────────────────────────────
+  const handleAssignTeacher = async () => {
+    if (!selectedTeacher || !selectedAssignClass || !selectedAssignSubject) {
+      return toast.error('Please select Teacher, Class, and Subject');
+    }
+    setAssigningTeacher(true);
+    try {
+      await API.post('/config/teacher-assignments', {
+        teacher_id: selectedTeacher,
+        class_id: selectedAssignClass,
+        subject_id: selectedAssignSubject
+      });
+      toast.success('Teacher assigned successfully!');
+      setSelectedAssignSubject('');
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to assign teacher');
+    } finally {
+      setAssigningTeacher(false);
+    }
+  };
+
+  const handleDeleteTeacherAssignment = async (id, name, cls, sub) => {
+    if (!window.confirm(`Revoke assignment of ${name} for ${cls} (${sub})?`)) return;
+    try {
+      await API.delete(`/config/teacher-assignments/${id}`);
+      toast.success('Assignment removed');
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete assignment');
+    }
+  };
+
+  // Subjects assigned to the class chosen in the teacher allocation panel
+  const assignableSubjectsForClass = subjects.filter(sub =>
+    classSubjects.some(cs => cs.class_id == selectedAssignClass && cs.subject_id == sub.id)
+  );
+
   const wrap = (fn) => async (...args) => { await fn(...args); fetchAll(); };
 
   const filteredAvailableSubjects = subjects.filter(sub => 
@@ -278,6 +372,156 @@ const Configuration = () => {
   return (
     <AppLayout title="Configuration" subtitle="Manage system settings">
       <div className="page-header"><div><h1>Configuration</h1><p>Admin-only system settings</p></div></div>
+
+      {/* ─── SCHOOL PROFILE (used on marksheet) ─── */}
+      <div className="card" style={{marginBottom:'20px', border:'2px solid #f59e0b'}}>
+        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#fffbeb'}}>
+          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800', color:'#92400e'}}>🏫 School Profile (shown on Marksheet)</h3>
+          <p style={{margin:'4px 0 0', fontSize:'12px', color:'#b45309'}}>
+            Changes here are applied automatically to all student marksheet reports.
+          </p>
+        </div>
+        <div style={{padding:'16px 20px', display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end'}}>
+          <div className="form-group" style={{margin:0, flex:'1 1 260px'}}>
+            <label style={{fontSize:'11px', fontWeight:'700'}}>School Name</label>
+            <input className="form-control" value={school.school_name}
+              onChange={e => setSchool({ ...school, school_name: e.target.value })} />
+          </div>
+          <div className="form-group" style={{margin:0, flex:'1 1 320px'}}>
+            <label style={{fontSize:'11px', fontWeight:'700'}}>Address</label>
+            <input className="form-control" value={school.address}
+              onChange={e => setSchool({ ...school, address: e.target.value })} />
+          </div>
+          <div className="form-group" style={{margin:0, minWidth:'140px'}}>
+            <label style={{fontSize:'11px', fontWeight:'700'}}>Academic Year</label>
+            <input className="form-control" placeholder="2026-27" value={school.academic_year}
+              onChange={e => setSchool({ ...school, academic_year: e.target.value })} />
+          </div>
+          <div className="form-group" style={{margin:0, minWidth:'160px'}}>
+            <label style={{fontSize:'11px', fontWeight:'700'}}>School Reopen Date</label>
+            <input type="date" className="form-control" value={school.reopen_date}
+              onChange={e => setSchool({ ...school, reopen_date: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" onClick={handleSaveSchool} disabled={savingSchool}>
+            {savingSchool ? 'Saving...' : '💾 Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── TEACHER + CLASS + SUBJECT ALLOCATION PANEL ─── */}
+      <div className="card" style={{marginBottom:'20px', border:'2px solid #10b981'}}>
+        <div style={{padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#f0fdf4'}}>
+          <h3 style={{margin:0, fontSize:'15px', fontWeight:'800', color:'#065f46'}}>
+            👨‍🏫 Teacher + Class + Subject Assignment (Broadcast & Class Control)
+          </h3>
+          <p style={{margin:'4px 0 0', fontSize:'12px', color:'#047857'}}>
+            Assign teachers to classes and subjects to allow them to broadcast to their assigned classes.
+          </p>
+        </div>
+
+        <div style={{padding:'16px 20px'}}>
+          <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
+            <div className="form-group" style={{margin:0, minWidth:'180px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>1. Select Teacher</label>
+              <select className="form-control" value={selectedTeacher} onChange={e => setSelectedTeacher(e.target.value)}>
+                <option value="">Choose Teacher</option>
+                {teachers.map(t => {
+                  const name = t.full_name || t.name || `${t.first_name || ''} ${t.last_name || ''}`.trim() || t.username || 'Staff Member';
+                  return <option key={t.id} value={t.id}>{name}</option>;
+                })}
+              </select>
+            </div>
+
+            <div className="form-group" style={{margin:0, minWidth:'150px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>2. Select Class</label>
+              <select className="form-control" value={selectedAssignClass}
+                onChange={e => { setSelectedAssignClass(e.target.value); setSelectedAssignSubject(''); }}>
+                <option value="">Choose Class</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group" style={{margin:0, minWidth:'160px'}}>
+              <label style={{fontSize:'11px', fontWeight:'700'}}>3. Select Subject</label>
+              <select className="form-control" value={selectedAssignSubject}
+                onChange={e => setSelectedAssignSubject(e.target.value)} disabled={!selectedAssignClass}>
+                <option value="">{selectedAssignClass ? 'Choose Subject' : '⚠️ Choose Class First'}</option>
+                {(assignableSubjectsForClass.length > 0 ? assignableSubjectsForClass : subjects).map(s => (
+                  <option key={s.id} value={s.id}>{s.name} {s.code ? `(${s.code})` : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            <button className="btn btn-primary" style={{background:'#059669', borderColor:'#059669'}}
+              onClick={handleAssignTeacher} disabled={assigningTeacher}>
+              {assigningTeacher ? '⏳ Assigning...' : '➕ Assign Teacher'}
+            </button>
+          </div>
+
+          {/* Desktop Table */}
+          <div className="desktop-table-view">
+            <div className="table-wrapper config-table" style={{maxHeight:'260px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px'}}>
+              <table>
+                <thead style={{position:'sticky', top:0, zIndex:1, background:'#f8fafc'}}>
+                  <tr>
+                    <th>Teacher Name</th>
+                    <th>Assigned Class</th>
+                    <th>Subject</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teacherAssignments.map(assign => (
+                    <tr key={assign.id}>
+                      <td><strong>👨‍🏫 {assign.teacher_name}</strong></td>
+                      <td><span className="badge badge-info">{assign.class_name}</span></td>
+                      <td><strong>{assign.subject_name}</strong></td>
+                      <td>
+                        <button className="btn btn-danger btn-sm"
+                          onClick={() => handleDeleteTeacherAssignment(assign.id, assign.teacher_name, assign.class_name, assign.subject_name)}>
+                          🗑️ Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {teacherAssignments.length === 0 && (
+                    <tr><td colSpan="4" style={{textAlign:'center', color:'#94a3b8'}}>No teacher assignments configured yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Card List */}
+          <div className="mobile-card-list mobile-card-scroll" style={{maxHeight:'240px', overflowY:'auto', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'10px'}}>
+            {teacherAssignments.map(assign => (
+              <div className="data-card" key={assign.id}>
+                <div className="data-card-row">
+                  <span className="dc-label">Teacher</span>
+                  <span className="dc-value"><strong>👨‍🏫 {assign.teacher_name}</strong></span>
+                </div>
+                <div className="data-card-row">
+                  <span className="dc-label">Class</span>
+                  <span className="dc-value"><span className="badge badge-info">{assign.class_name}</span></span>
+                </div>
+                <div className="data-card-row">
+                  <span className="dc-label">Subject</span>
+                  <span className="dc-value">{assign.subject_name}</span>
+                </div>
+                <div className="data-card-actions">
+                  <button className="btn btn-danger btn-sm"
+                    onClick={() => handleDeleteTeacherAssignment(assign.id, assign.teacher_name, assign.class_name, assign.subject_name)}>
+                    🗑️ Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+            {teacherAssignments.length === 0 && (
+              <div className="empty-state"><p>No teacher assignments configured yet.</p></div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <ConfigSection
         title="Classes" icon="🏫" items={classes}
