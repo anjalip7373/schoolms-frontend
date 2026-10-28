@@ -4,6 +4,18 @@ import API from '../utils/api';
 import { toast, ToastContainer } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const emptyForm = { full_name:'', gr_no:'', father_name:'', mother_name:'', class_id:'', phone:'', whatsapp_no:'', email:'', date_of_birth:'', address:'', fee_status:'active' };
 
 const Students = () => {
@@ -16,6 +28,7 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -176,12 +189,15 @@ setStudents(sorted);
     ? classes.filter(c => c.id == teacherClassId)
     : classes;
 
+  // Level filter (client-side)
+  const displayedStudents = students.filter(s => !levelFilter || levelOfClass(s.class_name) === levelFilter);
+
   return (
     <AppLayout title="Students" subtitle="Manage all student records">
       <div className="page-header">
         <div>
           <h1>Students</h1>
-          <p>Total: {students.length} students</p>
+          <p>Total: {displayedStudents.length} students</p>
         </div>
         <button className="btn btn-primary" onClick={openAdd}>➕ Add Student</button>
       </div>
@@ -193,11 +209,22 @@ setStudents(sorted);
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        {/* Level filter — narrows the class list and the students shown */}
+        {!isTeacher && (
+          <select className="form-control" value={levelFilter} onChange={e => {
+            const lvl = e.target.value;
+            setLevelFilter(lvl);
+            const sel = classes.find(c => c.id == classFilter);
+            if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
+          }}>
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
+        )}
         {/* Class filter dropdown — teacher sees only their class */}
         {!isTeacher ? (
           <select className="form-control" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
             <option value="">All Classes</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         ) : (
           <div style={{background:'#dbeafe', padding:'6px 14px', borderRadius:'8px', fontSize:'13px', fontWeight:'600', color:'#1e40af'}}>
@@ -220,7 +247,7 @@ setStudents(sorted);
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map(s => (
+                    {displayedStudents.map(s => (
                       <tr key={s.id}>
                         <td>{s.gr_no || '-'}</td>
                         <td><code style={{fontFamily:'JetBrains Mono', fontSize:'12px', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px'}}>{s.roll_no}</code></td>
@@ -245,7 +272,7 @@ setStudents(sorted);
                         </td>
                       </tr>
                     ))}
-                    {!students.length && (
+                    {!displayedStudents.length && (
                       <tr><td colSpan="8"><div className="empty-state"><div className="empty-icon">👨‍🎓</div><p>No students found</p></div></td></tr>
                     )}
                   </tbody>
@@ -254,8 +281,8 @@ setStudents(sorted);
             </div>
 
             {/* Mobile: card view */}
-            <div className="mobile-card-list" style={{ padding: students.length ? '16px' : '0' }}>
-              {students.map(s => (
+            <div className="mobile-card-list" style={{ padding: displayedStudents.length ? '16px' : '0' }}>
+              {displayedStudents.map(s => (
                 <div className="data-card" key={s.id}>
                   <div className="data-card-row">
                     <span className="dc-label">GR No</span>
@@ -306,7 +333,7 @@ setStudents(sorted);
                   </div>
                 </div>
               ))}
-              {!students.length && (
+              {!displayedStudents.length && (
                 <div className="empty-state">
                   <div className="empty-icon">👨‍🎓</div>
                   <p>No students found</p>

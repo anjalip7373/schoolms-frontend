@@ -8,6 +8,18 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveWorkbook, saveDocument } from '../utils/exportUtils';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 // RTE (Right to Education Act) no-detention policy applies from Nursery/KG through Class 8.
 // From Class 9 onward, a fail/absent in any subject is a straightforward FAIL.
 const isRTEProtectedClass = (className) => {
@@ -41,6 +53,7 @@ const MarksheetReport = () => {
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
 
   const [classes, setClasses] = useState([]);
+  const [levelFilter, setLevelFilter] = useState('');
   const [examTypes, setExamTypes] = useState([]);
   const [marksheetData, setMarksheetData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -544,7 +557,7 @@ const exportExcel = async () => {
 
   try {
     if (!isTeacher && !filters.class_id && filters.exam_type_id) {
-      for (const cls of classes) {
+      for (const cls of classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter)) {
         try {
           const { data } = await API.get('/marks/marksheet', { params: { class_id: cls.id, exam_type_id: filters.exam_type_id, academic_year: filters.academic_year } });
           if (!data.length) continue;
@@ -560,7 +573,7 @@ const exportExcel = async () => {
       toast.success(`Downloaded! ${wb.SheetNames.length} class(es) for ${examType}`);
 
     } else if (!isTeacher && !filters.class_id && !filters.exam_type_id) {
-      for (const cls of classes) {
+      for (const cls of classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter)) {
         const allSectionRows = [];
         const allHighlightOffsets = [];
         for (const et of examTypes) {
@@ -816,9 +829,19 @@ const exportPDF = async () => {
         <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
           <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
             {!isTeacher && (
+              <select className="form-control" value={levelFilter} onChange={e => {
+                const lvl = e.target.value;
+                setLevelFilter(lvl);
+                const sel = classes.find(c => c.id == filters.class_id);
+                if (sel && lvl && levelOfClass(sel.name) !== lvl) setFilters({...filters, class_id: ''});
+              }}>
+                <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+              </select>
+            )}
+            {!isTeacher && (
               <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
                 <option value="">All Classes</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
             <select className="form-control" value={filters.exam_type_id} onChange={e => setFilters({...filters, exam_type_id: e.target.value})}>

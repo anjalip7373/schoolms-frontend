@@ -4,6 +4,18 @@ import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // Academic years run April -> March. Build a dropdown list e.g. "2026-2027"
@@ -40,6 +52,7 @@ const Audit = () => {
   const [grandTotal, setGrandTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
+  const [level, setLevel] = useState('');
 
   const hasCustomRange = fromMonth && fromYear && toMonth && toYear;
 
@@ -51,8 +64,10 @@ const Audit = () => {
         : { academic_year: academicYear };
       const { data } = await API.get('/fees/audit', { params });
       setFeeTypes(data.fee_types || []);
-      setBills(data.bills || []);
-      setGrandTotal(data.grand_total || 0);
+      const allBills = data.bills || [];
+      const levelBills = level ? allBills.filter(b => levelOfClass(b.class_name) === level) : allBills;
+      setBills(levelBills);
+      setGrandTotal(level ? levelBills.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0) : (data.grand_total || 0));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load audit data');
     } finally {
@@ -60,7 +75,7 @@ const Audit = () => {
     }
   };
 
-  useEffect(() => { fetchAudit(); }, [academicYear, fromMonth, fromYear, toMonth, toYear]);
+  useEffect(() => { fetchAudit(); }, [academicYear, fromMonth, fromYear, toMonth, toYear, level]);
 
   const clearCustomRange = () => {
     setFromMonth(''); setFromYear(''); setToMonth(''); setToYear('');
@@ -77,6 +92,7 @@ const Audit = () => {
   const periodLabel = hasCustomRange
     ? `${MONTHS[fromMonth - 1]} ${fromYear} to ${MONTHS[toMonth - 1]} ${toYear}`
     : academicYear;
+  const periodLabelWithLevel = level ? `${periodLabel} (${level})` : periodLabel;
 
   // Export columns: Date, Class, Bill No, one column per fee type, Total
   const auditCols = [
@@ -118,7 +134,7 @@ const Audit = () => {
       <div className="page-header">
         <div>
           <h1>Fee Audit</h1>
-          <p>{bills.length} bill(s) • {periodLabel}</p>
+          <p>{bills.length} bill(s) • {periodLabelWithLevel}</p>
         </div>
         <div className="dropdown-export">
           <button className="btn btn-primary" onClick={() => setShowExport(!showExport)}>📤 Export ▾</button>
@@ -185,6 +201,15 @@ const Audit = () => {
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '4px' }}>
+            Level
+          </label>
+          <select className="form-control" value={level} onChange={e => setLevel(e.target.value)}>
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
         </div>
 
         {hasCustomRange && (

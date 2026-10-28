@@ -1,8 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
 
 const Dashboard = () => {
   const [data, setData] = useState({
@@ -15,6 +27,7 @@ const Dashboard = () => {
   const isClerk = (user?.role || '').toLowerCase() === 'clerk';
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
@@ -39,15 +52,25 @@ const Dashboard = () => {
   for (let y = 2020; y <= new Date().getFullYear() + 1; y++) years.push(y);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+  // Level filter (client-side) — applies when a level is chosen and no single class is selected
+  const view = useMemo(() => {
+    if (!selectedLevel || selectedClass) return data;
+    const inLevel = list => (list || []).filter(s => levelOfClass(s.class_name) === selectedLevel);
+    const paid = inLevel(data?.fees?.paid_students);
+    const notPaid = inLevel(data?.fees?.not_paid_students);
+    const all = inLevel(data?.fees?.all_students);
+    return { ...data, fees: { ...data.fees, paid_students: paid, not_paid_students: notPaid, all_students: all, total: all.length, paid: paid.length, not_paid: notPaid.length } };
+  }, [data, selectedLevel, selectedClass]);
+
   // Get modal config based on type
   const getModalConfig = () => {
     switch (modal) {
       case 'fee_paid':
-        return { title: '✅ Fee Paid Students', rows: data?.fees?.paid_students || [], type: 'student' };
+        return { title: '✅ Fee Paid Students', rows: view?.fees?.paid_students || [], type: 'student' };
       case 'fee_not_paid':
-        return { title: '❌ Fee Not Paid Students', rows: data?.fees?.not_paid_students || [], type: 'student' };
+        return { title: '❌ Fee Not Paid Students', rows: view?.fees?.not_paid_students || [], type: 'student' };
       case 'fee_all':
-        return { title: '👥 All Students', rows: data?.fees?.all_students || [], type: 'student' };
+        return { title: '👥 All Students', rows: view?.fees?.all_students || [], type: 'student' };
       case 'salary_generated':
         return { title: '📄 Salary Generated', rows: data?.salary?.generated_list || [], type: 'employee' };
       case 'salary_not_generated':
@@ -97,6 +120,16 @@ const Dashboard = () => {
         <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
+        {!isTeacher && (
+          <select className="form-control" value={selectedLevel} onChange={e => {
+            const lvl = e.target.value;
+            setSelectedLevel(lvl);
+            const sel = (data?.classes || []).find(c => c.id == selectedClass);
+            if (sel && lvl && levelOfClass(sel.name) !== lvl) setSelectedClass('');
+          }}>
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
+        )}
         {isTeacher ? (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -108,7 +141,7 @@ const Dashboard = () => {
         ) : (
           <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
             <option value="">All Classes</option>
-            {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {data?.classes?.filter(c => !selectedLevel || levelOfClass(c.name) === selectedLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
       </div>
@@ -132,7 +165,7 @@ const Dashboard = () => {
             >
               <span style={{fontSize:'28px'}}>👥</span>
               <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Total Students</span>
-              <span style={{fontSize:'32px', fontWeight:800, color:'#1e293b'}}>{data?.fees?.total ?? 0}</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#1e293b'}}>{view?.fees?.total ?? 0}</span>
               <span style={{fontSize:'12px', color:'#3b82f6', fontWeight:500}}>Click to view details →</span>
             </div>
 
@@ -145,7 +178,7 @@ const Dashboard = () => {
             >
               <span style={{fontSize:'28px'}}>✅</span>
               <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Fee Paid</span>
-              <span style={{fontSize:'32px', fontWeight:800, color:'#16a34a'}}>{data?.fees?.paid ?? 0}</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#16a34a'}}>{view?.fees?.paid ?? 0}</span>
               <span style={{fontSize:'12px', color:'#22c55e', fontWeight:500}}>Click to view details →</span>
             </div>
 
@@ -158,7 +191,7 @@ const Dashboard = () => {
             >
               <span style={{fontSize:'28px'}}>❌</span>
               <span style={{fontSize:'13px', color:'#64748b', fontWeight:600}}>Fee Not Paid</span>
-              <span style={{fontSize:'32px', fontWeight:800, color:'#dc2626'}}>{data?.fees?.not_paid ?? 0}</span>
+              <span style={{fontSize:'32px', fontWeight:800, color:'#dc2626'}}>{view?.fees?.not_paid ?? 0}</span>
               <span style={{fontSize:'12px', color:'#ef4444', fontWeight:500}}>Click to view details →</span>
             </div>
           </div>

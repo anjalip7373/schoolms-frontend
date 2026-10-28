@@ -4,6 +4,18 @@ import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const Marks = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
@@ -21,6 +33,7 @@ const Marks = () => {
   const [effectiveClassId, setEffectiveClassId] = useState(null);
 
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
 
   const currentYear = new Date().getFullYear();
   const academicYears = [
@@ -251,10 +264,21 @@ const Marks = () => {
         <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
           <div style={{display:'flex', gap:'10px', flexWrap:'wrap', alignItems:'center'}}>
             {!isTeacher && (
+              <select className="form-control" value={levelFilter}
+                onChange={e => {
+                  const lvl = e.target.value;
+                  setLevelFilter(lvl);
+                  const sel = classes.find(c => c.id == filters.class_id);
+                  if (sel && lvl && levelOfClass(sel.name) !== lvl) setFilters({...filters, class_id: ''});
+                }}>
+                <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+              </select>
+            )}
+            {!isTeacher && (
               <select className="form-control" value={filters.class_id}
                 onChange={e => setFilters({...filters, class_id: e.target.value})}>
                 <option value="">Select Class *</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
             <select className="form-control" value={filters.exam_type_id}

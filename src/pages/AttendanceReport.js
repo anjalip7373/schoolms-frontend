@@ -8,6 +8,18 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveWorkbook, saveDocument } from '../utils/exportUtils';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const AttendanceReport = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
@@ -21,6 +33,7 @@ const AttendanceReport = () => {
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
 
   const [filters, setFilters] = useState({
     from_month: new Date().getMonth() + 1,
@@ -112,7 +125,10 @@ const AttendanceReport = () => {
 
   const getDailyPresentCount = (day) => {
     const dateKey = `${filters.from_year}-${String(filters.from_month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    return Object.values(dailyData).filter(p => p[dateKey] === 'present').length;
+    const levelIds = (levelFilter && filters.person_type === 'student')
+      ? new Set(rawData.filter(r => levelOfClass(r.class_name) === levelFilter).map(r => String(r.id)))
+      : null;
+    return Object.entries(dailyData).filter(([id, p]) => (!levelIds || levelIds.has(String(id))) && p[dateKey] === 'present').length;
   };
 
   const maxDailyCount = Math.max(...dayNumbers.map(d => getDailyPresentCount(d)), 1);
@@ -129,7 +145,9 @@ const AttendanceReport = () => {
       ? classes.find(c => c.id == filters.class_id)?.name || 'Selected Class'
       : isTeacher && teacherClassName
         ? teacherClassName
-        : 'All Classes';
+        : levelFilter
+          ? `${levelFilter} (All Classes)`
+          : 'All Classes';
 
   const getStatusLabel = (status) => {
     if (status === 'present') return 'P';
@@ -146,6 +164,7 @@ const AttendanceReport = () => {
   };
 
   const filteredData = rawData.filter(row => {
+    if (filters.person_type === 'student' && levelFilter && levelOfClass(row.class_name) !== levelFilter) return false;
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     
@@ -492,6 +511,22 @@ const AttendanceReport = () => {
             {!isTeacher && (
               <select
                 className="form-control"
+                value={levelFilter}
+                disabled={filters.person_type === 'employee'}
+                style={filters.person_type === 'employee' ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                onChange={e => {
+                  const lvl = e.target.value;
+                  setLevelFilter(lvl);
+                  const sel = classes.find(c => c.id == filters.class_id);
+                  if (sel && lvl && levelOfClass(sel.name) !== lvl) setFilters({...filters, class_id: ''});
+                }}
+              >
+                <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+              </select>
+            )}
+            {!isTeacher && (
+              <select
+                className="form-control"
                 value={filters.class_id}
                 onChange={e => setFilters({...filters, class_id: e.target.value})}
                 disabled={filters.person_type === 'employee'}
@@ -499,7 +534,7 @@ const AttendanceReport = () => {
                 style={filters.person_type === 'employee' ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
               >
                 <option value="">All Classes</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
             {!isTeacher && (

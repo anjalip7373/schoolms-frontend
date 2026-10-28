@@ -4,6 +4,18 @@ import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const Attendance = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
@@ -14,6 +26,7 @@ const Attendance = () => {
   const [saving, setSaving] = useState(false);
   const [personType, setPersonType] = useState('student');
   const [classFilter, setClassFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -45,6 +58,7 @@ const Attendance = () => {
   const markAllPresent = () => {
     setRecords(prev => prev.map(r => {
       if (r.person_type !== personType) return r;
+      if (r.person_type === 'student' && levelFilter && levelOfClass(r.class_name) !== levelFilter) return r;
       const isDeactivated = r.person_type === 'student' ? (r.fee_status && r.fee_status !== 'active') : !r.is_active;
       if (isDeactivated) return r;
       return { ...r, status: 'present' };
@@ -56,6 +70,7 @@ const Attendance = () => {
   try {
     const payload = records
       .filter(r => r.person_type === personType)
+      .filter(r => personType !== 'student' || !levelFilter || levelOfClass(r.class_name) === levelFilter)
       .map(r => ({
         person_type: r.person_type,
         person_id: r.id,
@@ -72,7 +87,7 @@ const Attendance = () => {
     // WhatsApp notifications for absent/late/halfday students
     if (personType === 'student') {
       const notifyStudents = records.filter(r =>
-        r.person_type === 'student' && ['absent', 'late', 'halfday'].includes(r.status) &&
+        r.person_type === 'student' && (!levelFilter || levelOfClass(r.class_name) === levelFilter) && ['absent', 'late', 'halfday'].includes(r.status) &&
         !(r.fee_status && r.fee_status !== 'active')
       );
 
@@ -115,7 +130,10 @@ const Attendance = () => {
 
 
   
-  const currentRecords = records.filter(r => r.person_type === personType);
+  const currentRecords = records.filter(r =>
+    r.person_type === personType &&
+    (personType !== 'student' || !levelFilter || levelOfClass(r.class_name) === levelFilter)
+  );
   const counts = ['present','absent','late','halfday'].reduce((acc, s) => {
     acc[s] = currentRecords.filter(r => r.status === s).length;
     return acc;
@@ -167,6 +185,22 @@ const Attendance = () => {
           </button>
         )}
 
+        {/* Level filter — narrows the class list and the records shown */}
+        {!isTeacher && personType === 'student' && (
+          <select
+            className="form-control"
+            style={{minWidth:'140px'}}
+            value={levelFilter}
+            onChange={e => {
+              const lvl = e.target.value;
+              setLevelFilter(lvl);
+              const sel = classes.find(c => c.id == classFilter);
+              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
+            }}>
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
+        )}
+
         {/* Class filter — only for admin/principal/other employees, not teacher */}
         {!isTeacher && personType === 'student' && (
           <select
@@ -175,7 +209,7 @@ const Attendance = () => {
             value={classFilter}
             onChange={e => setClassFilter(e.target.value)}>
             <option value="">All Classes</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
 

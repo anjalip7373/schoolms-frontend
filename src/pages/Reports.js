@@ -5,6 +5,18 @@ import { toast } from 'react-toastify';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { useAuth } from '../context/AuthContext';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const Reports = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'Teacher' || user?.role === 'teacher';
@@ -21,6 +33,7 @@ const Reports = () => {
   const [search, setSearch] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [activeTab, setActiveTab] = useState('students');
+  const [level, setLevel] = useState('');
   const [filters, setFilters] = useState({
     class_id: '',
     from_month: new Date().getMonth() + 1,
@@ -135,7 +148,10 @@ const Reports = () => {
     return { data: [], cols: [], title: '' };
   };
 
-  const { data: activeData, cols: activeCols, title: activeTitle } = getActiveConfig();
+  const { data: rawActiveData, cols: activeCols, title: activeTitle } = getActiveConfig();
+  const activeData = (level && !filters.class_id && ['students', 'fees'].includes(activeTab))
+    ? rawActiveData.filter(r => levelOfClass(r.class_name) === level)
+    : rawActiveData;
 
   const filteredData = activeData.filter(r =>
     !search ||
@@ -305,9 +321,15 @@ const getEffectiveActiveStatus = (row) => {
       <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
         <div className="filter-bar" style={{marginBottom:'12px', flexWrap:'wrap', alignItems:'center'}}>
           {!isTeacher && (
+            <select className="form-control" value={level}
+              onChange={e => { setLevel(e.target.value); setFilters({...filters, class_id: ''}); }}>
+              <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+            </select>
+          )}
+          {!isTeacher && (
             <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
               <option value="">All Classes</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.filter(c => !level || levelOfClass(c.name) === level).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
 

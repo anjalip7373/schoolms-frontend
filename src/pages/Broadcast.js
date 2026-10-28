@@ -4,6 +4,18 @@ import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
+// Class level grouping for the "All Levels" filter (Pre-Primary: Jr/Sr Kg, Primary: 1-8, Secondary: 9-10)
+const levelOfClass = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/nursery|play\s*group|pre[- ]?primary|kindergarten|\b[lu]\.?\s*kg\b|\bjr\.?\s*kg\b|\bsr\.?\s*kg\b|junior\s*kg|senior\s*kg|\bkg\b/.test(n)) return 'Pre-Primary';
+  const m = n.match(/(\d+)/);
+  if (!m) return '';
+  const num = parseInt(m[1], 10);
+  if (num >= 1 && num <= 8) return 'Primary';
+  if (num >= 9) return 'Secondary';
+  return '';
+};
+
 const cleanPhone = (phone) => {
   if (!phone) return null;
   let cleaned = phone.toString().replace(/[\s\-\(\)\+]/g, '');
@@ -31,6 +43,8 @@ const Broadcast = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [whatsappProgress, setWhatsappProgress] = useState({ current: 0, total: 0 });
+  const [formLevel, setFormLevel] = useState('');
+  const [historyLevel, setHistoryLevel] = useState('');
 
   useEffect(() => {
     fetchBroadcasts();
@@ -198,6 +212,14 @@ const Broadcast = () => {
     );
   };
 
+  // History filtered by level (broadcasts sent to a class only)
+  const displayedBroadcasts = historyLevel
+    ? broadcasts.filter(b => {
+        const cn = b.class_name || classes.find(c => c.id == b.target_class_id)?.name;
+        return cn && levelOfClass(cn) === historyLevel;
+      })
+    : broadcasts;
+
   return (
     <AppLayout title="Broadcast" subtitle="Send announcements to students and staff">
       <div className="page-header">
@@ -259,10 +281,19 @@ const Broadcast = () => {
                   {form.target_type === 'class' && (
                     <div className="form-group" style={{ margin: 0 }}>
                       <label>Select Class <span style={{ color: 'red' }}>*</span></label>
+                      <select className="form-control" value={formLevel} style={{ marginBottom: '8px' }}
+                        onChange={e => {
+                          const lvl = e.target.value;
+                          setFormLevel(lvl);
+                          const sel = classes.find(c => c.id == form.target_class_id);
+                          if (sel && lvl && levelOfClass(sel.name) !== lvl) setForm({ ...form, target_class_id: '' });
+                        }}>
+                        <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+                      </select>
                       <select className="form-control" value={form.target_class_id}
                         onChange={e => setForm({ ...form, target_class_id: e.target.value })} required>
                         <option value="">Choose Class</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {classes.filter(c => !formLevel || levelOfClass(c.name) === formLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                   )}
@@ -399,14 +430,19 @@ const Broadcast = () => {
       <div className="card">
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>📋 Broadcast History</h3>
-          <button className="btn btn-outline btn-sm" onClick={fetchBroadcasts}>🔄 Refresh</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select className="form-control" value={historyLevel} onChange={e => setHistoryLevel(e.target.value)} style={{ minWidth: '140px' }}>
+              <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+            </select>
+            <button className="btn btn-outline btn-sm" onClick={fetchBroadcasts}>🔄 Refresh</button>
+          </div>
         </div>
 
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
-        ) : broadcasts.length > 0 ? (
+        ) : displayedBroadcasts.length > 0 ? (
           <div style={{ padding: '8px' }}>
-            {broadcasts.map(b => (
+            {displayedBroadcasts.map(b => (
               <div key={b.id} style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                 <div style={{
                   width: '44px', height: '44px', borderRadius: '12px',
