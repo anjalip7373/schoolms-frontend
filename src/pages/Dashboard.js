@@ -114,12 +114,6 @@ const Dashboard = () => {
 
       {/* Filters */}
       <div style={{display:'flex', alignItems:'center', background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0', flexWrap:'wrap', gap:'12px'}}>
-        <select className="form-control" value={month} onChange={e => setMonth(e.target.value)}>
-          {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-        </select>
-        <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
         {!isTeacher && (
           <select className="form-control" value={selectedLevel} onChange={e => {
             const lvl = e.target.value;
@@ -144,6 +138,12 @@ const Dashboard = () => {
             {data?.classes?.filter(c => !selectedLevel || levelOfClass(c.name) === selectedLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
+        <select className="form-control" value={month} onChange={e => setMonth(e.target.value)}>
+          {months.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+        </select>
+        <select className="form-control" value={year} onChange={e => setYear(e.target.value)}>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
       </div>
 
       {loading ? (

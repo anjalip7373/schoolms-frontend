@@ -479,35 +479,6 @@ const AttendanceReport = () => {
 
         <div style={{background:'#fff', padding:'14px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
           <div style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'center'}}>
-            <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="🔍 Search name or roll no..." 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{width:'100%', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'14px'}}
-              />
-            </div>
-
-            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>FROM</span>
-              <select className="form-control" value={filters.from_month} onChange={e => setFilters({...filters, from_month: parseInt(e.target.value)})}>
-                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-              </select>
-              <select className="form-control" value={filters.from_year} onChange={e => setFilters({...filters, from_year: parseInt(e.target.value)})}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>TO</span>
-              <select className="form-control" value={filters.to_month} onChange={e => setFilters({...filters, to_month: parseInt(e.target.value)})}>
-                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-              </select>
-              <select className="form-control" value={filters.to_year} onChange={e => setFilters({...filters, to_year: parseInt(e.target.value)})}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
             {!isTeacher && (
               <select
                 className="form-control"
@@ -537,6 +508,35 @@ const AttendanceReport = () => {
                 {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
+            <div style={{flex:'1', minWidth:'220px', display:'flex', gap:'6px'}}>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="🔍 Search name or roll no..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{width:'100%', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'14px'}}
+              />
+            </div>
+
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>FROM</span>
+              <select className="form-control" value={filters.from_month} onChange={e => setFilters({...filters, from_month: parseInt(e.target.value)})}>
+                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+              </select>
+              <select className="form-control" value={filters.from_year} onChange={e => setFilters({...filters, from_year: parseInt(e.target.value)})}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+              <span style={{fontSize:'12px', fontWeight:'700', color:'#64748b'}}>TO</span>
+              <select className="form-control" value={filters.to_month} onChange={e => setFilters({...filters, to_month: parseInt(e.target.value)})}>
+                {shortMonths.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+              </select>
+              <select className="form-control" value={filters.to_year} onChange={e => setFilters({...filters, to_year: parseInt(e.target.value)})}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
             {!isTeacher && (
               <div style={{display:'flex', gap:'6px'}}>
                 <button className={"btn btn-sm " + (filters.person_type === 'student' ? 'btn-primary' : 'btn-outline')}

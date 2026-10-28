@@ -203,12 +203,6 @@ setStudents(sorted);
       </div>
 
       <div className="filter-bar">
-        <input
-          className="form-control search-input"
-          placeholder="🔍 Search by name or roll no..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
         {/* Level filter — narrows the class list and the students shown */}
         {!isTeacher && (
           <select className="form-control" value={levelFilter} onChange={e => {
@@ -231,6 +225,12 @@ setStudents(sorted);
             📚 {visibleClasses[0]?.name || 'Your Class'}
           </div>
         )}
+        <input
+          className="form-control search-input"
+          placeholder="🔍 Search by name or roll no..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="card">

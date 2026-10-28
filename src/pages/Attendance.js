@@ -165,6 +165,36 @@ const Attendance = () => {
       {/* Filters Row */}
       <div style={{background:'#fff', padding:'16px 20px', borderRadius:'12px', marginBottom:'20px', border:'1px solid #e2e8f0'}}>
       <div className="filter-bar" style={{flexWrap:'wrap'}}>
+        {/* Level filter — narrows the class list and the records shown */}
+        {!isTeacher && (
+          <select
+            className="form-control"
+            style={{minWidth:'140px'}}
+            disabled={personType !== 'student'}
+            value={levelFilter}
+            onChange={e => {
+              const lvl = e.target.value;
+              setLevelFilter(lvl);
+              const sel = classes.find(c => c.id == classFilter);
+              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
+            }}>
+            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+          </select>
+        )}
+
+        {/* Class filter — only for admin/principal/other employees, not teacher */}
+        {!isTeacher && (
+          <select
+            className="form-control"
+            style={{minWidth:'160px'}}
+            disabled={personType !== 'student'}
+            value={classFilter}
+            onChange={e => setClassFilter(e.target.value)}>
+            <option value="">All Classes</option>
+            {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+
         {/* Student/Employee toggle */}
         {isTeacher ? (
           <div style={{background:'#1e40af', color:'#fff', padding:'8px 16px', borderRadius:'8px', fontSize:'14px', fontWeight:'600'}}>
@@ -183,34 +213,6 @@ const Attendance = () => {
             onClick={() => setPersonType('employee')}>
             👨‍💼 Employees
           </button>
-        )}
-
-        {/* Level filter — narrows the class list and the records shown */}
-        {!isTeacher && personType === 'student' && (
-          <select
-            className="form-control"
-            style={{minWidth:'140px'}}
-            value={levelFilter}
-            onChange={e => {
-              const lvl = e.target.value;
-              setLevelFilter(lvl);
-              const sel = classes.find(c => c.id == classFilter);
-              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
-            }}>
-            <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
-          </select>
-        )}
-
-        {/* Class filter — only for admin/principal/other employees, not teacher */}
-        {!isTeacher && personType === 'student' && (
-          <select
-            className="form-control"
-            style={{minWidth:'160px'}}
-            value={classFilter}
-            onChange={e => setClassFilter(e.target.value)}>
-            <option value="">All Classes</option>
-            {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
         )}
 
         {isTeacher && (
