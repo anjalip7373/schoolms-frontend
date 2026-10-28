@@ -109,6 +109,8 @@ const Fees = () => {
   const [form, setForm] = useState(getEmptyForm());
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const receiptRef = useRef();
@@ -187,14 +189,25 @@ const Fees = () => {
 
   const totalAmount = form.fee_items.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
 
+  // Level -> Class filter on the list (class filter only works once a level is chosen)
+  const displayedPayments = React.useMemo(() => {
+    if (!levelFilter) return payments;
+    const className = classFilter ? classes.find(c => c.id == classFilter)?.name : '';
+    return payments.filter(p => {
+      if (levelOfClass(p.class_name) !== levelFilter) return false;
+      if (classFilter && !(String(p.class_id) === String(classFilter) || p.class_name === className)) return false;
+      return true;
+    });
+  }, [payments, levelFilter, classFilter, classes]);
+
   const groupedPayments = React.useMemo(() => {
     const groups = {};
-    for (const p of payments) {
+    for (const p of displayedPayments) {
       if (!groups[p.receipt_no]) groups[p.receipt_no] = { ...p, amount: 0 };
       groups[p.receipt_no].amount += parseFloat(p.amount || 0);
     }
     return Object.values(groups);
-  }, [payments]);
+  }, [displayedPayments]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -321,19 +334,31 @@ const Fees = () => {
 
       <div style={{ width: '100%', overflowX: 'hidden' }}>
         <div className="page-header">
-          <div><h1>Fee Payments</h1><p>{payments.length} records</p></div>
+          <div><h1>Fee Payments</h1><p>{displayedPayments.length} records</p></div>
           <button className="btn btn-primary" onClick={() => { setEditReceiptNo(null); setShowModal(true); setForm(getEmptyForm()); }}>
             Add Fee Payment
           </button>
         </div>
 
         <div className="filter-bar">
+          <select className="form-control" value={levelFilter}
+            onChange={e => { setLevelFilter(e.target.value); setClassFilter(''); }}>
+            <option value="">All Levels</option>
+            <option value="Pre-Primary">Pre-Primary</option>
+            <option value="Primary">Primary</option>
+            <option value="Secondary">Secondary</option>
+          </select>
+          <select className="form-control" value={classFilter} disabled={!levelFilter}
+            onChange={e => setClassFilter(e.target.value)}>
+            <option value="">All Classes</option>
+            {classes.filter(c => levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
           <input className="form-control search-input" placeholder="Search by name or roll no..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
         {/* ─── FIXED PROPER MATCHED LABELS FOR RESPONSIVE CARDS ─── */}
         <div className="mobile-fee-view">
-          {payments.map((p) => (
+          {displayedPayments.map((p) => (
             <div key={p.id} className="mobile-fee-card">
               <div className="mobile-card-row-top">
                 <div className="mobile-student-info">
@@ -386,7 +411,7 @@ const Fees = () => {
             </div>
           ))}
 
-          {!payments.length && !loading && (
+          {!displayedPayments.length && !loading && (
             <div style={{padding:'40px', background:'#fff', borderRadius:'14px', textAlign:'center', color:'#94a3b8', border:'1px solid #e2e8f0'}}>
               <div style={{fontSize:'36px', marginBottom:'8px'}}>💰</div>
               <p>No fee payments found</p>
@@ -459,7 +484,7 @@ const Fees = () => {
                   </div>
                   <div className="form-group">
                     <label>Class <span>*</span></label>
-                    <select className="form-control" disabled={!!editReceiptNo} value={form.class_id} onChange={e => setForm({...form, class_id: e.target.value})} required>
+                    <select className="form-control" disabled={!!editReceiptNo || !form.level} value={form.class_id} onChange={e => setForm({...form, class_id: e.target.value})} required>
                       <option value="">Select Class</option>
                       {filteredClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>

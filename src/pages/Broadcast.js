@@ -45,6 +45,7 @@ const Broadcast = () => {
   const [whatsappProgress, setWhatsappProgress] = useState({ current: 0, total: 0 });
   const [formLevel, setFormLevel] = useState('');
   const [historyLevel, setHistoryLevel] = useState('');
+  const [historyClassId, setHistoryClassId] = useState('');
 
   useEffect(() => {
     fetchBroadcasts();
@@ -213,10 +214,13 @@ const Broadcast = () => {
   };
 
   // History filtered by level (broadcasts sent to a class only)
-  const displayedBroadcasts = historyLevel
+  const historyClassName = classes.find(c => c.id == historyClassId)?.name;
+  const displayedBroadcasts = (historyLevel || historyClassId)
     ? broadcasts.filter(b => {
         const cn = b.class_name || classes.find(c => c.id == b.target_class_id)?.name;
-        return cn && levelOfClass(cn) === historyLevel;
+        if (historyLevel && !(cn && levelOfClass(cn) === historyLevel)) return false;
+        if (historyClassId && !(b.target_class_id == historyClassId || (cn && cn === historyClassName))) return false;
+        return true;
       })
     : broadcasts;
 
@@ -431,8 +435,12 @@ const Broadcast = () => {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>📋 Broadcast History</h3>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <select className="form-control" value={historyLevel} onChange={e => setHistoryLevel(e.target.value)} style={{ minWidth: '140px' }}>
+            <select className="form-control" value={historyLevel} onChange={e => { setHistoryLevel(e.target.value); setHistoryClassId(''); }} style={{ minWidth: '140px' }}>
               <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
+            </select>
+            <select className="form-control" value={historyClassId} disabled={!historyLevel} onChange={e => setHistoryClassId(e.target.value)} style={{ minWidth: '150px' }}>
+              <option value="">All Classes</option>
+              {classes.filter(c => levelOfClass(c.name) === historyLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <button className="btn btn-outline btn-sm" onClick={fetchBroadcasts}>🔄 Refresh</button>
           </div>
