@@ -286,11 +286,11 @@ const Broadcast = () => {
                           const lvl = e.target.value;
                           setFormLevel(lvl);
                           const sel = classes.find(c => c.id == form.target_class_id);
-                          if (sel && lvl && levelOfClass(sel.name) !== lvl) setForm({ ...form, target_class_id: '' });
+                          if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setForm({ ...form, target_class_id: '' });
                         }}>
                         <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
                       </select>
-                      <select className="form-control" value={form.target_class_id}
+                      <select className="form-control" value={form.target_class_id} disabled={!formLevel}
                         onChange={e => setForm({ ...form, target_class_id: e.target.value })} required>
                         <option value="">Choose Class</option>
                         {classes.filter(c => !formLevel || levelOfClass(c.name) === formLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

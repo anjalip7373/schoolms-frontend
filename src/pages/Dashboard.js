@@ -119,7 +119,7 @@ const Dashboard = () => {
             const lvl = e.target.value;
             setSelectedLevel(lvl);
             const sel = (data?.classes || []).find(c => c.id == selectedClass);
-            if (sel && lvl && levelOfClass(sel.name) !== lvl) setSelectedClass('');
+            if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setSelectedClass('');
           }}>
             <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
           </select>
@@ -133,7 +133,7 @@ const Dashboard = () => {
             🏫 {data?.classes?.[0]?.name || 'Your Class'}
           </span>
         ) : (
-          <select className="form-control" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+          <select className="form-control" disabled={!selectedLevel} value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
             <option value="">All Classes</option>
             {data?.classes?.filter(c => !selectedLevel || levelOfClass(c.name) === selectedLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>

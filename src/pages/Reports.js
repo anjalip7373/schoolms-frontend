@@ -327,7 +327,7 @@ const getEffectiveActiveStatus = (row) => {
             </select>
           )}
           {!isTeacher && (
-            <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
+            <select className="form-control" disabled={!level} value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
               <option value="">All Classes</option>
               {classes.filter(c => !level || levelOfClass(c.name) === level).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>

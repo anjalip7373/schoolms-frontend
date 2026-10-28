@@ -833,13 +833,13 @@ const exportPDF = async () => {
                 const lvl = e.target.value;
                 setLevelFilter(lvl);
                 const sel = classes.find(c => c.id == filters.class_id);
-                if (sel && lvl && levelOfClass(sel.name) !== lvl) setFilters({...filters, class_id: ''});
+                if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setFilters({...filters, class_id: ''});
               }}>
                 <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
               </select>
             )}
             {!isTeacher && (
-              <select className="form-control" value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
+              <select className="form-control" disabled={!levelFilter} value={filters.class_id} onChange={e => setFilters({...filters, class_id: e.target.value})}>
                 <option value="">All Classes</option>
                 {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>

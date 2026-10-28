@@ -181,7 +181,7 @@ const Audit = () => {
               const lvl = e.target.value;
               setLevel(lvl);
               const sel = classes.find(c => c.id == classId);
-              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassId('');
+              if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setClassId('');
             }}
           >
             <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
@@ -195,7 +195,7 @@ const Audit = () => {
           <select
             className="form-control"
             style={{ minWidth: '160px' }}
-            value={classId}
+            disabled={!level} value={classId}
             onChange={e => setClassId(e.target.value)}
           >
             <option value="">All Classes</option>

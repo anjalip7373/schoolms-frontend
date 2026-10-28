@@ -176,7 +176,7 @@ const Attendance = () => {
               const lvl = e.target.value;
               setLevelFilter(lvl);
               const sel = classes.find(c => c.id == classFilter);
-              if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
+              if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setClassFilter('');
             }}>
             <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
           </select>
@@ -187,7 +187,7 @@ const Attendance = () => {
           <select
             className="form-control"
             style={{minWidth:'160px'}}
-            disabled={personType !== 'student'}
+            disabled={personType !== 'student' || !levelFilter}
             value={classFilter}
             onChange={e => setClassFilter(e.target.value)}>
             <option value="">All Classes</option>

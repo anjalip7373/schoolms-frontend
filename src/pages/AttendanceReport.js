@@ -489,7 +489,7 @@ const AttendanceReport = () => {
                   const lvl = e.target.value;
                   setLevelFilter(lvl);
                   const sel = classes.find(c => c.id == filters.class_id);
-                  if (sel && lvl && levelOfClass(sel.name) !== lvl) setFilters({...filters, class_id: ''});
+                  if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setFilters({...filters, class_id: ''});
                 }}
               >
                 <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
@@ -500,7 +500,7 @@ const AttendanceReport = () => {
                 className="form-control"
                 value={filters.class_id}
                 onChange={e => setFilters({...filters, class_id: e.target.value})}
-                disabled={filters.person_type === 'employee'}
+                disabled={filters.person_type === 'employee' || !levelFilter}
                 title={filters.person_type === 'employee' ? 'Class filter applies to students only' : undefined}
                 style={filters.person_type === 'employee' ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
               >

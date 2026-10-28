@@ -209,14 +209,14 @@ setStudents(sorted);
             const lvl = e.target.value;
             setLevelFilter(lvl);
             const sel = classes.find(c => c.id == classFilter);
-            if (sel && lvl && levelOfClass(sel.name) !== lvl) setClassFilter('');
+            if (sel && (!lvl || levelOfClass(sel.name) !== lvl)) setClassFilter('');
           }}>
             <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
           </select>
         )}
         {/* Class filter dropdown — teacher sees only their class */}
         {!isTeacher ? (
-          <select className="form-control" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
+          <select className="form-control" disabled={!levelFilter} value={classFilter} onChange={e => setClassFilter(e.target.value)}>
             <option value="">All Classes</option>
             {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
