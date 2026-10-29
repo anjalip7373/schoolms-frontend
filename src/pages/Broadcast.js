@@ -36,8 +36,9 @@ const Broadcast = () => {
   const [form, setForm] = useState({
     title: '',
     message: '',
-    target_type: 'all',
-    target_class_id: ''
+    target_type: isTeacher ? 'class' : 'all',
+    target_class_id: '',
+    subject_id: ''
   });
    const [sentResult, setSentResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -46,16 +47,58 @@ const Broadcast = () => {
   const [formLevel, setFormLevel] = useState('');
   const [historyLevel, setHistoryLevel] = useState('');
   const [historyClassId, setHistoryClassId] = useState('');
+  const [historySubjectId, setHistorySubjectId] = useState('');
+  const [historySubjects, setHistorySubjects] = useState([]);
+  // Subjects available for the class chosen in the form (teacher: only their assigned subjects)
+  const [formSubjects, setFormSubjects] = useState([]);
+
+  const emptyForm = (keepClass) => ({
+    title: '',
+    message: '',
+    target_type: isTeacher ? 'class' : 'all',
+    target_class_id: isTeacher ? keepClass : '',
+    subject_id: ''
+  });
+
+  // Class teacher of the selected class (can send a general notice to it)
+  const isOwnClassSelected = classes.some(
+    c => String(c.id) === String(form.target_class_id) && Number(c.is_class_teacher) === 1
+  );
+  // Subject is mandatory for teachers whenever they have subjects there, or may pick "General"
+  const subjectRequired = isTeacher && (formSubjects.length > 0 || isOwnClassSelected);
 
   useEffect(() => {
     fetchBroadcasts();
-   API.get('/config/classes').then(r => {
-      setClasses(r.data);
-      if (isTeacher && user?.class_assigned) {
-        setForm(f => ({ ...f, target_type: 'class', target_class_id: String(user.class_assigned) }));
-      }
-    });
+    (async () => {
+      try {
+        let cls;
+        try { ({ data: cls } = await API.get('/my-broadcast-classes')); }
+        catch (err) { ({ data: cls } = await API.get('/config/classes')); }
+        setClasses(cls || []);
+        // A teacher with exactly one class gets it pre-selected
+        if (isTeacher && (cls || []).length === 1) {
+          setForm(f => ({ ...f, target_type: 'class', target_class_id: String(cls[0].id) }));
+        }
+      } catch (e) {}
+    })();
   }, []);
+
+  // Subjects for the class selected in the "New Broadcast" form
+  useEffect(() => {
+    if (!form.target_class_id || form.target_type !== 'class') { setFormSubjects([]); return; }
+    API.get('/my-broadcast-subjects', { params: { class_id: form.target_class_id } })
+      .then(r => setFormSubjects(r.data || []))
+      .catch(() => setFormSubjects([]));
+  }, [form.target_class_id, form.target_type]);
+
+  // Subjects for the class selected in the history filter
+  useEffect(() => {
+    setHistorySubjectId('');
+    if (!historyClassId) { setHistorySubjects([]); return; }
+    API.get('/my-broadcast-subjects', { params: { class_id: historyClassId } })
+      .then(r => setHistorySubjects(r.data || []))
+      .catch(() => setHistorySubjects([]));
+  }, [historyClassId]);
 
   const fetchBroadcasts = async () => {
     setLoading(true);
@@ -125,6 +168,7 @@ const Broadcast = () => {
     fd.append('message', form.message);
     fd.append('target_type', form.target_type);
     if (form.target_class_id) fd.append('target_class_id', form.target_class_id);
+    fd.append('subject_id', form.subject_id === 'general' ? '' : (form.subject_id || ''));
     if (selectedFile) fd.append('media', selectedFile);
     return fd;
   };
@@ -136,6 +180,7 @@ const Broadcast = () => {
     if (form.target_type === 'class' && !form.target_class_id) {
       toast.error('Please select a class'); return;
     }
+    if (subjectRequired && !form.subject_id) { toast.error('Please select a subject'); return; }
     setSending(true);
     setSentResult(null);
     try {
@@ -144,9 +189,13 @@ const Broadcast = () => {
       setFileInputKey(k => k + 1);
       setSentResult({ ...data, channel: 'email' });
       toast.success(data.message);
-      setForm({ title: '', message: '', target_type: 'all', target_class_id: '' });
+      setForm(emptyForm(form.target_class_id));
       fetchBroadcasts();
     } catch (err) {
+      if (err.response?.status === 409 && err.response?.data?.duplicate) {
+        window.alert(err.response.data.message);
+        return;
+      }
       toast.error(err.response?.data?.message || 'Failed to send broadcast');
     } finally { setSending(false); }
   };
@@ -158,6 +207,7 @@ const Broadcast = () => {
   if (form.target_type === 'class' && !form.target_class_id) {
     toast.error('Please select a class'); return;
   }
+  if (subjectRequired && !form.subject_id) { toast.error('Please select a subject'); return; }
 
   setSendingWhatsApp(true);
   setSentResult(null);
@@ -168,9 +218,13 @@ const Broadcast = () => {
     setSentResult({ channel: 'whatsapp', sent_count: data.sent_count, skipped: data.skipped });
     toast.success(`✅ WhatsApp broadcast sent to ${data.sent_count} recipients!`);
     if (data.skipped > 0) toast.warn(`⚠️ ${data.skipped} skipped — no phone number`);
-    setForm({ title: '', message: '', target_type: 'all', target_class_id: '' });
+    setForm(emptyForm(form.target_class_id));
     fetchBroadcasts();
   } catch (err) {
+    if (err.response?.status === 409 && err.response?.data?.duplicate) {
+      window.alert(err.response.data.message);
+      return;
+    }
     toast.error(err.response?.data?.message || 'Failed to send WhatsApp broadcast');
   } finally {
     setSendingWhatsApp(false);
@@ -215,11 +269,12 @@ const Broadcast = () => {
 
   // History filtered by level (broadcasts sent to a class only)
   const historyClassName = classes.find(c => c.id == historyClassId)?.name;
-  const displayedBroadcasts = (historyLevel || historyClassId)
+  const displayedBroadcasts = (historyLevel || historyClassId || historySubjectId)
     ? broadcasts.filter(b => {
         const cn = b.class_name || classes.find(c => c.id == b.target_class_id)?.name;
         if (historyLevel && !(cn && levelOfClass(cn) === historyLevel)) return false;
         if (historyClassId && !(b.target_class_id == historyClassId || (cn && cn === historyClassName))) return false;
+        if (historySubjectId && String(b.subject_id) !== String(historySubjectId)) return false;
         return true;
       })
     : broadcasts;
@@ -259,16 +314,28 @@ const Broadcast = () => {
 
                           {/* Target */}
               {isTeacher ? (
-                <div className="form-group" style={{ margin: 0, gridColumn: '1/-1' }}>
-                  <label>Send To</label>
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: '#eff6ff', color: '#1e40af', fontWeight: 700, fontSize: '13px',
-                    padding: '9px 14px', borderRadius: '8px', border: '1px solid #bfdbfe'
-                  }}>
-                    🏫 {classes.find(c => c.id == form.target_class_id)?.name || 'Your Class'}
+                <>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Select Class <span style={{ color: 'red' }}>*</span></label>
+                    <select className="form-control" value={form.target_class_id} required
+                      onChange={e => setForm({ ...form, target_type: 'class', target_class_id: e.target.value, subject_id: '' })}>
+                      <option value="">Choose Class</option>
+                      {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                   </div>
-                </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Select Subject {subjectRequired && <span style={{ color: 'red' }}>*</span>}</label>
+                    <select className="form-control" value={form.subject_id}
+                      disabled={!form.target_class_id}
+                      onChange={e => setForm({ ...form, subject_id: e.target.value })}>
+                      <option value="">{form.target_class_id ? 'Choose Subject' : 'Select Class First'}</option>
+                      {isOwnClassSelected && <option value="general">General Notification</option>}
+                      {formSubjects.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               ) : (
                 <>
                   <div className="form-group" style={{ margin: 0 }}>
@@ -298,6 +365,19 @@ const Broadcast = () => {
                         onChange={e => setForm({ ...form, target_class_id: e.target.value })} required>
                         <option value="">Choose Class</option>
                         {classes.filter(c => !formLevel || levelOfClass(c.name) === formLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {form.target_type === 'class' && form.target_class_id && formSubjects.length > 0 && (
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Subject (optional)</label>
+                      <select className="form-control" value={form.subject_id}
+                        onChange={e => setForm({ ...form, subject_id: e.target.value })}>
+                        <option value="">All subjects</option>
+                        {formSubjects.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>
+                        ))}
                       </select>
                     </div>
                   )}
@@ -353,6 +433,8 @@ const Broadcast = () => {
                     {form.target_type === 'students' && 'all students'}
                     {form.target_type === 'employees' && 'all employees'}
                     {form.target_type === 'class' && (form.target_class_id ? classes.find(c => c.id == form.target_class_id)?.name : 'selected class')}
+                    {form.target_type === 'class' && form.subject_id && form.subject_id !== 'general' &&
+                      ` — ${formSubjects.find(x => String(x.id) === String(form.subject_id))?.name || ''}`}
                   </strong>
                 </div>
               </div>
@@ -442,6 +524,11 @@ const Broadcast = () => {
               <option value="">All Classes</option>
               {classes.filter(c => levelOfClass(c.name) === historyLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+            <select className="form-control" value={historySubjectId} disabled={!historyClassId}
+              onChange={e => setHistorySubjectId(e.target.value)} style={{ minWidth: '150px' }}>
+              <option value="">{historyClassId ? 'All Subjects' : 'Select Class First'}</option>
+              {historySubjects.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>)}
+            </select>
             <button className="btn btn-outline btn-sm" onClick={fetchBroadcasts}>🔄 Refresh</button>
           </div>
         </div>
@@ -465,6 +552,11 @@ const Broadcast = () => {
                       {b.title?.replace('[WhatsApp] ', '')}
                     </span>
                     {targetBadge(b.target_type, b.class_name)}
+                    {b.subject_name && (
+                      <span style={{ background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
+                        📚 {b.subject_name}
+                      </span>
+                    )}
                     <span style={{ background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
                       {b.title?.startsWith('[WhatsApp]') ? '📲' : '📧'} {b.sent_count} recipients
                     </span>
