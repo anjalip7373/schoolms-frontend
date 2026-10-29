@@ -1200,7 +1200,7 @@ const exportPDF = async () => {
         .desktop-report-view { display: block; }
         .mobile-report-view { display: none; }
 
-        @media (max-width: 1300px) {
+        @media (min-width: 0px) {
           .desktop-report-view { display: none !important; }
           .mobile-report-view { 
             display: block !important; 
