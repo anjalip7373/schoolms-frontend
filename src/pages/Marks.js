@@ -34,6 +34,8 @@ const Marks = () => {
 
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
+  const [editableIds, setEditableIds] = useState(null); // null = every subject editable (admin/principal)
+  const [canEditRemarks, setCanEditRemarks] = useState(true);
 
   const currentYear = new Date().getFullYear();
   const academicYears = [
@@ -48,7 +50,15 @@ const Marks = () => {
   });
 
   useEffect(() => {
-    API.get('/config/classes').then(r => setClasses(r.data));
+    // teachers get only their own classes (own class + classes where they teach a subject)
+    API.get(isTeacher ? '/marks/my-classes' : '/config/classes').then(r => {
+      const list = r.data || [];
+      setClasses(list);
+      // teachers open straight into their (first) class
+      if (isTeacher && list.length > 0) {
+        setFilters(f => f.class_id ? f : { ...f, class_id: String(list[0].id) });
+      }
+    }).catch(() => setClasses([]));
     API.get('/exam-types').then(r => setExamTypes(r.data));
   }, []);
 
@@ -60,7 +70,7 @@ const Marks = () => {
         exam_type_id: filters.exam_type_id,
         academic_year: filters.academic_year,
       };
-      if (!isTeacher && filters.class_id) {
+      if (filters.class_id) {
         params.class_id = filters.class_id;
       }
 
@@ -74,6 +84,8 @@ const Marks = () => {
       setMarksMap(marksRes.data.marksMap);
       setRemarksMap(remarksRes.data || {});
       setEffectiveClassId(marksRes.data.class_id);
+      setEditableIds(marksRes.data.editable_subject_ids ?? null);
+      setCanEditRemarks(marksRes.data.can_edit_remarks ?? true);
 
       if (marksRes.data.subjects?.length > 0) {
         setSelectedSubjectId(marksRes.data.subjects[0].id);
@@ -107,7 +119,10 @@ const Marks = () => {
     if (filters.exam_type_id && (filters.class_id || isTeacher)) fetchMarks();
   }, [filters]);
 
+  const canEdit = (subjectId) => !editableIds || editableIds.includes(Number(subjectId));
+
   const handleMarkChange = (studentId, subjectId, value) => {
+    if (!canEdit(subjectId)) return;
     const sub = subjects.find(s => s.id === subjectId);
     const max = sub?.max_marks || 100;
     if (value !== '' && (parseFloat(value) < 0 || parseFloat(value) > max)) return;
@@ -124,6 +139,7 @@ const Marks = () => {
   };
 
   const handleAbsentToggle = (studentId, subjectId) => {
+    if (!canEdit(subjectId)) return;
     setInputMarks(prev => {
       const current = prev[studentId]?.[subjectId];
       const nowAbsent = !current?.is_absent;
@@ -150,6 +166,7 @@ const Marks = () => {
       const marks = [];
       Object.entries(inputMarks).forEach(([studentId, subjectMarks]) => {
         Object.entries(subjectMarks).forEach(([subjectId, data]) => {
+          if (!canEdit(subjectId)) return; // view-only subjects are never sent
           const marksObtained = data.marks;
           const isAbsent = data.is_absent || false;
 
@@ -163,7 +180,7 @@ const Marks = () => {
           });
         });
       });
-      const classIdToSend = isTeacher ? effectiveClassId : filters.class_id;
+      const classIdToSend = filters.class_id || (isTeacher ? effectiveClassId : filters.class_id);
 
       await API.post('/marks', {
         class_id: classIdToSend,
@@ -179,7 +196,7 @@ const Marks = () => {
           overall_remark: overall_remark || ''
         }));
 
-      if (remarks.length > 0) {
+      if (canEditRemarks && remarks.length > 0) {
         await API.post('/marks/remarks', {
           class_id: classIdToSend,
           exam_type_id: filters.exam_type_id,
@@ -281,6 +298,12 @@ const Marks = () => {
                 {classes.filter(c => !levelFilter || levelOfClass(c.name) === levelFilter).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
+            {isTeacher && classes.length > 1 && (
+              <select className="form-control" value={filters.class_id}
+                onChange={e => setFilters({...filters, class_id: e.target.value})}>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}{c.is_class_teacher ? ' (Class Teacher)' : ''}</option>)}
+              </select>
+            )}
             <select className="form-control" value={filters.exam_type_id}
               onChange={e => setFilters({...filters, exam_type_id: e.target.value})}>
               <option value="">Select Exam Type *</option>
@@ -292,6 +315,14 @@ const Marks = () => {
             </select>
           </div>
         </div>
+
+        {editableIds && students.length > 0 && (
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '16px' }}>
+            {canEditRemarks
+              ? '🔒 You are the class teacher: you can edit your own subject(s) and the overall remark. Other subjects are view-only.'
+              : '📝 You can enter marks only for your assigned subject(s) in this class.'}
+          </div>
+        )}
 
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
@@ -331,6 +362,7 @@ const Marks = () => {
                 const isDeactivated = student.fee_status && student.fee_status !== 'active';
                 
                 const currentSub = currentMobileSubject;
+                const readOnly = !canEdit(selectedSubjectId);
                 const isFail = !isAbsent && !isNaN(numVal) && markVal !== '' && currentSub && numVal < currentSub.pass_marks;
                 const isPass = !isAbsent && !isNaN(numVal) && markVal !== '' && currentSub && numVal >= currentSub.pass_marks;
 
@@ -350,7 +382,7 @@ const Marks = () => {
                         min="0" 
                         max={currentSub?.max_marks || 100}
                         value={isAbsent ? '' : markVal}
-                        disabled={isAbsent || isDeactivated}
+                        disabled={isAbsent || isDeactivated || readOnly}
                         onChange={e => handleMarkChange(student.id, parseInt(selectedSubjectId), e.target.value)}
                         placeholder={isDeactivated ? '—' : isAbsent ? 'AB' : 'Enter score'}
                         style={{
@@ -364,7 +396,7 @@ const Marks = () => {
 
                       <button
                         onClick={() => handleAbsentToggle(student.id, parseInt(selectedSubjectId))}
-                        disabled={isDeactivated}
+                        disabled={isDeactivated || readOnly}
                         style={{
                           padding:'10px 14px', borderRadius:'8px', fontSize:'13px', fontWeight:'700',
                           border: isAbsent ? '1px solid #f59e0b' : '1px solid #cbd5e1',
@@ -377,7 +409,7 @@ const Marks = () => {
                       </button>
                     </div>
 
-                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                    <div style={{display: canEditRemarks ? 'flex' : 'none', alignItems:'center', gap:'12px'}}>
                       <span className="mobile-input-label">Remark:</span>
                       <input
                         type="text"
@@ -412,12 +444,12 @@ const Marks = () => {
                         <th style={{padding:'12px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'left', width:'80px'}}>ROLL NO</th>
                         {subjects.map(s => (
                           <th key={s.id} style={{padding:'8px 6px', color:'#fff', fontSize:'10px', fontWeight:'700', textAlign:'center', minWidth:'90px'}}>
-                            {s.name}<br/><span style={{opacity:0.7, fontSize:'9px'}}>/{s.max_marks}</span>
+                            {s.name}{!canEdit(s.id) && ' 🔒'}<br/><span style={{opacity:0.7, fontSize:'9px'}}>/{s.max_marks}</span>
                           </th>
                         ))}
                         <th style={{padding:'12px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', minWidth:'70px'}}>TOTAL</th>
                         <th style={{padding:'12px 8px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', minWidth:'60px'}}>%</th>
-                        <th style={{padding:'12px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', minWidth:'140px'}}>OVERALL REMARK</th>
+                        {canEditRemarks && <th style={{padding:'12px 10px', color:'#fff', fontSize:'11px', fontWeight:'700', textAlign:'center', minWidth:'140px'}}>OVERALL REMARK</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -461,6 +493,7 @@ const Marks = () => {
                               const numVal = parseFloat(markVal);
                               const isFail = !isAbsent && !isNaN(numVal) && markVal !== '' && numVal < s.pass_marks;
                               const isPass = !isAbsent && !isNaN(numVal) && markVal !== '' && numVal >= s.pass_marks;
+                              const readOnly = !canEdit(s.id);
 
                               return (
                                 <td key={s.id} style={{padding:'4px', textAlign:'center'}}>
@@ -468,26 +501,26 @@ const Marks = () => {
                                     <input
                                       type="number" min="0" max={s.max_marks}
                                       value={isAbsent ? '' : markVal}
-                                      disabled={isAbsent || isDeactivated}
+                                      disabled={isAbsent || isDeactivated || readOnly}
                                       onChange={e => handleMarkChange(student.id, s.id, e.target.value)}
                                       style={{
                                         width:'65px', padding:'5px', textAlign:'center',
                                         border: isAbsent ? '1px solid #fcd34d' : '1px solid #e2e8f0',
                                         borderRadius:'6px',
                                         fontSize:'12px', fontWeight:'700', outline:'none',
-                                        background: isDeactivated ? '#f1f5f9' : isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
+                                        background: (isDeactivated || readOnly) ? '#f1f5f9' : isAbsent ? '#fef3c7' : isFail ? '#fee2e2' : isPass ? '#f0fdf4' : '#fff',
                                         color: isAbsent ? '#d97706' : isFail ? '#dc2626' : isPass ? '#16a34a' : '#1e293b',
-                                        cursor: (isAbsent || isDeactivated) ? 'not-allowed' : 'text',
+                                        cursor: (isAbsent || isDeactivated || readOnly) ? 'not-allowed' : 'text',
                                       }}
                                       placeholder={isDeactivated ? '—' : isAbsent ? 'AB' : '—'}
                                     />
                                     <button
                                       onClick={() => handleAbsentToggle(student.id, s.id)}
-                                      disabled={isDeactivated}
+                                      disabled={isDeactivated || readOnly}
                                       style={{
                                         width:'65px', padding:'2px 0',
                                         border: isAbsent ? '1px solid #f59e0b' : '1px solid #e2e8f0',
-                                        borderRadius:'4px', cursor: isDeactivated ? 'not-allowed' : 'pointer',
+                                        borderRadius:'4px', cursor: (isDeactivated || readOnly) ? 'not-allowed' : 'pointer',
                                         fontSize:'10px', fontWeight:'700',
                                         background: isAbsent ? '#f59e0b' : '#f8fafc',
                                         color: isAbsent ? '#fff' : '#94a3b8',
@@ -511,7 +544,7 @@ const Marks = () => {
                                 <span style={{background:'#dcfce7', color:'#16a34a', padding:'2px 8px', borderRadius:'10px', fontSize:'12px', fontWeight:'700'}}>{pct}%</span>
                               )}
                             </td>
-                            <td style={{padding:'6px 8px'}}>
+                            {canEditRemarks && <td style={{padding:'6px 8px'}}>
                               <input
                                 type="text"
                                 value={remarksMap[student.id] ?? ''}
@@ -525,7 +558,7 @@ const Marks = () => {
                                   background: isDeactivated ? '#f1f5f9' : '#fff'
                                 }}
                               />
-                            </td>
+                            </td>}
                           </tr>
                         );
                       })}
@@ -543,7 +576,7 @@ const Marks = () => {
             </div>
 
             <div style={{display:'flex', justifyContent:'stretch', width:'100%'}}>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving || (editableIds && editableIds.length === 0 && !canEditRemarks)}
                 style={{padding:'14px 32px', fontSize:'16px', width:'100%', borderRadius:'12px', fontWeight:'700'}}>
                 {saving ? '⏳ Saving Marks...' : '💾 Save All Marks'}
               </button>
