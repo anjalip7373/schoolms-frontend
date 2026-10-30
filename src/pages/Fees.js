@@ -330,6 +330,14 @@ const Fees = () => {
             gap: 4px;
           }
         }
+
+        /* Stop the Add/Edit Fee modal from resizing when options are selected */
+        .fee-modal .form-grid { grid-template-columns: minmax(0, 1fr); }
+        .fee-modal .form-grid > * { min-width: 0; }
+        .fee-modal .form-control { min-width: 0; max-width: 100%; box-sizing: border-box; }
+        @media (min-width: 769px) {
+          .fee-modal .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
       `}</style>
 
       <div style={{ width: '100%', overflowX: 'hidden' }}>
@@ -464,7 +472,7 @@ const Fees = () => {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'680px'}}>
+          <div className="modal fee-modal" onClick={e => e.stopPropagation()} style={{maxWidth:'680px'}}>
             <div className="modal-header">
               <h2>{editReceiptNo ? `Edit Fee Payment — ${editReceiptNo}` : 'Add Fee Payment'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>X</button>
