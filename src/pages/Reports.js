@@ -107,6 +107,7 @@ const Reports = () => {
     { key:'roll_no', label:'Roll No' },
     { key:'full_name', label:'Student Name' },
     { key:'class_name', label:'Class' },
+    { key:'receipt_no', label:'Receipt No' },
     { key:'fee_types_paid', label:'Fee Types Paid' },
     { key:'paid_amount', label:'Amount Paid (₹)' },
     { key:'last_payment_date', label:'Last Payment Date' },
