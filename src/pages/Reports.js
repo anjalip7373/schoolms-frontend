@@ -58,6 +58,7 @@ const Reports = () => {
         API.get('/students', { params: { ...classParam, search, to_month: filters.to_month, to_year: filters.to_year } }).catch(() => ({ data: [] })),
         API.get('/fees/all-students-status', { params: {
           ...classParam,
+          by_receipt: '1',
           from_month: filters.from_month,
           from_year: filters.from_year,
           to_month: filters.to_month,
