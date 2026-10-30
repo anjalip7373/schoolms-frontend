@@ -335,6 +335,7 @@ const Fees = () => {
         .fee-modal .form-grid { grid-template-columns: minmax(0, 1fr); }
         .fee-modal .form-grid > * { min-width: 0; }
         .fee-modal .form-control { min-width: 0; max-width: 100%; box-sizing: border-box; }
+        .fee-modal .form-grid-row .form-control { width: 100%; }
         @media (min-width: 769px) {
           .fee-modal .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
