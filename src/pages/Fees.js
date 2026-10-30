@@ -203,8 +203,11 @@ const Fees = () => {
   const groupedPayments = React.useMemo(() => {
     const groups = {};
     for (const p of displayedPayments) {
-      if (!groups[p.receipt_no]) groups[p.receipt_no] = { ...p, amount: 0 };
+      if (!groups[p.receipt_no]) groups[p.receipt_no] = { ...p, amount: 0, fee_type_names: [] };
       groups[p.receipt_no].amount += parseFloat(p.amount || 0);
+      if (p.fee_type_name && !groups[p.receipt_no].fee_type_names.includes(p.fee_type_name)) {
+        groups[p.receipt_no].fee_type_names.push(p.fee_type_name);
+      }
     }
     return Object.values(groups);
   }, [displayedPayments]);
@@ -367,8 +370,8 @@ const Fees = () => {
 
         {/* ─── FIXED PROPER MATCHED LABELS FOR RESPONSIVE CARDS ─── */}
         <div className="mobile-fee-view">
-          {displayedPayments.map((p) => (
-            <div key={p.id} className="mobile-fee-card">
+          {groupedPayments.map((p) => (
+            <div key={p.receipt_no} className="mobile-fee-card">
               <div className="mobile-card-row-top">
                 <div className="mobile-student-info">
                   <h3>{p.full_name}</h3>
@@ -386,7 +389,7 @@ const Fees = () => {
                 </div>
                 <div className="mobile-detail-item">
                   <span className="mobile-detail-lbl">Fee Type</span>
-                  <span className="mobile-detail-val">{p.fee_type_name}</span>
+                  <span className="mobile-detail-val">{(p.fee_type_names && p.fee_type_names.length ? p.fee_type_names : [p.fee_type_name]).join(', ')}</span>
                 </div>
                 <div className="mobile-detail-item">
                   <span className="mobile-detail-lbl">Payment Method</span>
