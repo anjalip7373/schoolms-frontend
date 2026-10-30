@@ -1119,8 +1119,8 @@ const exportPDF = async () => {
       ...(isFinalCumulative ? [{ label: 'Attendance', value: attText, color: '#0891b2' }] : [])
     ];
 
-    const th = { padding: '10px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#ffffff', letterSpacing: '0.3px' };
-    const td = { padding: '7px 6px', textAlign: 'center', borderTop: '1px solid #e2e8f0' };
+    const th = { padding: '8px 3px', textAlign: 'center', fontSize: '9px', fontWeight: 800, color: '#ffffff', letterSpacing: '0', wordBreak: 'break-word', overflowWrap: 'anywhere', lineHeight: 1.2 };
+    const td = { padding: '6px 3px', textAlign: 'center', borderTop: '1px solid #e2e8f0', wordBreak: 'break-word', overflowWrap: 'anywhere' };
 
     return (
       <>
@@ -1136,8 +1136,12 @@ const exportPDF = async () => {
         )}
 
         <h4 className="mobile-section-title">▼ Exam-wise Marks</h4>
-        <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '14px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+        <div style={{ overflowX: 'hidden', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '14px' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <colgroup>
+              <col style={{ width: '26%' }} />
+              {cols.map(et => <col key={et} />)}
+            </colgroup>
             <thead>
               <tr style={{ background: '#1e40af', color: '#fff' }}>
                 <th style={{ ...th, textAlign: 'left' }}>SUBJECT</th>
@@ -1155,7 +1159,7 @@ const exportPDF = async () => {
                     const failed = parseFloat(m.obtained) < parseFloat(m.pass);
                     return (
                       <td key={et} style={{ ...td, color: failed ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
-                        {m.obtained}<span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '10px' }}>/{m.max}</span>
+                        {m.obtained}<span style={{ display: 'block', color: '#94a3b8', fontWeight: 500, fontSize: '9px' }}>/{m.max}</span>
                       </td>
                     );
                   })}
