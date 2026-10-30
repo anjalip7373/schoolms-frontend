@@ -330,6 +330,15 @@ const Configuration = () => {
     if (!selectedTeacher || !selectedAssignClass || !selectedAssignSubject) {
       return toast.error('Please select Teacher, Class, and Subject');
     }
+    const alreadyAssigned = teacherAssignments.some(a =>
+      String(a.teacher_id) === String(selectedTeacher) &&
+      String(a.class_id) === String(selectedAssignClass) &&
+      String(a.subject_id) === String(selectedAssignSubject)
+    );
+    if (alreadyAssigned) {
+      window.alert('This Teacher + Class + Subject assignment already exists.');
+      return;
+    }
     setAssigningTeacher(true);
     try {
       await API.post('/config/teacher-assignments', {
@@ -341,7 +350,11 @@ const Configuration = () => {
       setSelectedAssignSubject('');
       fetchAll();
     } catch (err) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to assign teacher');
+      if (err.response?.status === 409) {
+        window.alert(err.response?.data?.message || 'This Teacher + Class + Subject assignment already exists.');
+      } else {
+        toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to assign teacher');
+      }
     } finally {
       setAssigningTeacher(false);
     }
