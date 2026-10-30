@@ -287,7 +287,7 @@ const Broadcast = () => {
           .bc-form-grid { grid-template-columns: minmax(0, 1fr) !important; }
           .bc-form-grid > * { min-width: 0; }
           .bc-actions { flex-direction: column-reverse; align-items: stretch !important; }
-          .bc-actions > button { width: 100%; }
+          .bc-actions > button { width: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
 
           .bc-history-head { flex-direction: column; align-items: stretch !important; gap: 12px; }
           .bc-history-filters { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; width: 100%; }
