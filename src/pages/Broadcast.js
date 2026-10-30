@@ -281,6 +281,24 @@ const Broadcast = () => {
 
   return (
     <AppLayout title="Broadcast" subtitle="Send announcements to students and staff">
+      <style>{`
+        @media (max-width: 768px) {
+          .bc-form-card { padding: 16px !important; }
+          .bc-form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .bc-form-grid > * { min-width: 0; }
+          .bc-actions { flex-direction: column-reverse; align-items: stretch !important; }
+          .bc-actions > button { width: 100%; }
+
+          .bc-history-head { flex-direction: column; align-items: stretch !important; gap: 12px; }
+          .bc-history-filters { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; width: 100%; }
+          .bc-history-filters select { min-width: 0 !important; width: 100%; }
+          .bc-history-filters select:nth-of-type(3) { grid-column: 1 / -1; }
+          .bc-history-filters button { grid-column: 1 / -1; }
+
+          .bc-item { padding: 14px 4px !important; gap: 10px !important; }
+          .bc-item > div:first-child { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+        }
+      `}</style>
       <div className="page-header">
         <div>
           <h1>📢 Broadcast</h1>
@@ -293,13 +311,13 @@ const Broadcast = () => {
 
       {/* New Broadcast Form */}
       {showForm && (
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <div className="bc-form-card" style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>
             📢 Create New Broadcast
           </h3>
 
           <form onSubmit={handleSendEmail}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div className="bc-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               {/* Title */}
               <div className="form-group" style={{ gridColumn: '1/-1', margin: 0 }}>
                 <label>Broadcast Title <span style={{ color: 'red' }}>*</span></label>
@@ -460,7 +478,7 @@ const Broadcast = () => {
             )}
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="bc-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button type="button" className="btn btn-outline"
                 onClick={() => { setShowForm(false); setSentResult(null); }}>
                 Cancel
@@ -514,10 +532,10 @@ const Broadcast = () => {
 
       {/* Broadcasts History */}
       <div className="card">
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="bc-history-head" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>📋 Broadcast History</h3>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <select className="form-control" value={historyLevel} onChange={e => { setHistoryLevel(e.target.value); setHistoryClassId(''); }} style={{ minWidth: '140px' }}>
+           <div className="bc-history-filters" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select className="form-control" value={historyLevel}onChange={e => { setHistoryLevel(e.target.value); setHistoryClassId(''); }} style={{ minWidth: '140px' }}>
               <option value="">All Levels</option><option value="Pre-Primary">Pre-Primary</option><option value="Primary">Primary</option><option value="Secondary">Secondary</option>
             </select>
             <select className="form-control" value={historyClassId} disabled={!historyLevel} onChange={e => setHistoryClassId(e.target.value)} style={{ minWidth: '150px' }}>
@@ -538,7 +556,7 @@ const Broadcast = () => {
         ) : displayedBroadcasts.length > 0 ? (
           <div style={{ padding: '8px' }}>
             {displayedBroadcasts.map(b => (
-              <div key={b.id} style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div key={b.id} className="bc-item" style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                 <div style={{
                   width: '44px', height: '44px', borderRadius: '12px',
                   background: b.title?.startsWith('[WhatsApp]') ? '#dcfce7' : '#dbeafe',
