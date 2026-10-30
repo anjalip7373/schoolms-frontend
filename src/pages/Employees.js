@@ -239,7 +239,7 @@ const handleSubmit = async (ev) => {
           <input
             type="text"
             className="form-control"
-            placeholder="Search by name, Emp ID, phone, email, user ID, role, class or subject..."
+            placeholder="Search name, ID, phone, email..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{flex:1}}
